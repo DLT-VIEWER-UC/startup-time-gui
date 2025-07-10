@@ -215,7 +215,7 @@ def format_excel_cells(sheet, start_row):
             # Check if the cell value is a column header
             if cell.value in (application_startup_time_columns + application_startup_time_min_max_avg_columns
                               + application_info_columns + application_start_end_time_min_max_avg_columns +
-                              applications_overall_status_columns + applications_order_status_columns):
+                              applications_overall_status_columns):
                
                 # Apply a green fill color and bold font to column headers
                 cell.fill = PatternFill(start_color="B5E6A2", end_color="B5E6A2", fill_type="solid")
