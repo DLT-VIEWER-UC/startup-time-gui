@@ -76,7 +76,6 @@ application_start_end_time_min_max_avg_columns = ['Services/Applications', 'Mini
 
 applications_overall_status_columns = ['No. of Iterations', 'Total Time\n to Startup\n Last Application\n from IG ON (sec)',
                                         'Test Case Status', 'Startup Order Status']
-applications_order_status_columns = ['No. of Iterations', 'Startup Order Status']
 appendix_columns = ['Column Name', 'Description']
 startup_field_descriptions = [
    ("Services/Applications", "Name of the Service/Application being initialized."),
@@ -590,10 +589,6 @@ def create_header(sheet, ecu_type, validate_startup_order, app_columns):
         if not validate_startup_order:
             columns=columns[:-1]
 
-    elif app_columns == 'app_order_test_columns':
-       header = f'Startup Order of Applications'
-       columns = applications_order_status_columns
-
     elif app_columns == 'startup_appendix':
        header = f'Field Description for \n Services/Applications Startup Completion Time on {ecu_type}'
        columns = appendix_columns
@@ -653,14 +648,6 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
         summary_sheet.append(data_row)
    
     format_excel_cells(summary_sheet, start_row)
-
-
-def each_iteration_app_startup_order_status(ecu_type, summary_sheet, config, application_startup_order_status):
-    start_row = create_header(summary_sheet, ecu_type, config['validate-startup-order'], 'app_order_test_columns')
-    for i, test_status in enumerate(application_startup_order_status):
-        summary_sheet.append([i+1, "PASS" if test_status else "FAIL"])
-    format_excel_cells(summary_sheet, start_row)
-
 
 def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, process_start_times, config):
     # Create a header in the Excel sheet for the average data
