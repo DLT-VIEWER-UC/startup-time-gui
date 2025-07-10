@@ -1308,12 +1308,12 @@ def start_startup_time_measurement():
     global cur_dt_time_obj
     cur_dt_time_obj = datetime.now()
     global local_save_path
-    local_save_path = Path(__file__).parents[1].joinpath("Reports", "03_Startup_Time", "20250627_18-34-52") #cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S"))
+    local_save_path = Path(__file__).parents[1].joinpath("Reports", "03_Startup_Time", cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S"))
     local_save_path.mkdir(parents=True, exist_ok=True)
     global workbook_map
     workbook_map = {}
     global current_timestamp
-    current_timestamp = '20250627_183452' #cur_dt_time_obj.strftime("%Y%m%d_%H%M%S")
+    current_timestamp = cur_dt_time_obj.strftime("%Y%m%d_%H%M%S")
 
 
     script_start_time = time.perf_counter()
