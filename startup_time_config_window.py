@@ -47,6 +47,8 @@ class StartupTimeConfig(QDialog):
         self.config_data = self.load_config()
         self.widgets = {}
         self.ecu_block_list = []
+        self.isElite, self.isPadas = False, False
+        self.isRCAR, self.isSOC0, self.isSOC1 = False, False, False
 
         self.init_ui()
    
@@ -109,7 +111,6 @@ class StartupTimeConfig(QDialog):
             # print(key, str(self.config_data.get(key, '')))
             le = QLineEdit(str(self.config_data.get(key, '')))
             le.setPlaceholderText('0')
-            # le.textChanged.connect(lambda text: [self.ok_btn.setDisabled(False)])
             le.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
             le.setValidator(validator)
             le.setFixedWidth(150)
@@ -164,87 +165,25 @@ class StartupTimeConfig(QDialog):
         ec_vbox = QVBoxLayout()
         self.widgets['ecu-config'] = []
 
-        isElite, isPadas=False, False
-        isRCAR, isSOC0, isSOC1 = False, False, False
-        if self.config_data.get('PADAS', {}).get('RCAR', False):
-            isRCAR = True
-            isPadas = True
-        else:
-            for board_type, enabled in self.config_data.get('Elite', {}).items():
-                if enabled:
-                    isElite = True
-                    if board_type == 'RCAR':
-                        isRCAR = True
-                    elif board_type == 'SoC0':
-                        isSOC0 = True
-                    elif board_type == 'SoC1':
-                        isSOC1 = True
-                   
-        # print("isElite, isPadas", isElite, isPadas)
-        # print("isRCAR, isSOC0, isSOC1", isRCAR, isSOC0, isSOC1)            
-
-        self.ecu_selection_group = QGroupBox('ECU Selection')
-        self.ecu_selection_group.setFixedHeight(80)
-        # Radio setup
-        self.padas_radio = QRadioButton("PADAS")
-        self.elite_radio = QRadioButton("Elite")
-        self.setup_group = QButtonGroup()
-        self.setup_group.addButton(self.padas_radio)
-        self.setup_group.addButton(self.elite_radio)
-        self.elite_radio.setChecked(isElite)
-        self.padas_radio.setChecked(isPadas)
-        radio_h = QHBoxLayout()
-        radio_h.addWidget(self.padas_radio)
-        radio_h.addWidget(self.elite_radio)
-        self.ecu_selection_group.setLayout(radio_h)
-        ec_vbox.addWidget(self.ecu_selection_group)
-        self.padas_radio.toggled.connect(lambda checked: [self.on_radio_changed(checked), self.on_change_update_ok_btn_state()])
-        self.elite_radio.toggled.connect(lambda checked: [self.on_radio_changed(checked), self.on_change_update_ok_btn_state()])
-
-       
-        self.board_selection_group = QGroupBox('Board Selection')
-        self.board_selection_group.setFixedHeight(80)
-        board_selection_layout = QHBoxLayout()
-        self.rcar_cb = QCheckBox('RCAR');  self.rcar_cb.setChecked(isRCAR)
-        self.soc0_cb = QCheckBox('SoC0');  self.soc0_cb.setChecked(isSOC0)
-        self.soc1_cb = QCheckBox('SoC1');  self.soc1_cb.setChecked(isSOC1)
-        board_selection_layout.addWidget(self.rcar_cb)
-        board_selection_layout.addWidget(self.soc0_cb)
-        board_selection_layout.addWidget(self.soc1_cb)
-        self.board_selection_group.setLayout(board_selection_layout)
-        ec_vbox.addWidget(self.board_selection_group)
-
-        self.board_selection_group.setDisabled(not self.padas_radio.isChecked() and not self.elite_radio.isChecked())
-
-        if self.padas_radio.isChecked():
-            self.soc0_cb.setDisabled(True)
-            self.soc1_cb.setDisabled(True)              
-
         # Load existing or defaults
         ecu_types = {ecu['ecu-type']: ecu for ecu in self.config_data.get('ecu-config', [])}
         for idx, ecu_type in enumerate(['RCAR', 'SoC0', 'SoC1']):
             ecu_data = ecu_types.get(ecu_type, {'ecu-type': ecu_type, 'startup-order': []})
             block = self._create_ecu_block(ecu_data, idx)
             if ecu_type=='RCAR':
-                block.setVisible(self.rcar_cb.isChecked())
+                block.setVisible(self.isRCAR)
             elif ecu_type=='SoC0':
-                block.setVisible(self.soc0_cb.isChecked())
+                block.setVisible(self.isSOC0)
             elif ecu_type=='SoC1':
-                block.setVisible(self.soc1_cb.isChecked())
+                block.setVisible(self.isSOC1)
             block.setEnabled(vcb.isChecked())
             self.ecu_block_list.append(block)
             ec_vbox.addWidget(block)
 
         self.ec_group.setLayout(ec_vbox)
         layout.addWidget(self.ec_group)
-        # self.ec_group.setEnabled(vcb.isChecked())
-        # self.ec_group.setEnabled(checked)
-        vcb.toggled.connect(lambda checked: [self.on_change_update_ok_btn_state(), self.ecu_block_list[0].setEnabled(checked), self.ecu_block_list[1].setEnabled(checked), self.ecu_block_list[2].setEnabled(checked)])#, self.ok_btn.setDisabled(False)])
+        vcb.toggled.connect(lambda checked: [self.on_change_update_ok_btn_state(), self.ecu_block_list[0].setEnabled(checked), self.ecu_block_list[1].setEnabled(checked), self.ecu_block_list[2].setEnabled(checked)])
 
-
-        self.rcar_cb.toggled.connect(lambda checked: [self.ecu_block_list[0].setVisible(checked), self.on_change_update_ok_btn_state()])#, self.ok_btn.setDisabled(False)])
-        self.soc0_cb.toggled.connect(lambda checked: [self.ecu_block_list[1].setVisible(checked), self.on_change_update_ok_btn_state()])#, self.ok_btn.setDisabled(False)])
-        self.soc1_cb.toggled.connect(lambda checked: [self.ecu_block_list[2].setVisible(checked), self.on_change_update_ok_btn_state()])#, self.ok_btn.setDisabled(False)])
 
         # OK/Cancel
         btn_h = QHBoxLayout()
@@ -255,7 +194,6 @@ class StartupTimeConfig(QDialog):
         layout.addLayout(btn_h)
 
         self.on_change_update_ok_btn_state()
-        # self.ok_btn.setDisabled(True)        
 
     def ok_clicked(self):
         self.save_config()
@@ -264,23 +202,6 @@ class StartupTimeConfig(QDialog):
     def done(self, result):
         print("Startup Time configuration window closed successfully")
         super().done(result)
-
-    def on_radio_changed(self, checked):
-        # self.ok_btn.setDisabled(False)
-        visible = self.elite_radio.isChecked()
-        self.board_selection_group.setDisabled(False)
-        if visible:
-            self.soc0_cb.setDisabled(False)
-            self.soc1_cb.setDisabled(False)
-            self.soc0_cb.setChecked(False)
-            self.soc1_cb.setChecked(False)
-        else:
-            self.soc0_cb.setDisabled(True)
-            self.soc1_cb.setDisabled(True)
-            self.soc0_cb.setChecked(False)
-            self.soc1_cb.setChecked(False)
-        # for i in (1, 2):
-        #     self.ecu_block_list[i].setVisible(visible)
 
     def _create_ecu_block(self, data, idx):
         gb = QGroupBox(data.get('ecu-type'))
@@ -335,19 +256,9 @@ class StartupTimeConfig(QDialog):
             if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0):
                 enabled = False
         if enabled:
-            if not self.padas_radio.isChecked() and not self.elite_radio.isChecked():
-                enabled = False
-            elif not self.rcar_cb.isChecked() and not self.soc0_cb.isChecked() and not self.soc1_cb.isChecked():
-                enabled = False
-        if enabled:
             vcb = self.widgets['validate-startup-order']
             if vcb.isChecked():
-                # if not self.padas_radio.isChecked() and not self.elite_radio.isChecked():
-                #     enabled = False
-                # elif not self.rcar_cb.isChecked() and not self.soc0_cb.isChecked() and not self.soc1_cb.isChecked():
-                #     enabled = False
-                # else:
-                if enabled and self.rcar_cb.isChecked():
+                if enabled and self.isRCAR:
                     if len(self.widgets['ecu-config'][0]['startup']) == 0:
                         enabled=False
                     else:
@@ -355,7 +266,7 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-                if enabled and self.soc0_cb.isChecked():
+                if enabled and self.isSOC0:
                     if len(self.widgets['ecu-config'][1]['startup']) == 0:
                         enabled=False
                     else:
@@ -363,7 +274,7 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-                if enabled and self.soc1_cb.isChecked():
+                if enabled and self.isSOC1:
                     if len(self.widgets['ecu-config'][2]['startup']) == 0:
                         enabled=False
                     else:
@@ -411,12 +322,12 @@ class StartupTimeConfig(QDialog):
             'dltViewerPath': self.widgets['windows.dltViewerPath'].text()
         }
         data['PADAS'] = {
-            'RCAR': self.rcar_cb.isChecked() and self.padas_radio.isChecked()
+            'RCAR': self.isPadas and self.isRCAR
         }
         data['Elite'] = {
-                'RCAR': self.rcar_cb.isChecked() and self.elite_radio.isChecked(),
-                'SoC0': self.soc0_cb.isChecked() and self.elite_radio.isChecked(),
-                'SoC1': self.soc1_cb.isChecked() and self.elite_radio.isChecked()
+                'RCAR': self.isRCAR and self.isElite,
+                'SoC0': self.isSOC0 and self.isElite,
+                'SoC1': self.isSOC1 and self.isElite
         }
         ec = []
         for idx, item in enumerate(self.widgets['ecu-config']):
