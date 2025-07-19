@@ -318,22 +318,12 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-                        # Check threshold entries for RCAR
-                        for entry in self.widgets['ecu-config'][0]['threshold']:
-                            if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
-                                enabled = False
-                                break
                 if enabled and self.isSOC0:
                     if len(self.widgets['ecu-config'][1]['startup']) == 0:
                         enabled=False
                     else:
                         for entry in self.widgets['ecu-config'][1]['startup']:
                             if not entry[2].text() or len(entry[2].text()) == 0:
-                                enabled = False
-                                break
-                        # Check threshold entries for SoC0
-                        for entry in self.widgets['ecu-config'][1]['threshold']:
-                            if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
                 if enabled and self.isSOC1:
@@ -344,12 +334,24 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-                        # Check threshold entries for SoC1
-                        for entry in self.widgets['ecu-config'][2]['threshold']:
-                            if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
-                                enabled = False
-                                break
-                    # print(idx, len(ecu_widgets['startup']))
+        if enabled:
+            # Check threshold entries for RCAR
+            for entry in self.widgets['ecu-config'][0]['threshold']:
+                if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                    enabled = False
+                    break
+        if enabled:
+            # Check threshold entries for SoC0
+            for entry in self.widgets['ecu-config'][1]['threshold']:
+                if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                    enabled = False
+                    break
+        if enabled:
+            # Check threshold entries for SoC1
+            for entry in self.widgets['ecu-config'][2]['threshold']:
+                if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                    enabled = False
+                    break
 
         self.ok_btn.setEnabled(enabled)
            
