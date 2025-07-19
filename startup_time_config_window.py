@@ -47,8 +47,9 @@ class StartupTimeConfig(QDialog):
         self.config_data = self.load_config()
         self.widgets = {}
         self.ecu_block_list = []
-        self.isElite, self.isPadas = False, False
-        self.isRCAR, self.isSOC0, self.isSOC1 = False, False, False
+        self.startup_group_list = []
+        self.isElite, self.isPadas = True, False
+        self.isRCAR, self.isSOC0, self.isSOC1 = True, True, True
 
         self.init_ui()
    
@@ -176,13 +177,14 @@ class StartupTimeConfig(QDialog):
                 block.setVisible(self.isSOC0)
             elif ecu_type=='SoC1':
                 block.setVisible(self.isSOC1)
-            block.setEnabled(vcb.isChecked())
+            for startup_group in self.startup_group_list:
+                startup_group.setEnabled(vcb.isChecked()) 
             self.ecu_block_list.append(block)
             ec_vbox.addWidget(block)
 
         self.ec_group.setLayout(ec_vbox)
         layout.addWidget(self.ec_group)
-        vcb.toggled.connect(lambda checked: [self.on_change_update_ok_btn_state(), self.ecu_block_list[0].setEnabled(checked), self.ecu_block_list[1].setEnabled(checked), self.ecu_block_list[2].setEnabled(checked)])
+        vcb.toggled.connect(lambda checked: [self.on_change_update_ok_btn_state()] + [startup_group.setEnabled(checked) for startup_group in self.startup_group_list])
 
 
         # OK/Cancel
@@ -206,18 +208,42 @@ class StartupTimeConfig(QDialog):
     def _create_ecu_block(self, data, idx):
         gb = QGroupBox(data.get('ecu-type'))
         vbox = QVBoxLayout()
-        fl = QFormLayout()
-        entries = []
+        
+        # Startup Order Section
+        startup_group = QGroupBox('Startup Order')
+        startup_vbox = QVBoxLayout()
+        startup_fl = QFormLayout()
+        startup_entries = []
         for order in data.get('startup-order', []):
             row, tp, apps, count_lbl = self._create_startup_row(order.get('type', ''), order.get('apps', ''), idx)
-            fl.addRow(row)
-            entries.append((row, tp, apps))
-        add_btn = QPushButton('Add Startup Order')
-        add_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(i), self.on_change_update_ok_btn_state()])
-        vbox.addLayout(fl)
-        vbox.addWidget(add_btn, alignment=Qt.AlignLeft)
+            startup_fl.addRow(row)
+            startup_entries.append((row, tp, apps))
+        add_startup_btn = QPushButton('Add Startup Order')
+        add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(i), self.on_change_update_ok_btn_state()])
+        startup_vbox.addLayout(startup_fl)
+        startup_vbox.addWidget(add_startup_btn, alignment=Qt.AlignLeft)
+        startup_group.setLayout(startup_vbox)
+
+        # Threshold Config Section
+        self.threshold_group = QGroupBox('Threshold Config')
+        threshold_vbox = QVBoxLayout()
+        threshold_fl = QFormLayout()
+        threshold_entries = []
+        for threshold in data.get('threshold-config', []):
+            row, apps, thresh, count_lbl = self._create_threshold_row(threshold.get('application-group', ''), threshold.get('threshold-in-seconds', ''), idx)
+            threshold_fl.addRow(row)
+            threshold_entries.append((row, apps, thresh))
+        add_threshold_btn = QPushButton('Add Threshold Config')
+        add_threshold_btn.clicked.connect(lambda _, i=idx: [self.add_threshold_row(i), self.on_change_update_ok_btn_state()])
+        threshold_vbox.addLayout(threshold_fl)
+        threshold_vbox.addWidget(add_threshold_btn, alignment=Qt.AlignLeft)
+        self.threshold_group.setLayout(threshold_vbox)
+
+        vbox.addWidget(startup_group)
+        vbox.addWidget(self.threshold_group)
         gb.setLayout(vbox)
-        self.widgets['ecu-config'].append({'layout': fl, 'startup': entries})
+        self.startup_group_list.append(startup_group)
+        self.widgets['ecu-config'].append({'startup_layout': startup_fl, 'startup': startup_entries, 'threshold_layout': threshold_fl, 'threshold': threshold_entries})
         return gb
 
     def _create_startup_row(self, type_val, apps_val, ecu_idx):
@@ -243,6 +269,32 @@ class StartupTimeConfig(QDialog):
         hl.addWidget(rem)
         return row, dd, apps, count_lbl
 
+    def _create_threshold_row(self, apps_val, threshold_val, ecu_idx):
+        row = QWidget()
+        hl = QHBoxLayout(); row.setLayout(hl)
+        
+        apps = QLineEdit(apps_val)
+        apps.setPlaceholderText('App1, App2, App3')
+        apps.setMaxLength(250)
+        count_lbl = QLabel(f"{len(apps.text())} / {apps.maxLength()}")
+        apps.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {apps.maxLength()}"), self.on_change_update_ok_btn_state()])
+
+        thresh = QLineEdit(str(threshold_val))
+        thresh.setPlaceholderText('5')
+        thresh.setValidator(CustomIntValidator(1, 100))
+        thresh.setFixedWidth(80)
+        thresh.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
+
+        rem = QPushButton('Remove')
+        rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_threshold_row(i, r), self.on_change_update_ok_btn_state()])
+
+        hl.addWidget(QLabel('applications')); hl.addWidget(apps)
+        hl.addWidget(count_lbl)
+        hl.addWidget(QLabel('threshold')); hl.addWidget(thresh)
+        hl.addWidget(QLabel('sec'))
+        hl.addWidget(rem)
+        return row, apps, thresh, count_lbl
+
     def on_change_update_ok_btn_state(self):
         enabled = True
         for key in ['script-execution-time-in-seconds', 'iterations', 'threshold-in-seconds']:
@@ -266,12 +318,22 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
+                        # Check threshold entries for RCAR
+                        for entry in self.widgets['ecu-config'][0]['threshold']:
+                            if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                                enabled = False
+                                break
                 if enabled and self.isSOC0:
                     if len(self.widgets['ecu-config'][1]['startup']) == 0:
                         enabled=False
                     else:
                         for entry in self.widgets['ecu-config'][1]['startup']:
                             if not entry[2].text() or len(entry[2].text()) == 0:
+                                enabled = False
+                                break
+                        # Check threshold entries for SoC0
+                        for entry in self.widgets['ecu-config'][1]['threshold']:
+                            if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
                 if enabled and self.isSOC1:
@@ -282,6 +344,11 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
+                        # Check threshold entries for SoC1
+                        for entry in self.widgets['ecu-config'][2]['threshold']:
+                            if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                                enabled = False
+                                break
                     # print(idx, len(ecu_widgets['startup']))
 
         self.ok_btn.setEnabled(enabled)
@@ -290,19 +357,35 @@ class StartupTimeConfig(QDialog):
         # self.ok_btn.setDisabled(False)
         entry = self.widgets['ecu-config'][idx]
         row, dd, apps, count_lbl = self._create_startup_row('', '', idx)
-        entry['layout'].addRow(row)
+        entry['startup_layout'].addRow(row)
         entry['startup'].append((row, dd, apps))
 
     def remove_startup_row(self, idx, row):
         # self.ok_btn.setDisabled(False)
         entry = self.widgets['ecu-config'][idx]
-        fl = entry['layout']
+        fl = entry['startup_layout']
         for i in range(fl.rowCount()):
             w = fl.itemAt(i, QFormLayout.FieldRole).widget()
             if w is row:
                 fl.removeRow(i)
                 break
         entry['startup'] = [e for e in entry['startup'] if e[0] is not row]
+
+    def add_threshold_row(self, idx):
+        entry = self.widgets['ecu-config'][idx]
+        row, apps, thresh, count_lbl = self._create_threshold_row('', '', idx)
+        entry['threshold_layout'].addRow(row)
+        entry['threshold'].append((row, apps, thresh))
+
+    def remove_threshold_row(self, idx, row):
+        entry = self.widgets['ecu-config'][idx]
+        fl = entry['threshold_layout']
+        for i in range(fl.rowCount()):
+            w = fl.itemAt(i, QFormLayout.FieldRole).widget()
+            if w is row:
+                fl.removeRow(i)
+                break
+        entry['threshold'] = [e for e in entry['threshold'] if e[0] is not row]
 
     def browse_path(self, line_edit):
         path, _ = QFileDialog.getOpenFileName(self, 'Select dlt-viewer executable')
@@ -332,9 +415,12 @@ class StartupTimeConfig(QDialog):
         ec = []
         for idx, item in enumerate(self.widgets['ecu-config']):
             title = self.ecu_block_list[idx].title()
-            ec_item = {'ecu-type': title, 'startup-order': []}
+            ec_item = {'ecu-type': title, 'startup-order': [], 'threshold-config': []}
             for _, dd, apps in item['startup']:
                 ec_item['startup-order'].append({'type': dd.currentText(), 'apps': apps.text()})
+            for _, apps, thresh in item['threshold']:
+                if thresh.text():  # Only save if threshold value is provided
+                    ec_item['threshold-config'].append({'application-group': apps.text(), 'threshold-in-seconds': int(thresh.text())})
             ec.append(ec_item)
         data['ecu-config'] = ec
         try:
