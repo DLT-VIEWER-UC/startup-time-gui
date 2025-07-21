@@ -3078,7 +3078,7 @@ def start_startup_time_measurement():
 
         isSuccess = True
         anySheet = []
-        config = load_config('startup_time_config.yml')      
+        config = load_config('startup_time_config.json')      
        
         # Check if the configuration is empty
         if config is None:
