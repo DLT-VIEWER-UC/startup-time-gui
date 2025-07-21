@@ -285,25 +285,42 @@ class StartupTimeConfig(QDialog):
 
     def _create_startup_row(self, type_val, apps_val, ecu_idx):
         row = QWidget()
-        hl = QHBoxLayout(); row.setLayout(hl)
+        main_layout = QHBoxLayout(); row.setLayout(main_layout)
+        
+        # Left side - form layout for type and apps
+        left_widget = QWidget()
+        left_form = QFormLayout(left_widget)
+        left_form.setContentsMargins(0, 0, 0, 0)
+        
+        # Type row
         dd = QComboBox(); dd.addItems(["Sequential", "Parallel"])
+        dd.setFixedWidth(150)  # Set fixed width to 150 pixels
         idx = dd.findText(type_val)
         dd.setCurrentIndex(idx if idx != -1 else 0)
         # dd.currentIndexChanged.connect(lambda idx: self.ok_btn.setEnabled(True))
-       
+        
+        # Apps row
         apps = QLineEdit(apps_val)
         apps.setPlaceholderText('App1, App2')
         apps.setMaxLength(250)
         count_lbl = QLabel(f"{len(apps.text())} / {apps.maxLength()}")
-        apps.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {apps.maxLength()}"), self.on_change_update_ok_btn_state()])#, self.ok_btn.setDisabled(False)])
+        apps.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {apps.maxLength()}"), self.on_change_update_ok_btn_state()])
+
+        apps_row = QWidget()
+        apps_hl = QHBoxLayout(apps_row)
+        apps_hl.setContentsMargins(0, 0, 0, 0)
+        apps_hl.addWidget(apps)
+        apps_hl.addWidget(count_lbl)
+        
+        left_form.addRow(QLabel('type'), dd)
+        left_form.addRow(QLabel('apps'), apps_row)
 
         rem = QPushButton('Remove')
         rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_startup_row(i, r), self.on_change_update_ok_btn_state()])
-
-        hl.addWidget(QLabel('type')); hl.addWidget(dd)
-        hl.addWidget(QLabel('apps')); hl.addWidget(apps)
-        hl.addWidget(count_lbl)
-        hl.addWidget(rem)
+        
+        main_layout.addWidget(left_widget)
+        main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
+        
         return row, dd, apps, count_lbl
 
     def _create_threshold_row(self, apps_val, threshold_val, ecu_idx):
