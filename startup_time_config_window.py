@@ -308,28 +308,50 @@ class StartupTimeConfig(QDialog):
 
     def _create_threshold_row(self, apps_val, threshold_val, ecu_idx):
         row = QWidget()
-        hl = QHBoxLayout(); row.setLayout(hl)
+        main_layout = QHBoxLayout(); row.setLayout(main_layout)
         
+        # Left side - form layout for apps and threshold
+        left_widget = QWidget()
+        left_form = QFormLayout(left_widget)
+        left_form.setContentsMargins(0, 0, 0, 0)
+        
+        # Applications row
         apps = QLineEdit(apps_val)
         apps.setPlaceholderText('App1, App2, App3')
         apps.setMaxLength(250)
         count_lbl = QLabel(f"{len(apps.text())} / {apps.maxLength()}")
         apps.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {apps.maxLength()}"), self.on_change_update_ok_btn_state()])
 
+        apps_row = QWidget()
+        apps_hl = QHBoxLayout(apps_row)
+        apps_hl.setContentsMargins(0, 0, 0, 0)
+        apps_hl.addWidget(apps)
+        apps_hl.addWidget(count_lbl)
+        
+        # Threshold row
         thresh = QLineEdit(str(threshold_val))
         thresh.setPlaceholderText('5')
         thresh.setValidator(CustomIntValidator(1, 100))
         thresh.setFixedWidth(80)
         thresh.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
-
+        
+        thresh_row = QWidget()
+        thresh_hl = QHBoxLayout(thresh_row)
+        thresh_hl.setContentsMargins(0, 0, 0, 0)
+        thresh_hl.addWidget(thresh)
+        thresh_hl.addWidget(QLabel('sec'))
+        thresh_hl.addStretch()  # Push everything to the left
+        
+        left_form.addRow(QLabel('applications'), apps_row)
+        left_form.addRow(QLabel('threshold'), thresh_row)
+        
+        # Right side - Remove button (centered vertically)
         rem = QPushButton('Remove')
         rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_threshold_row(i, r), self.on_change_update_ok_btn_state()])
-
-        hl.addWidget(QLabel('applications')); hl.addWidget(apps)
-        hl.addWidget(count_lbl)
-        hl.addWidget(QLabel('threshold')); hl.addWidget(thresh)
-        hl.addWidget(QLabel('sec'))
-        hl.addWidget(rem)
+        
+        main_layout.addWidget(left_widget)
+        main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
+        
         return row, apps, thresh, count_lbl
 
     def on_change_update_ok_btn_state(self):
