@@ -19,6 +19,10 @@ baudrate-relay: 9600
 # Toggle the validation of the order on and off
 validate-startup-order: true
 
+capture-logs-from-dlt-viewer: true
+use-default-path: true
+logs-folder-path: ""
+
 # Windows-specific settings
 windows:
   # Flag to indicate if the path is set
