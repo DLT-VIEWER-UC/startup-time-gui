@@ -30,23 +30,23 @@ class CustomIntValidator(QIntValidator):
            
 class StartupTimeConfig(QDialog):
     DEFAULT_CONFIG = {
-        # 'script-execution-time-in-seconds': 0,
-        # 'iterations': 0,
-        # 'threshold-in-seconds': 0,
-        'validate-startup-order': False,
-        'windows': {'isPathSet': False, 'dltViewerPath': ''},
+        # 'DLT-Viewer Log Capture Time': 0,
+        # 'Iterations': 0,
+        # 'Threshold': 0,
+        'Startup Order Judgement': False,
+        'windows': {'Is Environment Path Set': False, 'DLT-Viewer Installed Path': ''},
         'ecu-config': []
     }
     CONFIG_GUI_FIELD_MAPPING = {
-        'script-execution-time-in-seconds': 'DLT-Viewer Log Capture Time',
-        'threshold-in-seconds': 'Threshold',
-        'iterations': 'Iterations',
-        'validate-startup-order': 'Startup Order Judgement',
-        'isPathSet': 'Is Environment Path Set',
-        'dltViewerPath': 'DLT-Viewer Installed Path',
-        'capture-logs-from-dlt-viewer': 'Pre-Generated Logs',
+        'DLT-Viewer Log Capture Time': 'DLT-Viewer Log Capture Time',
+        'Threshold': 'Threshold',
+        'Iterations': 'Iterations',
+        'Startup Order Judgement': 'Startup Order Judgement',
+        'Is Environment Path Set': 'Is Environment Path Set',
+        'DLT-Viewer Installed Path': 'DLT-Viewer Installed Path',
+        'Pre-Generated Logs': 'Pre-Generated Logs',
         'logs-folder-path': 'Pre-Generated Logs Folder Path',
-        'apps': 'Applications',
+        'Applications': 'Applications',
         'use-default-path': 'Use Default Path'
     }
 
@@ -131,12 +131,12 @@ class StartupTimeConfig(QDialog):
 
         # General Settings
         general_group = QGroupBox('General Settings')
-        general_group.setFixedHeight(225)
+        general_group.setFixedHeight(180)
         general_layout = QFormLayout()
         for key, validator in [
-            ('script-execution-time-in-seconds', CustomIntValidator(1, 500)),
-            ('iterations', CustomIntValidator(1, 50)),
-            ('threshold-in-seconds', CustomIntValidator(1, 100))
+            ('DLT-Viewer Log Capture Time', CustomIntValidator(1, 500)),
+            ('Iterations', CustomIntValidator(1, 50)),
+            ('Threshold', CustomIntValidator(1, 100))
         ]:
             widgets_lst = list()
             le = QLineEdit(str(self.config_data.get(key, '')))
@@ -147,55 +147,35 @@ class StartupTimeConfig(QDialog):
             widgets_lst.append(le)
             row_layout = QHBoxLayout()
             row_layout.addWidget(le)
-            if key != 'iterations':
+            if key != 'Iterations':
                 sec_lbl = QLabel('sec')
                 row_layout.addWidget(sec_lbl)
                 widgets_lst.append(sec_lbl)
-            key_lbl = QLabel(self.CONFIG_GUI_FIELD_MAPPING.get(key, key))
+            key_lbl = QLabel(key)
             widgets_lst.append(key_lbl)
             general_layout.addRow(key_lbl, row_layout)
             self.widgets[key] = widgets_lst
-        vcb = QCheckBox(); vcb.setChecked(self.config_data.get('validate-startup-order', False))
-        general_layout.addRow(QLabel(self.CONFIG_GUI_FIELD_MAPPING.get('validate-startup-order', 'validate-startup-order')), vcb)
-        self.widgets['validate-startup-order'] = vcb
-        capture_logs_cb = QCheckBox(); capture_logs_cb.setChecked(not self.config_data.get('capture-logs-from-dlt-viewer', False))
-        general_layout.addRow(QLabel(self.CONFIG_GUI_FIELD_MAPPING.get('capture-logs-from-dlt-viewer', 'capture-logs-from-dlt-viewer')), capture_logs_cb)
-        self.widgets['capture-logs-from-dlt-viewer'] = capture_logs_cb
-        use_default_path_cb = QCheckBox('(./Default/Path)'); use_default_path_cb.setChecked(self.config_data.get('use-default-path', True))
-        use_default_path_lbl = QLabel(self.CONFIG_GUI_FIELD_MAPPING.get('use-default-path', 'use-default-path'))
-        general_layout.addRow(use_default_path_lbl, use_default_path_cb)
-        self.widgets['use-default-path'] = use_default_path_cb
-
-        # Path line edit with char count
-        logs_folder_path_le = QLineEdit(self.config_data.get('logs-folder-path', ''))
-        logs_folder_path_le.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
-        logs_folder_path_le.setMaxLength(250)
-        logs_folder_path_count_lbl = QLabel(f"{len(logs_folder_path_le.text())} / {logs_folder_path_le.maxLength()}")
-        logs_folder_path_le.textChanged.connect(lambda text: logs_folder_path_count_lbl.setText(f"{len(text)} / {logs_folder_path_le.maxLength()}"))
-        logs_folder_path_browse_btn = QPushButton('Browse')
-        logs_folder_path_browse_btn.clicked.connect(lambda: self.browse_log_folder_path(logs_folder_path_le))
-        logs_folder_path_hl = QHBoxLayout()
-        logs_folder_path_lbl = QLabel(self.CONFIG_GUI_FIELD_MAPPING.get('logs-folder-path', 'logs-folder-path'))
-        logs_folder_path_hl.addWidget(logs_folder_path_lbl)
-        logs_folder_path_hl.addWidget(logs_folder_path_le)
-        logs_folder_path_hl.addWidget(logs_folder_path_browse_btn)
-        logs_folder_path_hl.addWidget(logs_folder_path_count_lbl)
-        general_layout.addRow(logs_folder_path_hl)
+        vcb = QCheckBox(); vcb.setChecked(self.config_data.get('Startup Order Judgement', False))
+        general_layout.addRow(QLabel('Startup Order Judgement'), vcb)
+        self.widgets['Startup Order Judgement'] = vcb
+        pre_gen_logs_cb = QCheckBox(); pre_gen_logs_cb.setChecked(self.config_data.get('Pre-Generated Logs', False))
+        general_layout.addRow(QLabel('Pre-Generated Logs'), pre_gen_logs_cb)
+        self.widgets['Pre-Generated Logs'] = pre_gen_logs_cb
+        
         general_group.setLayout(general_layout)
         layout.addWidget(general_group)
-        self.widgets['logs-folder-path'] = logs_folder_path_le
 
         # Windows Settings
         win_group = QGroupBox('DLT Viewer Path Settings')
         win_group.setFixedHeight(100)
         win_layout = QFormLayout()
         win = self.config_data.get('windows', {})
-        path_cb = QCheckBox(); path_cb.setChecked(win.get('isPathSet', False))
-        win_layout.addRow(QLabel(self.CONFIG_GUI_FIELD_MAPPING.get('isPathSet', 'isPathSet')), path_cb)
-        self.widgets['windows.isPathSet'] = path_cb
+        path_cb = QCheckBox(); path_cb.setChecked(win.get('Is Environment Path Set', False))
+        win_layout.addRow(QLabel('Is Environment Path Set'), path_cb)
+        self.widgets['windows.Is Environment Path Set'] = path_cb
 
         # Path line edit with char count
-        path_le = QLineEdit(win.get('dltViewerPath', ''))
+        path_le = QLineEdit(win.get('DLT-Viewer Installed Path', ''))
         path_le.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
         path_le.setMaxLength(250)
         count_lbl = QLabel(f"{len(path_le.text())} / {path_le.maxLength()}")
@@ -206,9 +186,9 @@ class StartupTimeConfig(QDialog):
         hl.addWidget(path_le)
         hl.addWidget(browse_btn)
         hl.addWidget(count_lbl)
-        dlt_path_lbl = QLabel(self.CONFIG_GUI_FIELD_MAPPING.get('dltViewerPath', 'dltViewerPath'))
+        dlt_path_lbl = QLabel('DLT-Viewer Installed Path')
         win_layout.addRow(dlt_path_lbl, hl)
-        self.widgets['windows.dltViewerPath'] = path_le
+        self.widgets['windows.DLT-Viewer Installed Path'] = path_le
         win_group.setLayout(win_layout)
         layout.addWidget(win_group)
 
@@ -244,23 +224,10 @@ class StartupTimeConfig(QDialog):
         self.ec_group.setLayout(ec_vbox)
         layout.addWidget(self.ec_group)
         vcb.toggled.connect(lambda checked: [self.on_change_update_ok_btn_state()] + [startup_group.setEnabled(checked) for startup_group in self.startup_group_list])
-        capture_logs_cb.toggled.connect(lambda checked: [
+        pre_gen_logs_cb.toggled.connect(lambda checked: [
             self.on_change_update_ok_btn_state(),
-            use_default_path_lbl.setEnabled(checked),
-            use_default_path_cb.setEnabled(checked),
-            logs_folder_path_lbl.setEnabled(checked and not use_default_path_cb.isChecked()),
-            logs_folder_path_le.setEnabled(checked and not use_default_path_cb.isChecked()), 
-            logs_folder_path_browse_btn.setEnabled(checked and not use_default_path_cb.isChecked()), 
-            logs_folder_path_count_lbl.setEnabled(checked and not use_default_path_cb.isChecked()),
             win_group.setDisabled(checked)] + [
-            w.setDisabled(checked) for w in self.widgets['script-execution-time-in-seconds']
-        ])
-        use_default_path_cb.toggled.connect(lambda checked: [
-            self.on_change_update_ok_btn_state(),
-            logs_folder_path_lbl.setDisabled(checked),
-            logs_folder_path_le.setDisabled(checked), 
-            logs_folder_path_browse_btn.setDisabled(checked), 
-            logs_folder_path_count_lbl.setDisabled(checked)
+            w.setDisabled(checked) for w in self.widgets['DLT-Viewer Log Capture Time']
         ])
 
         # OK/Cancel
@@ -272,8 +239,7 @@ class StartupTimeConfig(QDialog):
         layout.addLayout(btn_h)
 
         # Trigger check box toggled event to set initial state
-        capture_logs_cb.toggled.emit(capture_logs_cb.isChecked())
-        use_default_path_cb.toggled.emit(use_default_path_cb.isChecked())
+        pre_gen_logs_cb.toggled.emit(pre_gen_logs_cb.isChecked())
         self.on_change_update_ok_btn_state()
 
     def ok_clicked(self):
@@ -294,7 +260,7 @@ class StartupTimeConfig(QDialog):
         startup_fl = QFormLayout()
         startup_entries = []
         for order in data.get('startup-order', []):
-            row, tp, apps, count_lbl = self._create_startup_row(order.get('type', ''), order.get('apps', ''), idx)
+            row, tp, apps, count_lbl = self._create_startup_row(order.get('Order Type', ''), order.get('Applications', ''), idx)
             startup_fl.addRow(row)
             startup_entries.append((row, tp, apps))
         add_startup_btn = QPushButton('Add Startup Order')
@@ -309,7 +275,7 @@ class StartupTimeConfig(QDialog):
         threshold_fl = QFormLayout()
         threshold_entries = []
         for threshold in data.get('threshold-config', []):
-            row, apps, thresh, count_lbl = self._create_threshold_row(threshold.get('application-group', ''), threshold.get('threshold-in-seconds', ''), idx)
+            row, apps, thresh, count_lbl = self._create_threshold_row(threshold.get('Applications', ''), threshold.get('Threshold', ''), idx)
             threshold_fl.addRow(row)
             threshold_entries.append((row, apps, thresh))
         add_threshold_btn = QPushButton('Add Threshold Config')
@@ -355,7 +321,7 @@ class StartupTimeConfig(QDialog):
         apps_hl.addWidget(count_lbl)
         
         left_form.addRow(QLabel('Order Type'), dd)
-        left_form.addRow(QLabel(self.CONFIG_GUI_FIELD_MAPPING.get('apps', 'apps')), apps_row)
+        left_form.addRow(QLabel('Applications'), apps_row)
 
         rem = QPushButton('Remove')
         rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_startup_row(i, r), self.on_change_update_ok_btn_state()])
@@ -401,8 +367,8 @@ class StartupTimeConfig(QDialog):
         thresh_hl.addWidget(QLabel('sec'))
         thresh_hl.addStretch()  # Push everything to the left
 
-        left_form.addRow(QLabel(self.CONFIG_GUI_FIELD_MAPPING['apps']), apps_row)
-        left_form.addRow(QLabel(self.CONFIG_GUI_FIELD_MAPPING['threshold-in-seconds']), thresh_row)
+        left_form.addRow(QLabel('Applications'), apps_row)
+        left_form.addRow(QLabel('Threshold'), thresh_row)
 
         # Right side - Remove button (centered vertically)
         rem = QPushButton('Remove')
@@ -415,20 +381,20 @@ class StartupTimeConfig(QDialog):
 
     def on_change_update_ok_btn_state(self):
         enabled = True
-        for key in ['script-execution-time-in-seconds', 'iterations', 'threshold-in-seconds']:
-            if key == 'script-execution-time-in-seconds' and self.widgets['capture-logs-from-dlt-viewer'].isChecked():
+        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Threshold']:
+            if key == 'DLT-Viewer Log Capture Time' and self.widgets['Pre-Generated Logs'].isChecked():
                 continue
             text = self.widgets[key][0].text()
             if not text or len(text) == 0:
                 enabled = False
                 break
-        if enabled and not self.widgets['capture-logs-from-dlt-viewer'].isChecked():
-            path_cb = self.widgets['windows.isPathSet']
-            path_le = self.widgets['windows.dltViewerPath']
+        if enabled and not self.widgets['Pre-Generated Logs'].isChecked():
+            path_cb = self.widgets['windows.Is Environment Path Set']
+            path_le = self.widgets['windows.DLT-Viewer Installed Path']
             if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0):
                 enabled = False
         if enabled:
-            vcb = self.widgets['validate-startup-order']
+            vcb = self.widgets['Startup Order Judgement']
             if vcb.isChecked():
                 if enabled and self.isRCAR:
                     if len(self.widgets['ecu-config'][0]['startup']) == 0:
@@ -472,10 +438,6 @@ class StartupTimeConfig(QDialog):
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
                     break
-        if enabled and self.widgets['capture-logs-from-dlt-viewer'].isChecked() and not self.widgets['use-default-path'].isChecked():
-            path = self.widgets['logs-folder-path'].text()
-            if not path or len(path) == 0:
-                enabled = False
 
         self.ok_btn.setEnabled(enabled)
            
@@ -514,7 +476,7 @@ class StartupTimeConfig(QDialog):
         entry['threshold'] = [e for e in entry['threshold'] if e[0] is not row]
 
     def browse_path(self, line_edit):
-        path, _ = QFileDialog.getOpenFileName(self, 'Select dlt-viewer executable')
+        path, _ = QFileDialog.getOpenFileName(self, 'Select dlt-viewer executable', '', 'Executable Files (*.exe)')
         if path:
             line_edit.setText(path)
 
@@ -525,18 +487,16 @@ class StartupTimeConfig(QDialog):
 
     def save_config(self):
         data = {}
-        for key in ['script-execution-time-in-seconds', 'iterations', 'threshold-in-seconds']:
+        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Threshold']:
             w = self.widgets[key][0]
             # print(w.text())
             if w.text() and len(w.text())>0:
                 data[key] = int(w.text())
-        data['validate-startup-order'] = self.widgets['validate-startup-order'].isChecked()
-        data['capture-logs-from-dlt-viewer'] = not self.widgets['capture-logs-from-dlt-viewer'].isChecked()
-        data['use-default-path'] = self.widgets['use-default-path'].isChecked()
-        data['logs-folder-path'] = self.widgets['logs-folder-path'].text()
+        data['Startup Order Judgement'] = self.widgets['Startup Order Judgement'].isChecked()
+        data['Pre-Generated Logs'] = self.widgets['Pre-Generated Logs'].isChecked()
         data['windows'] = {
-            'isPathSet': self.widgets['windows.isPathSet'].isChecked(),
-            'dltViewerPath': self.widgets['windows.dltViewerPath'].text()
+            'Is Environment Path Set': self.widgets['windows.Is Environment Path Set'].isChecked(),
+            'DLT-Viewer Installed Path': self.widgets['windows.DLT-Viewer Installed Path'].text()
         }
         data['PADAS'] = {
             'RCAR': self.isPadas and self.isRCAR
@@ -551,10 +511,10 @@ class StartupTimeConfig(QDialog):
             title = self.ecu_block_list[idx].title()
             ec_item = {'ecu-type': title, 'startup-order': [], 'threshold-config': []}
             for _, dd, apps in item['startup']:
-                ec_item['startup-order'].append({'type': dd.currentText(), 'apps': apps.text()})
+                ec_item['startup-order'].append({'Order Type': dd.currentText(), 'Applications': apps.text()})
             for _, apps, thresh in item['threshold']:
                 if thresh.text():  # Only save if threshold value is provided
-                    ec_item['threshold-config'].append({'application-group': apps.text(), 'threshold-in-seconds': int(thresh.text())})
+                    ec_item['threshold-config'].append({'Applications': apps.text(), 'Threshold': int(thresh.text())})
             ec.append(ec_item)
         data['ecu-config'] = ec
         try:
