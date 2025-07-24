@@ -46,7 +46,6 @@ def round_decimal_half_up(number, decimals=0):
     multiplier = 10 ** decimals
     return float(Decimal(str(number * multiplier)).quantize(Decimal('1'), rounding=ROUND_HALF_UP)) / multiplier
 
-logger = None
 cur_dt_time_obj = None
 local_save_path = None
 workbook_map = None
@@ -179,7 +178,7 @@ def is_valid_ip(ip_str):
     except ValueError:
         return False
 
-def validate_ip_address(ecu_config_list):
+def validate_ip_address(ecu_config_list, logger):
     """
     Validates IP addresses for all ECU configurations in the provided list.
     
@@ -207,7 +206,7 @@ def validate_ip_address(ecu_config_list):
             return False
     return True
 
-def remove_png_files():
+def remove_png_files(logger):
     """
     Removes all PNG image files from the script's directory.
     
@@ -234,7 +233,7 @@ def remove_png_files():
             pass
             logger.info(f"Error deleting file {file}: {e}")
 
-def adjust_column_width(sheet, ecu_type):
+def adjust_column_width(sheet, ecu_type, logger):
     """
     Automatically adjusts column widths in an Excel worksheet based on content length.
     
@@ -741,7 +740,7 @@ def get_log_file_path(ecu_type, setup_type, index):
     # Return the log file path and name
     return filename, logfile, dltfile
 
-def find_log_files_with_keywords(folder_path, keywords):
+def find_log_files_with_keywords(folder_path, keywords, logger):
     """
     Returns a list of .log files in folder_path whose filenames contain any of the keywords.
     """
@@ -755,13 +754,13 @@ def find_log_files_with_keywords(folder_path, keywords):
     ]
     return filtered_files
 
-def extract_log_file_paths(index, ecu_type, setup_type):
+def extract_log_file_paths(index, ecu_type, setup_type, logger):
     parent_dir = local_save_path / "Logs"
     keywords = [ecu_type, setup_type, f'N{index + 1}']
     if setup_type == ECUType.ELITE.value:
-        filtered_files = find_log_files_with_keywords(parent_dir / ecu_type, keywords)
+        filtered_files = find_log_files_with_keywords(parent_dir / ecu_type, keywords, logger)
     elif setup_type == ECUType.PADAS.value:
-        filtered_files = find_log_files_with_keywords(parent_dir, keywords)
+        filtered_files = find_log_files_with_keywords(parent_dir, keywords, logger)
     if not filtered_files or len(filtered_files) == 0:
         logger.warning(f"No log files found for {ecu_type} with setup type {setup_type} and index {index + 1}.")
         if setup_type == ECUType.ELITE.value:
@@ -835,7 +834,7 @@ def get_log_file_paths_for_elite(index, ecu_config_list, setup_type):
     return filename_list
 
 
-def get_expected_startup_order(application_name, application_startup_order):
+def get_expected_startup_order(application_name, application_startup_order, logger):
     """
     Determines the expected startup order position for a given application.
     
@@ -882,7 +881,7 @@ def get_expected_startup_order(application_name, application_startup_order):
     cur_pos = 0
     for order_type, order in application_startup_order:
         if application_name in order:
-            print('order type', order_type, (order_type.lower()), (OrderType.SEQUENTIAL.value))
+            logger.info('order type: %s, %s, %s', order_type, order_type.lower(), OrderType.SEQUENTIAL.value)
             if order_type.lower() == OrderType.SEQUENTIAL.value:
                 return str(cur_pos + order.index(application_name) + 1)
             else:
@@ -894,7 +893,7 @@ def get_expected_startup_order(application_name, application_startup_order):
  
 
 
-def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, threshold, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration):
+def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, threshold, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
     """
     Writes application startup timing data to Excel worksheet with comprehensive validation.
     
@@ -955,14 +954,14 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         else:
             result = 'FAIL'
             overall_IG_ON_cur_iteration['status'] = False
-        print(">>>", process, process, process_timing_info)
+        logger.info(">>> %s, %s, %s", process, process, process_timing_info)
 
         data_row = [position+1, process, round_decimal_half_up(dltstart_line, 3), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 3), threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else threshold, result]
-        print('##',process,validate_startup_order)
+        logger.info('## %s, %s', process, validate_startup_order)
 
         if validate_startup_order:
             # Create a data row for the process
-            expected_order = get_expected_startup_order(process, application_startup_order)
+            expected_order = get_expected_startup_order(process, application_startup_order, logger)
             if not expected_order:
                 expected_order='-'
             data_row.append(str(expected_order))
@@ -994,7 +993,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 data_row = ['-', app, '-', '-', '-', '-', '-']
                
                 if validate_startup_order:
-                    expected_order = get_expected_startup_order(app, application_startup_order)
+                    expected_order = get_expected_startup_order(app, application_startup_order, logger)
                     if not expected_order:
                         expected_order='-'
                     data_row.extend([str(expected_order), 'FAIL', '', '•', ''])
@@ -1211,7 +1210,7 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
     format_excel_cells(summary_sheet, start_row)
 
 
-def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, process_start_times, config):
+def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, process_start_times, config, logger):
     """
     Generates comprehensive statistical analysis and visualizations of application startup performance.
     
@@ -1345,7 +1344,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
     format_excel_cells(sheet, start_row)
    
     # Adjust the column width of the Excel sheet
-    adjust_column_width(sheet, ecu_type)
+    adjust_column_width(sheet, ecu_type, logger)
 
 
 def add_logfile_hyperlink(report_path, log_path, sheet, ecu_type, setup_type):
@@ -1458,7 +1457,7 @@ def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, co
     format_excel_cells(sheet, start_row)
 
 
-def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltstart_timestamps,  process_timing_info, application_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration):
+def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltstart_timestamps,  process_timing_info, application_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
     """
     Generates a comprehensive startup time analysis report for a single test iteration.
     
@@ -1511,7 +1510,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
     start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'startup_time_columns')
 
     # Write the data to the Excel sheet
-    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config.get('Threshold'), config.get('Startup Order Judgement'), application_startup_order_status_iteration, overall_IG_ON_cur_iteration)
+    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config.get('Threshold'), config.get('Startup Order Judgement'), application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
 
     # Plot the differences as a graph
     plot_process_startup_time_graph(dltstart_timestamps, sheet, start_row, ecu_type, False)
@@ -1522,10 +1521,10 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
     generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, config)
 
     # Adjust the column width of the Excel sheet
-    adjust_column_width(sheet, ecu_type)
+    adjust_column_width(sheet, ecu_type, logger)
 
 
-def extract_and_sort_process_timestamps(process_Start_End_timestamps, ecu_type):
+def extract_and_sort_process_timestamps(process_Start_End_timestamps, ecu_type, logger):
     """
     Extracts and sorts process initialization timing information from raw timestamp data.
     
@@ -1587,7 +1586,7 @@ def extract_and_sort_process_timestamps(process_Start_End_timestamps, ecu_type):
     return process_timing_info
 
 
-def calculate_differences(dltstart_timestamps, welcome_timestamp):
+def calculate_differences(dltstart_timestamps, welcome_timestamp, logger):
     """
     Calculates time differences between application start times and the system welcome timestamp.
     
@@ -1731,7 +1730,7 @@ def extract_process_timestamps(lines):
     return process_Start_End_timestamps
 
 
-def extract_dltstart_timestamps(lines):
+def extract_dltstart_timestamps(lines, logger):
     """
     Extracts application startup timestamps from DLT log file lines using pattern matching.
     
@@ -2057,7 +2056,7 @@ def extract_welcome_timestamp(lines):
     return welcome_timestamp
 
 
-def RCAR_ON_OFF_Relay(power_on_off_delay):
+def RCAR_ON_OFF_Relay(power_on_off_delay, logger):
     """
     Controls RCAR ECU power using USB relay for automated testing cycles.
     
@@ -2117,7 +2116,7 @@ def RCAR_ON_OFF_Relay(power_on_off_delay):
     return True
 
 
-def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay):
+def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, logger):
     """
     Controls ECU power using serial-controlled relay for automated testing cycles.
     
@@ -2188,7 +2187,7 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay):
     return True
 
 
-def create_workBook(ecu_type, setup_type, iterations, config):
+def create_workBook(ecu_type, setup_type, iterations, config, logger):
     """
     Creates a comprehensive Excel workbook for startup time analysis reporting.
     
@@ -2308,7 +2307,7 @@ def create_workBook(ecu_type, setup_type, iterations, config):
         # return None, None, None, None
 
 
-def load_config(file_path):
+def load_config(file_path, logger):
     """
     Loads and parses configuration files supporting both JSON and YAML formats.
     
@@ -2661,7 +2660,7 @@ def create_dlp_files(ecu_config_list, setup_type, config):
     return dlp_files
 
 
-def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name, config, ecu_type):
+def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name, config, ecu_type, logger):
     """
     Captures diagnostic logs from ECU using DLT viewer with cross-platform support.
     
@@ -2746,7 +2745,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
     return True
 
        
-def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config, sheet, overall_IG_ON_iteration, process_start_times, process_times, application_startup_order,application_startup_order_status):
+def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config, sheet, overall_IG_ON_iteration, process_start_times, process_times, application_startup_order,application_startup_order_status, logger):
     """
     Processes a single ECU log file for one test iteration, extracting timing data and generating reports.
     
@@ -2814,7 +2813,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         # Get the log file path and name for the specified ECU type and timestamp
         filename, logfile, dltfile = log_file_details
         if not is_pre_gen_logs:
-            if not capture_logs_from_dlt_viewer(filename, dltfile, dlp_file, config, ecu_type):
+            if not capture_logs_from_dlt_viewer(filename, dltfile, dlp_file, config, ecu_type, logger):
                 return False
 
         # Attempt to open the log file in read mode with error handling for encoding issues
@@ -2838,7 +2837,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
 
         # Extract DLTStart timestamps for each application from the log file
-        dltstart_timestamps = extract_dltstart_timestamps(lines)
+        dltstart_timestamps = extract_dltstart_timestamps(lines, logger)
 
         # Check if the DLTStart timestamps were found
         if not dltstart_timestamps or len(dltstart_timestamps)==0:
@@ -2857,8 +2856,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         if not process_Start_End_timestamps or len(process_Start_End_timestamps)==0:
             logger.error("Error: Unable to extract process timestamps.")
             return False
-       
-        process_timing_info = extract_and_sort_process_timestamps(process_Start_End_timestamps, ecu_type)
+
+        process_timing_info = extract_and_sort_process_timestamps(process_Start_End_timestamps, ecu_type, logger)
         print ("process_timing_info:"+str(process_timing_info))
        
         if not process_timing_info:
@@ -2890,7 +2889,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         }
         print ("overall_IG_ON_iteration:"+str(overall_IG_ON_iteration))
 
-        generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltstart_timestamps, process_timing_info, application_startup_order, application_startup_order_status[i], overall_IG_ON_iteration[i])
+        generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltstart_timestamps, process_timing_info, application_startup_order, application_startup_order_status[i], overall_IG_ON_iteration[i], logger)
        
         # Add a hyperlink to the log file in the Excel sheet
         add_logfile_hyperlink(filename, logfile, sheet, ecu_type, setup_type)
@@ -2900,7 +2899,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         return False
     return True
    
-def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_iteration, process_times, process_start_times, application_startup_order_status, config, workbook, report_file):
+def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_iteration, process_times, process_start_times, application_startup_order_status, config, workbook, report_file, logger):
     """
     Finalizes Excel workbook with summary analysis and saves the complete test report.
     
@@ -2976,7 +2975,7 @@ def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_it
     each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status)
 
     # Export the average data to the Excel sheet
-    export_and_plot_average_data_to_excel(summary_sheet, ecu_type, process_times, process_start_times, config)
+    export_and_plot_average_data_to_excel(summary_sheet, ecu_type, process_times, process_start_times, config, logger)
 
     # Save the Excel workbook
     workbook.save(report_file)
@@ -2987,7 +2986,7 @@ def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_it
     logger.info(f"Test report is created successfully {report_file}")
     return True      
 
-def start_startup_time_measurement():
+def start_startup_time_measurement(logger):
     """
     Main entry point for ECU startup time measurement and analysis system.
     
@@ -3073,12 +3072,10 @@ def start_startup_time_measurement():
 
     script_start_time = time.perf_counter()
     try:
-        global logger
-        logger = setup_logging()
 
         isSuccess = True
         anySheet = []
-        config = load_config('startup_time_config.json')      
+        config = load_config('startup_time_config.json', logger)      
        
         # Check if the configuration is empty
         if config is None:
@@ -3158,7 +3155,7 @@ def start_startup_time_measurement():
                     ecu['ip-address'] = config['ECU_setting']['Qualcomm_SoC0_IPAddress']
                 elif ecu['ecu-type'] == ECUType.SoC1.value:
                     ecu['ip-address'] = config['ECU_setting']['Qualcomm_SoC1_IPAddress']
-            workbook_map[ecu['ecu-type']] = tuple(create_workBook(ecu['ecu-type'], setup_type, iterations, config))
+            workbook_map[ecu['ecu-type']] = tuple(create_workBook(ecu['ecu-type'], setup_type, iterations, config, logger))
            
             # Check if the workbook creation was successful
             if workbook_map[ecu['ecu-type']][2] is None:
@@ -3185,7 +3182,7 @@ def start_startup_time_measurement():
         logger.info(f"Threshold Map: {threshold_map}")
 
         # if config['ecu-config']['setup-type'] == ECUType.ELITE.value:
-        if not is_pre_gen_logs and not validate_ip_address(ecu_config_list):
+        if not is_pre_gen_logs and not validate_ip_address(ecu_config_list, logger):
             return False
         dlp_files = create_dlp_files(ecu_config_list, setup_type, config)
         if not is_pre_gen_logs and (not dlp_files or len(dlp_files) == 0):
@@ -3196,10 +3193,10 @@ def start_startup_time_measurement():
             
             if not is_pre_gen_logs:
                 if setup_type == ECUType.RCAR.value:
-                    if not RCAR_ON_OFF_Relay(config.get('Power ON-OFF Delay', 25)):
+                    if not RCAR_ON_OFF_Relay(config.get('Power ON-OFF Delay', 25), logger):
                         return False
                 else:
-                    if not power_ON_OFF_Relay(config.get('serial-port-relay'), config.get('baudrate-relay'), config.get('Power ON-OFF Delay', 25)):
+                    if not power_ON_OFF_Relay(config.get('serial-port-relay'), config.get('baudrate-relay'), config.get('Power ON-OFF Delay', 25), logger):
                         return False
            
             threads = []
@@ -3213,7 +3210,7 @@ def start_startup_time_measurement():
                     else:
                         filename_list[ecu_type] = tuple(get_log_file_path(ecu_type, setup_type, iterations, i))
                 else:
-                    filename_list[ecu_type] = extract_log_file_paths(i, ecu_type, setup_type)
+                    filename_list[ecu_type] = extract_log_file_paths(i, ecu_type, setup_type, logger)
                 logger.info(f"Log files for {ecu_type} in iteration {i}: {filename_list}")
                 if any(not filename for (filename, logfile, dltfile) in filename_list.values()):
                     if is_pre_gen_logs:
@@ -3235,7 +3232,8 @@ def start_startup_time_measurement():
                         process_start_times_map[ecu_type],
                         process_times_map[ecu_type],
                         application_startup_order_map[ecu_type],
-                        application_startup_order_status_map[ecu_type]
+                        application_startup_order_status_map[ecu_type],
+                        logger
                      )
                 )
                 threads.append(thread)
@@ -3272,7 +3270,7 @@ def start_startup_time_measurement():
         logger.error(f"An error occurred: {e}")
         isSuccess = False
     finally:
-        remove_png_files()
+        remove_png_files(logger)
         script_end_time = time.perf_counter()
         logger.info(f"Total script execution time: {(script_end_time-script_start_time):.3f} seconds")
     print("Final response :: ", isSuccess)
