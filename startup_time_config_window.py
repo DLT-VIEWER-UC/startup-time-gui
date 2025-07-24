@@ -60,8 +60,25 @@ class StartupTimeConfig(QDialog):
         self.widgets = {}
         self.ecu_block_list = []
         self.startup_group_list = []
-        self.isElite, self.isPadas = True, False
-        self.isRCAR, self.isSOC0, self.isSOC1 = True, True, True
+        
+        self.isElite, self.isPadas = False, False
+        self.isRCAR, self.isSOC0, self.isSOC1 = False, False, False
+        
+        # Check which ECU type is enabled (only one can be selected at a time)
+        self.ecu_selection = main_window.ecu_selection_status
+
+        if self.ecu_selection.get('Elite', {}).get('RCAR', False):
+            self.isElite = True
+            self.isRCAR = True
+        if self.ecu_selection.get('Elite', {}).get('SoC0', False):
+            self.isElite = True
+            self.isSOC0 = True
+        if self.ecu_selection.get('Elite', {}).get('SoC1', False):
+            self.isElite = True
+            self.isSOC1 = True
+        if self.ecu_selection.get('PADAS', {}).get('RCAR', False):
+            self.isPadas = True
+            self.isRCAR = True
 
         self.init_ui()
    
