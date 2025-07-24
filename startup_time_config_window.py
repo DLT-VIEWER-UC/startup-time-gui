@@ -131,12 +131,13 @@ class StartupTimeConfig(QDialog):
 
         # General Settings
         general_group = QGroupBox('General Settings')
-        general_group.setFixedHeight(180)
+        general_group.setFixedHeight(200)
         general_layout = QFormLayout()
         for key, validator in [
             ('DLT-Viewer Log Capture Time', CustomIntValidator(1, 500)),
             ('Iterations', CustomIntValidator(1, 50)),
-            ('Threshold', CustomIntValidator(1, 100))
+            ('Threshold', CustomIntValidator(1, 100)),
+            ('Power ON-OFF Delay', CustomIntValidator(1, 100))
         ]:
             widgets_lst = list()
             le = QLineEdit(str(self.config_data.get(key, '')))
@@ -227,7 +228,7 @@ class StartupTimeConfig(QDialog):
         pre_gen_logs_cb.toggled.connect(lambda checked: [
             self.on_change_update_ok_btn_state(),
             win_group.setDisabled(checked)] + [
-            w.setDisabled(checked) for w in self.widgets['DLT-Viewer Log Capture Time']
+            w.setDisabled(checked) for w in self.widgets['DLT-Viewer Log Capture Time'] + self.widgets['Power ON-OFF Delay']
         ])
 
         # OK/Cancel
@@ -381,8 +382,8 @@ class StartupTimeConfig(QDialog):
 
     def on_change_update_ok_btn_state(self):
         enabled = True
-        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Threshold']:
-            if key == 'DLT-Viewer Log Capture Time' and self.widgets['Pre-Generated Logs'].isChecked():
+        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Threshold', 'Power ON-OFF Delay']:
+            if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay'] and self.widgets['Pre-Generated Logs'].isChecked():
                 continue
             text = self.widgets[key][0].text()
             if not text or len(text) == 0:
@@ -487,7 +488,7 @@ class StartupTimeConfig(QDialog):
 
     def save_config(self):
         data = {}
-        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Threshold']:
+        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Threshold', 'Power ON-OFF Delay']:
             w = self.widgets[key][0]
             # print(w.text())
             if w.text() and len(w.text())>0:
