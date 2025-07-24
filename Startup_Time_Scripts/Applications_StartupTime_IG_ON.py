@@ -1206,6 +1206,10 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
                     application_startup_order_status[i][OrderFailureType.APPLICATION_NOT_CONFIGURED.name]
                 ])
             summary_sheet.append(data_row)
+            
+            # Apply hyperlink formatting to the first cell in the last row
+            cell = summary_sheet.cell(row=summary_sheet.max_row, column=1)
+            cell.font = Font(bold=True, underline='single', color='0000FF')
    
     format_excel_cells(summary_sheet, start_row)
 
@@ -3260,7 +3264,8 @@ def start_startup_time_measurement(logger):
                     application_startup_order_status_map[ecu_type],
                     config,
                     workbook,
-                    report_file):
+                    report_file,
+                    logger):
                     isSuccess = False
 
     except KeyError as e:
