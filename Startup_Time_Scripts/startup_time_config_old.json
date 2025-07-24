@@ -1,0 +1,86 @@
+{
+  "script-execution-time-in-seconds": 70,
+  "iterations": 3,
+  "threshold-in-seconds": 5,
+  "serial-port-relay": "COM5",
+  "baudrate-relay": 9600,
+  "validate-startup-order": true,
+  "windows": {
+    "isPathSet": false,
+    "dltViewerPath": "C:\\Users\\Testing\\AppData\\Local\\Programs\\dlt-viewer\\dlt-viewer.exe"
+  },
+  "PADAS": {
+    "RCAR": false
+  },
+  "Elite": {
+    "RCAR": true,
+    "SoC0": true,
+    "SoC1": true
+  },
+  "ECU_setting": {
+    "RCAR_IPAddress": "192.168.1.33",
+    "Qualcomm_SoC0_IPAddress": "192.168.1.3",
+    "Qualcomm_SoC1_IPAddress": "192.168.1.58"
+  },
+  "ecu-config": [
+    {
+      "ecu-type": "RCAR",
+      "startup-order": [
+        {
+          "type": "Sequential",
+          "apps": " crypto_keystorage_manager,access_manager, healthmanager,aradltdaemon,araipcd"
+        },
+        {
+          "type": "Parallel",
+          "apps": "arasomeipd,statemanager,DiagnosticManager,functiongroupmanager,AHdf"
+        },
+        {
+          "type": "Sequential",
+          "apps": "eq-mng-app,internal-com-app,bsw-app,ADAS_ACore_HADI_RAD_Process,ADAS_ACore_HADI_VI_T10_Process"
+        },
+        {
+          "type": "Parallel",
+          "apps": "adf-app-tsr, adf-app-tli,adf-app-ahbadb,diag_master_app,h-diag-eq-app"
+        },
+        {
+          "type": "Sequential",
+          "apps": "h_diag_app,diag-default-services-app,packagemanager"
+        }
+      ]
+    },
+    {
+      "ecu-type": "SoC0",
+      "startup-order": [
+        {
+          "type": "Sequential",
+          "apps": " aradltdaemon, healthmanager, crypto_keystorage_manager, access_manager, arasomeipd, araipcd, DiagnosticManager, statemanager, functiongroupmanager"
+        },
+        {
+          "type": "Parallel",
+          "apps": "internal-com-app,eq-mng-app,bsw-app,AHdf"
+        },
+        {
+          "type": "Sequential",
+          "apps": "ADAS_ACore_HADI_RAD_Process, ADAS_ACore_HADI_VI_T10_Process, adf-app-tsr, adf-app-tli,adf-app-ahbadb,  SDmap,GNSS, h-diag-eq-app, h-diag-app, diag-master-app, probe_app, packagemanager, diag-default-services-app"
+        }
+      ]
+    },
+    {
+      "ecu-type": "SoC1",
+      "startup-order": [
+        {
+          "type": "Sequential",
+          "apps": " aradltdaemon, healthmanager, crypto_keystorage_manager, access_manager, arasomeipd, araipcd, DiagnosticManager, statemanager, functiongroupmanager"
+        },
+        {
+          "type": "Parallel",
+          "apps": "internal-com-app,eq-mng-app,bsw-app,AHdf"
+        },
+        {
+          "type": "Sequential",
+          "apps": "ADAS_ACore_HADI_RAD_Process, ADAS_ACore_HADI_VI_T10_Process, adf-app-tsr, adf-app-tli,adf-app-ahbadb,  SDmap,GNSS, h-diag-eq-app, h-diag-app, diag-master-app, probe_app, packagemanager, diag-default-services-app"
+        }
+      ]
+    }
+  ]
+}

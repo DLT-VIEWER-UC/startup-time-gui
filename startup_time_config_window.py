@@ -498,14 +498,6 @@ class StartupTimeConfig(QDialog):
             'Is Environment Path Set': self.widgets['windows.Is Environment Path Set'].isChecked(),
             'DLT-Viewer Installed Path': self.widgets['windows.DLT-Viewer Installed Path'].text()
         }
-        data['PADAS'] = {
-            'RCAR': self.isPadas and self.isRCAR
-        }
-        data['Elite'] = {
-                'RCAR': self.isRCAR and self.isElite,
-                'SoC0': self.isSOC0 and self.isElite,
-                'SoC1': self.isSOC1 and self.isElite
-        }
         ec = []
         for idx, item in enumerate(self.widgets['ecu-config']):
             title = self.ecu_block_list[idx].title()

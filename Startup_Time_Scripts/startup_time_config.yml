@@ -19,7 +19,7 @@ baudrate-relay: 9600
 # Toggle the validation of the order on and off
 validate-startup-order: true
 
-capture-logs-from-dlt viewer: true
+capture-logs-from-dlt-viewer: true
 use-default-path: true
 logs-folder-path: ""
 
