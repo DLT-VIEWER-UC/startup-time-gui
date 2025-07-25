@@ -65,7 +65,11 @@ class StartupTimeConfig(QDialog):
         self.isRCAR, self.isSOC0, self.isSOC1 = False, False, False
         
         # Check which ECU type is enabled (only one can be selected at a time)
-        self.ecu_selection = main_window.ecu_selection_status
+        # self.ecu_selection = main_window.ecu_selection_status
+        self.ecu_selection = {
+            'Elite': {'RCAR': True, 'SoC0': False, 'SoC1': True},
+            'PADAS': {'RCAR': True}
+        }
 
         if self.ecu_selection.get('Elite', {}).get('RCAR', False):
             self.isElite = True
@@ -208,15 +212,17 @@ class StartupTimeConfig(QDialog):
 
         # Load existing or defaults
         ecu_types = {ecu['ecu-type']: ecu for ecu in self.config_data.get('ecu-config', [])}
-        for idx, ecu_type in enumerate(['RCAR', 'SoC0', 'SoC1']):
+        for idx, ecu_type in enumerate(['PADAS', 'RCAR', 'SoC0', 'SoC1']):
             ecu_data = ecu_types.get(ecu_type, {'ecu-type': ecu_type, 'startup-order': []})
             block = self._create_ecu_block(ecu_data, idx)
+            if ecu_type == 'PADAS':
+                block.setVisible(self.isPadas and self.isRCAR)
             if ecu_type=='RCAR':
-                block.setVisible(self.isRCAR)
+                block.setVisible(self.isRCAR and self.isElite)
             elif ecu_type=='SoC0':
-                block.setVisible(self.isSOC0)
+                block.setVisible(self.isSOC0 and self.isElite)
             elif ecu_type=='SoC1':
-                block.setVisible(self.isSOC1)
+                block.setVisible(self.isSOC1 and self.isElite)
             for startup_group in self.startup_group_list:
                 startup_group.setEnabled(vcb.isChecked()) 
             self.ecu_block_list.append(block)
@@ -241,6 +247,10 @@ class StartupTimeConfig(QDialog):
 
         # Trigger check box toggled event to set initial state
         pre_gen_logs_cb.toggled.emit(pre_gen_logs_cb.isChecked())
+        for i, ecu_config in enumerate(self.widgets['ecu-config']):
+            if len(ecu_config['startup']) == 0:
+                self.add_startup_row(i)
+        
         self.on_change_update_ok_btn_state()
 
     def ok_clicked(self):
@@ -261,14 +271,16 @@ class StartupTimeConfig(QDialog):
         startup_fl = QFormLayout()
         startup_entries = []
         for order in data.get('startup-order', []):
-            row, tp, apps, count_lbl = self._create_startup_row(order.get('Order Type', ''), order.get('Applications', ''), idx)
+            row, tp, apps, count_lbl, rem = self._create_startup_row(order.get('Order Type', ''), order.get('Applications', ''), idx)
             startup_fl.addRow(row)
-            startup_entries.append((row, tp, apps))
+            startup_entries.append((row, tp, apps, count_lbl, rem))
         add_startup_btn = QPushButton('Add Startup Order')
         add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(i), self.on_change_update_ok_btn_state()])
         startup_vbox.addLayout(startup_fl)
         startup_vbox.addWidget(add_startup_btn, alignment=Qt.AlignLeft)
         startup_group.setLayout(startup_vbox)
+        if len(startup_entries) == 1:
+            startup_entries[0][4].setDisabled(True)
 
         # Threshold Config Section
         self.threshold_group = QGroupBox('Threshold Configuration')
@@ -289,7 +301,7 @@ class StartupTimeConfig(QDialog):
         vbox.addWidget(self.threshold_group)
         gb.setLayout(vbox)
         self.startup_group_list.append(startup_group)
-        self.widgets['ecu-config'].append({'startup_layout': startup_fl, 'startup': startup_entries, 'threshold_layout': threshold_fl, 'threshold': threshold_entries})
+        self.widgets['ecu-config'].append({'startup_layout': startup_fl, 'startup': startup_entries, 'threshold_layout': threshold_fl, 'threshold': threshold_entries, 'add_startup_btn': add_startup_btn, 'add_threshold_btn': add_threshold_btn})
         return gb
 
     def _create_startup_row(self, type_val, apps_val, ecu_idx):
@@ -330,7 +342,7 @@ class StartupTimeConfig(QDialog):
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
         
-        return row, dd, apps, count_lbl
+        return row, dd, apps, count_lbl, rem
 
     def _create_threshold_row(self, apps_val, threshold_val, ecu_idx):
         row = QWidget()
@@ -397,7 +409,7 @@ class StartupTimeConfig(QDialog):
         if enabled:
             vcb = self.widgets['Startup Order Judgement']
             if vcb.isChecked():
-                if enabled and self.isRCAR:
+                if enabled and self.isRCAR and self.isPadas:
                     if len(self.widgets['ecu-config'][0]['startup']) == 0:
                         enabled=False
                     else:
@@ -405,7 +417,7 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-                if enabled and self.isSOC0:
+                if enabled and self.isRCAR and self.isElite:
                     if len(self.widgets['ecu-config'][1]['startup']) == 0:
                         enabled=False
                     else:
@@ -413,11 +425,19 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-                if enabled and self.isSOC1:
+                if enabled and self.isSOC0 and self.isElite:
                     if len(self.widgets['ecu-config'][2]['startup']) == 0:
                         enabled=False
                     else:
                         for entry in self.widgets['ecu-config'][2]['startup']:
+                            if not entry[2].text() or len(entry[2].text()) == 0:
+                                enabled = False
+                                break
+                if enabled and self.isSOC1 and self.isElite:
+                    if len(self.widgets['ecu-config'][3]['startup']) == 0:
+                        enabled=False
+                    else:
+                        for entry in self.widgets['ecu-config'][3]['startup']:
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
@@ -445,9 +465,14 @@ class StartupTimeConfig(QDialog):
     def add_startup_row(self, idx):
         # self.ok_btn.setDisabled(False)
         entry = self.widgets['ecu-config'][idx]
-        row, dd, apps, count_lbl = self._create_startup_row('', '', idx)
+        row, dd, apps, count_lbl, rem = self._create_startup_row('', '', idx)
         entry['startup_layout'].addRow(row)
-        entry['startup'].append((row, dd, apps))
+        entry['startup'].append((row, dd, apps, count_lbl, rem))
+        if len(entry['startup']) == 1:
+            rem.setDisabled(True)
+        else:
+            for e in entry['startup']:
+                e[4].setDisabled(False)
 
     def remove_startup_row(self, idx, row):
         # self.ok_btn.setDisabled(False)
@@ -459,6 +484,9 @@ class StartupTimeConfig(QDialog):
                 fl.removeRow(i)
                 break
         entry['startup'] = [e for e in entry['startup'] if e[0] is not row]
+        if len(entry['startup']) == 1:
+            # If only one row left, disable the remove button
+            entry['startup'][0][4].setDisabled(True)
 
     def add_threshold_row(self, idx):
         entry = self.widgets['ecu-config'][idx]
@@ -503,9 +531,13 @@ class StartupTimeConfig(QDialog):
         for idx, item in enumerate(self.widgets['ecu-config']):
             title = self.ecu_block_list[idx].title()
             ec_item = {'ecu-type': title, 'startup-order': [], 'threshold-config': []}
-            for _, dd, apps in item['startup']:
+            for entry in item['startup']:
+                # entry is (row, dd, apps, count_lbl, rem)
+                _, dd, apps, _, _ = entry
                 ec_item['startup-order'].append({'Order Type': dd.currentText(), 'Applications': apps.text()})
-            for _, apps, thresh in item['threshold']:
+            for entry in item['threshold']:
+                # entry is (row, apps, thresh)
+                _, apps, thresh = entry
                 if thresh.text():  # Only save if threshold value is provided
                     ec_item['threshold-config'].append({'Applications': apps.text(), 'Threshold': int(thresh.text())})
             ec.append(ec_item)
