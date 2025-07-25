@@ -3137,7 +3137,7 @@ def start_startup_time_measurement(logger):
         enabled_ecu_list = set()
                
         if config.get('ECU_setting', {}).get('PADAS', {}).get('RCAR', False):
-            enabled_ecu_list.add('RCAR')
+            enabled_ecu_list.add('PADAS')
             setup_type = 'PADAS'
         else:
             for board_type, enabled in config.get('ECU_setting', {}).get('Elite', {}).items():
@@ -3152,6 +3152,8 @@ def start_startup_time_measurement(logger):
 
         ecu_config_list = [ecu for ecu in config['ecu-config'] if ecu['ecu-type'] in enabled_ecu_list]
         for ecu in ecu_config_list:
+            if ecu['ecu-type'] == ECUType.PADAS.value:
+                ecu['ecu-type'] = ECUType.RCAR.value
             if not is_pre_gen_logs:
                 if ecu['ecu-type'] == ECUType.RCAR.value:
                     ecu['ip-address'] = config['ECU_setting']['RCAR_IPAddress']
