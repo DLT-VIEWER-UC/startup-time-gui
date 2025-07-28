@@ -271,16 +271,16 @@ class StartupTimeConfig(QDialog):
         startup_fl = QFormLayout()
         startup_entries = []
         for order in data.get('startup-order', []):
-            row, tp, apps, count_lbl, rem = self._create_startup_row(order.get('Order Type', ''), order.get('Applications', ''), idx)
+            row, tp, apps, rem = self._create_startup_row(order.get('Order Type', ''), order.get('Applications', ''), idx)
             startup_fl.addRow(row)
-            startup_entries.append((row, tp, apps, count_lbl, rem))
+            startup_entries.append((row, tp, apps, rem))
         add_startup_btn = QPushButton('Add Startup Order')
         add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(i), self.on_change_update_ok_btn_state()])
         startup_vbox.addLayout(startup_fl)
         startup_vbox.addWidget(add_startup_btn, alignment=Qt.AlignLeft)
         startup_group.setLayout(startup_vbox)
         if len(startup_entries) == 1:
-            startup_entries[0][4].setDisabled(True)
+            startup_entries[0][3].setDisabled(True)
 
         # Threshold Config Section
         self.threshold_group = QGroupBox('Threshold Configuration')
@@ -288,7 +288,7 @@ class StartupTimeConfig(QDialog):
         threshold_fl = QFormLayout()
         threshold_entries = []
         for threshold in data.get('threshold-config', []):
-            row, apps, thresh, count_lbl = self._create_threshold_row(threshold.get('Applications', ''), threshold.get('Threshold', ''), idx)
+            row, apps, thresh = self._create_threshold_row(threshold.get('Applications', ''), threshold.get('Threshold', ''), idx)
             threshold_fl.addRow(row)
             threshold_entries.append((row, apps, thresh))
         add_threshold_btn = QPushButton('Add Threshold Config')
@@ -323,15 +323,13 @@ class StartupTimeConfig(QDialog):
         # Apps row
         apps = QLineEdit(apps_val)
         apps.setPlaceholderText('App1, App2')
-        apps.setMaxLength(250)
-        count_lbl = QLabel(f"{len(apps.text())} / {apps.maxLength()}")
-        apps.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {apps.maxLength()}"), self.on_change_update_ok_btn_state()])
+        # apps.setMaxLength(250)
+        apps.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
 
         apps_row = QWidget()
         apps_hl = QHBoxLayout(apps_row)
         apps_hl.setContentsMargins(0, 0, 0, 0)
         apps_hl.addWidget(apps)
-        apps_hl.addWidget(count_lbl)
         
         left_form.addRow(QLabel('Order Type'), dd)
         left_form.addRow(QLabel('Applications'), apps_row)
@@ -342,7 +340,7 @@ class StartupTimeConfig(QDialog):
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
         
-        return row, dd, apps, count_lbl, rem
+        return row, dd, apps, rem
 
     def _create_threshold_row(self, apps_val, threshold_val, ecu_idx):
         row = QWidget()
@@ -356,15 +354,13 @@ class StartupTimeConfig(QDialog):
         # Applications row
         apps = QLineEdit(apps_val)
         apps.setPlaceholderText('App1, App2, App3')
-        apps.setMaxLength(250)
-        count_lbl = QLabel(f"{len(apps.text())} / {apps.maxLength()}")
-        apps.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {apps.maxLength()}"), self.on_change_update_ok_btn_state()])
+        # apps.setMaxLength(250)
+        apps.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
 
         apps_row = QWidget()
         apps_hl = QHBoxLayout(apps_row)
         apps_hl.setContentsMargins(0, 0, 0, 0)
         apps_hl.addWidget(apps)
-        apps_hl.addWidget(count_lbl)
         
         # Threshold row
         thresh = QLineEdit(str(threshold_val))
@@ -390,7 +386,7 @@ class StartupTimeConfig(QDialog):
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
         
-        return row, apps, thresh, count_lbl
+        return row, apps, thresh
 
     def on_change_update_ok_btn_state(self):
         enabled = True
@@ -465,14 +461,14 @@ class StartupTimeConfig(QDialog):
     def add_startup_row(self, idx):
         # self.ok_btn.setDisabled(False)
         entry = self.widgets['ecu-config'][idx]
-        row, dd, apps, count_lbl, rem = self._create_startup_row('', '', idx)
+        row, dd, apps, rem = self._create_startup_row('', '', idx)
         entry['startup_layout'].addRow(row)
-        entry['startup'].append((row, dd, apps, count_lbl, rem))
+        entry['startup'].append((row, dd, apps, rem))
         if len(entry['startup']) == 1:
             rem.setDisabled(True)
         else:
             for e in entry['startup']:
-                e[4].setDisabled(False)
+                e[3].setDisabled(False)
 
     def remove_startup_row(self, idx, row):
         # self.ok_btn.setDisabled(False)
@@ -486,11 +482,11 @@ class StartupTimeConfig(QDialog):
         entry['startup'] = [e for e in entry['startup'] if e[0] is not row]
         if len(entry['startup']) == 1:
             # If only one row left, disable the remove button
-            entry['startup'][0][4].setDisabled(True)
+            entry['startup'][0][3].setDisabled(True)
 
     def add_threshold_row(self, idx):
         entry = self.widgets['ecu-config'][idx]
-        row, apps, thresh, count_lbl = self._create_threshold_row('', '', idx)
+        row, apps, thresh = self._create_threshold_row('', '', idx)
         entry['threshold_layout'].addRow(row)
         entry['threshold'].append((row, apps, thresh))
 
@@ -533,7 +529,7 @@ class StartupTimeConfig(QDialog):
             ec_item = {'ecu-type': title, 'startup-order': [], 'threshold-config': []}
             for entry in item['startup']:
                 # entry is (row, dd, apps, count_lbl, rem)
-                _, dd, apps, _, _ = entry
+                _, dd, apps, _ = entry
                 ec_item['startup-order'].append({'Order Type': dd.currentText(), 'Applications': apps.text()})
             for entry in item['threshold']:
                 # entry is (row, apps, thresh)
