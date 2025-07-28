@@ -420,7 +420,7 @@ def plot_process_individual_apps_avg_graph(differences, sheet, start_row, ecu_ty
             plt.plot([0, difference], [index, index], marker='o')
 
             # Add a text label at the midpoint of the line with the difference value
-            plt.text((0 + difference) / 2, index + 0.1, str(round_decimal_half_up(difference, 3))+" ms",#"{:.3f} ms".format(difference),
+            plt.text((0 + difference) / 2, index + 0.1, str(round_decimal_half_up(difference, 4))+" ms",#"{:.3f} ms".format(difference),
                     verticalalignment='bottom', horizontalalignment='center')
 
         # Set the y-axis tick labels to the process names and 'Time from IG ON to QNX startup'
@@ -532,7 +532,7 @@ def plot_process_start_end_time_graph(ecu_type, data, sheet, start_row):
             print ("row",row['start_time_ms'])
             plt.plot([0, row['start_time_ms']], [index, index], marker='o')
             plt.text(row['start_time_ms'] / 2, index + 0.1,
-                    str(round_decimal_half_up(row['start_time_ms'], 3))+" ms", #"{:.3f} ms".format(row['start_time_ms']),
+                    str(round_decimal_half_up(row['start_time_ms'], 4))+" ms", #"{:.3f} ms".format(row['start_time_ms']),
                     verticalalignment='bottom',
                     horizontalalignment='center')    
 
@@ -627,7 +627,7 @@ def plot_process_startup_time_graph(differences, sheet, start_row, ecu_type, avg
 
             # Add a text label at the midpoint of the line with the difference value
             plt.text((OFFSET_TIME + difference + OFFSET_TIME) / 2, index + 0.1,
-                    str(round_decimal_half_up(difference, 3))+" sec", #"{:.3f} sec".format(difference),
+                    str(round_decimal_half_up(difference, 4))+" sec", #"{:.3f} sec".format(difference),
                     verticalalignment='bottom', horizontalalignment='center')
 
         # Set the y-axis tick labels to the process names and 'Time from IG ON to QNX startup'
@@ -956,7 +956,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             overall_IG_ON_cur_iteration['status'] = False
         logger.info(">>> %s, %s, %s", process, process, process_timing_info)
 
-        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 3), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 3), threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else threshold, result]
+        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else threshold, result]
         logger.info('## %s, %s', process, validate_startup_order)
 
         if validate_startup_order:
@@ -1281,14 +1281,14 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
         min_time = min(times)
         max_time = max(times)
         # avg_time = sum(times) / len(times)
-        avg_time = round_decimal_half_up(sum(times) / len(times), 3)
+        avg_time = round_decimal_half_up(sum(times) / len(times), 4)
        
         # Create a dictionary for the process with the minimum, maximum, and average times
         data_row = {
             'process': process,
-            'min_time': round_decimal_half_up(min_time, 3),
-            'max_time': round_decimal_half_up(max_time, 3),
-            'avg_time': round_decimal_half_up(avg_time, 3),
+            'min_time': round_decimal_half_up(min_time, 4),
+            'max_time': round_decimal_half_up(max_time, 4),
+            'avg_time': round_decimal_half_up(avg_time, 4),
         }
        
         # Append the data row to the list
@@ -1323,9 +1323,9 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
         # Create a dictionary for the process with the minimum, maximum, and average times
         data_row = {
             'process': process,
-            'min_time': round_decimal_half_up(min_time, 3),
-            'max_time': round_decimal_half_up(max_time, 3),
-            'avg_time': round_decimal_half_up(avg_time, 3),
+            'min_time': round_decimal_half_up(min_time, 4),
+            'max_time': round_decimal_half_up(max_time, 4),
+            'avg_time': round_decimal_half_up(avg_time, 4),
         }
        
         # Append the data row to the list
@@ -2877,7 +2877,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
                 # If the process is not in the dictionary, add it with an empty list
                 process_start_times[process] = []
             # Append the start_time_ms to the process's list of start times    
-            process_start_times[process].append(item['start_time_ms'])                      
+            process_start_times[process].append(round_decimal_half_up(item['start_time_ms'], 4))                      
        
         for process, process_time in dltstart_timestamps.items():
             # Check if the process is already in the process times dictionary
@@ -2885,7 +2885,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
                 # If the process is not in the dictionary, add it with an empty list
                 process_times[process] = []
             # Append the difference to the process's list of times
-            process_times[process].append(process_time)
+            process_times[process].append(round_decimal_half_up(process_time, 4))
        
         overall_IG_ON_iteration[i] = {
             'timestamp': max(dltstart_timestamps.values()),
