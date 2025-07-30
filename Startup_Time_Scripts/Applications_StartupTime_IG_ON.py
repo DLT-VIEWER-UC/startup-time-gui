@@ -893,7 +893,7 @@ def get_expected_startup_order(application_name, application_startup_order, logg
  
 
 
-def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, threshold, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
+def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
     """
     Writes application startup timing data to Excel worksheet with comprehensive validation.
     
@@ -948,15 +948,17 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     # Iterate over the DLTStart timestamps and differences in parallel using zip
     for position, (process, dltstart_line) in enumerate(dltstart_timestamps.items()):
         # Check if the process names match
-       
-        if float(dltstart_line + OFFSET_TIME) < (threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else threshold):
-            result = 'PASS'
-        else:
-            result = 'FAIL'
-            overall_IG_ON_cur_iteration['status'] = False
+        result = '-'
+        if process in threshold_map[ecu_type]:
+            if float(dltstart_line + OFFSET_TIME) < threshold_map[ecu_type][process]:
+                result = 'PASS'
+                overall_IG_ON_cur_iteration['passed_count'] += 1
+            else:
+                result = 'FAIL'
+                overall_IG_ON_cur_iteration['status'] = False
         logger.info(">>> %s, %s, %s", process, process, process_timing_info)
 
-        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else threshold, result]
+        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else '-', result]
         logger.info('## %s, %s', process, validate_startup_order)
 
         if validate_startup_order:
@@ -999,6 +1001,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                             expected_order='-'
                         data_row.extend([str(expected_order), 'FAIL', '', '⬤', ''])
                         application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
+                        application_startup_order_status_iteration['startup_order_status'] = False
                     sheet.append(data_row)
         # Update the last three cells of the row at startup_order_count_idx with the current counts and highlight in yellow
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
@@ -1196,7 +1199,12 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
     for i in range(config['Iterations']):
         if i in overall_IG_ON_iteration:
             overall_value = overall_IG_ON_iteration[i]['timestamp'] + OFFSET_TIME
-            test_status = 'PASS' if overall_IG_ON_iteration[i]['status'] else 'FAIL'
+            test_status = '-'
+            if overall_IG_ON_iteration[i]['status']:
+                if overall_IG_ON_iteration[i]['passed_count'] >= 1:
+                    test_status = 'PASS'
+            else:
+                test_status = 'FAIL'
             data_row = [f'=HYPERLINK("#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
             if config['Startup Order Judgement'] and i in application_startup_order_status:
                 data_row.extend([
@@ -1299,7 +1307,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
 
     # Append the sorted data to the Excel sheet
     for data_row in data:
-        sheet.append([data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], float(data_row['avg_time']) + OFFSET_TIME, threshold_map[ecu_type][data_row['process']] if data_row['process'] in threshold_map[ecu_type] else config['Threshold']])
+        sheet.append([data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], float(data_row['avg_time']) + OFFSET_TIME, threshold_map[ecu_type][data_row['process']] if data_row['process'] in threshold_map[ecu_type] else '-'])
 
         # Store the average difference in the differences dictionary
         differences[data_row['process']] = float(data_row['avg_time'])
@@ -1514,7 +1522,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
     start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'startup_time_columns')
 
     # Write the data to the Excel sheet
-    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config.get('Threshold'), config.get('Startup Order Judgement'), application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
+    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config.get('Startup Order Judgement'), application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
 
     # Plot the differences as a graph
     plot_process_startup_time_graph(dltstart_timestamps, sheet, start_row, ecu_type, False)
@@ -2890,6 +2898,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         overall_IG_ON_iteration[i] = {
             'timestamp': max(dltstart_timestamps.values()),
             'status': True,
+            'passed_count': 0
         }
         print ("overall_IG_ON_iteration:"+str(overall_IG_ON_iteration))
 
@@ -3101,9 +3110,9 @@ def start_startup_time_measurement(logger):
         if not is_pre_gen_logs and config['windows']['DLT-Viewer Installed Path'] and not os.path.isfile(config['windows']['DLT-Viewer Installed Path']):
             logger.error("Configured dlt-viewer path is not valid.")
             return False
-        if config.get('Threshold', -1) < 0 or config.get('Threshold') > 100:
-            logger.error("Configured 'Threshold' is not valid. Configure its value in range[0, 100].")
-            return False
+        # if config.get('Threshold', -1) < 0 or config.get('Threshold') > 100:
+        #     logger.error("Configured 'Threshold' is not valid. Configure its value in range[0, 100].")
+        #     return False
        
         # Retrieve the number of iterations from the configuration
         try:
