@@ -986,20 +986,20 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     merged_range = f'D{start_row}:D{sheet.max_row}'
     sheet.merge_cells(merged_range)
    
-    for order_type, order in application_startup_order:
-        for app in order:
-            if app not in dltstart_timestamps:
-               
-                data_row = ['-', app, '-', '-', '-', '-', '-']
-               
-                if validate_startup_order:
-                    expected_order = get_expected_startup_order(app, application_startup_order, logger)
-                    if not expected_order:
-                        expected_order='-'
-                    data_row.extend([str(expected_order), 'FAIL', '', '•', ''])
-                    application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
-                sheet.append(data_row)
     if validate_startup_order:
+        for order_type, order in application_startup_order:
+            for app in order:
+                if app not in dltstart_timestamps:
+                
+                    data_row = ['-', app, '-', '-', '-', '-', '-']
+                
+                    if validate_startup_order:
+                        expected_order = get_expected_startup_order(app, application_startup_order, logger)
+                        if not expected_order:
+                            expected_order='-'
+                        data_row.extend([str(expected_order), 'FAIL', '', '•', ''])
+                        application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
+                    sheet.append(data_row)
         # Update the last three cells of the row at startup_order_count_idx with the current counts and highlight in yellow
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
         counts = [
@@ -3173,7 +3173,7 @@ def start_startup_time_measurement(logger):
             application_startup_order_status_map[ecu['ecu-type']] = {}
             application_startup_order = []
             for block in ecu['startup-order']:
-                application_startup_order.append(tuple([block['Order Type'], [app.strip() for app in block['Applications'].split(',')]]))
+                application_startup_order.append(tuple([block['Order Type'], [app.strip() for app in block['Applications'].split(',') if len(app.strip()) > 0]]))
             application_startup_order_map[ecu['ecu-type']] = list(application_startup_order)
             
             threshold_map[ecu['ecu-type']] = {}
