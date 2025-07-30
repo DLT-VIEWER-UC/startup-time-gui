@@ -357,7 +357,7 @@ def format_excel_cells(sheet, start_row):
             elif cell.value == "FAIL":
                 # If the cell value is "FAIL", fill it with a light red color.
                 cell.fill = PatternFill(start_color = "FF0000", end_color = "FF0000", fill_type = "solid")
-            elif cell.value == '•':
+            elif cell.value == '⬤':
                 cell.font = Font(bold=True)
                
             # Center align the cell contents horizontally and vertically
@@ -970,9 +970,9 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             if order_failure_type != 0:
                 data_row.extend([
                     'FAIL',
-                    '•' if OrderFailureType.ORDER_MISMATCH.name == OrderFailureType(order_failure_type).name else '',
+                    '⬤' if OrderFailureType.ORDER_MISMATCH.name == OrderFailureType(order_failure_type).name else '',
                     '',
-                    '•' if OrderFailureType.APPLICATION_NOT_CONFIGURED.name == OrderFailureType(order_failure_type).name else ''
+                    '⬤' if OrderFailureType.APPLICATION_NOT_CONFIGURED.name == OrderFailureType(order_failure_type).name else ''
                 ])
                 application_startup_order_status_iteration[OrderFailureType(order_failure_type).name] += 1
                 application_startup_order_status_iteration['startup_order_status'] = False
@@ -997,7 +997,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                         expected_order = get_expected_startup_order(app, application_startup_order, logger)
                         if not expected_order:
                             expected_order='-'
-                        data_row.extend([str(expected_order), 'FAIL', '', '•', ''])
+                        data_row.extend([str(expected_order), 'FAIL', '', '⬤', ''])
                         application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
                     sheet.append(data_row)
         # Update the last three cells of the row at startup_order_count_idx with the current counts and highlight in yellow
