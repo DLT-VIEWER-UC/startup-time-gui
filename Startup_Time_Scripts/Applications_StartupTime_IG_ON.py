@@ -977,7 +977,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 application_startup_order_status_iteration[OrderFailureType(order_failure_type).name] += 1
                 application_startup_order_status_iteration['startup_order_status'] = False
             else:
-                data_row.extend(['PASS', '', '', '', ''])
+                data_row.extend(['PASS', '', '', ''])
 
         # Append the data row to the sheet
         sheet.append(data_row)
