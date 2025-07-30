@@ -37,18 +37,6 @@ class StartupTimeConfig(QDialog):
         'windows': {'Is Environment Path Set': False, 'DLT-Viewer Installed Path': ''},
         'ecu-config': []
     }
-    CONFIG_GUI_FIELD_MAPPING = {
-        'DLT-Viewer Log Capture Time': 'DLT-Viewer Log Capture Time',
-        'Threshold': 'Threshold',
-        'Iterations': 'Iterations',
-        'Startup Order Judgement': 'Startup Order Judgement',
-        'Is Environment Path Set': 'Is Environment Path Set',
-        'DLT-Viewer Installed Path': 'DLT-Viewer Installed Path',
-        'Pre-Generated Logs': 'Pre-Generated Logs',
-        'logs-folder-path': 'Pre-Generated Logs Folder Path',
-        'Applications': 'Applications',
-        'use-default-path': 'Use Default Path'
-    }
 
     def __init__(self, main_window):
         super().__init__()
@@ -65,11 +53,11 @@ class StartupTimeConfig(QDialog):
         self.isRCAR, self.isSOC0, self.isSOC1 = False, False, False
         
         # Check which ECU type is enabled (only one can be selected at a time)
-        # self.ecu_selection = main_window.ecu_selection_status
-        self.ecu_selection = {
-            'Elite': {'RCAR': True, 'SoC0': False, 'SoC1': True},
-            'PADAS': {'RCAR': True}
-        }
+        self.ecu_selection = main_window.ecu_selection_status
+        # self.ecu_selection = {
+        #     'Elite': {'RCAR': True, 'SoC0': False, 'SoC1': True},
+        #     'PADAS': {'RCAR': False}
+        # }
 
         if self.ecu_selection.get('Elite', {}).get('RCAR', False):
             self.isElite = True
@@ -140,7 +128,6 @@ class StartupTimeConfig(QDialog):
         for key, validator in [
             ('DLT-Viewer Log Capture Time', CustomIntValidator(1, 500)),
             ('Iterations', CustomIntValidator(1, 50)),
-            ('Threshold', CustomIntValidator(1, 100)),
             ('Power ON-OFF Delay', CustomIntValidator(1, 100))
         ]:
             widgets_lst = list()
@@ -390,7 +377,7 @@ class StartupTimeConfig(QDialog):
 
     def on_change_update_ok_btn_state(self):
         enabled = True
-        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Threshold', 'Power ON-OFF Delay']:
+        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Power ON-OFF Delay']:
             if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay'] and self.widgets['Pre-Generated Logs'].isChecked():
                 continue
             text = self.widgets[key][0].text()
@@ -437,21 +424,27 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-        if enabled:
-            # Check threshold entries for RCAR
+        if enabled and self.isRCAR and self.isPadas:
+            # Check threshold entries for RCAR-PADAS
             for entry in self.widgets['ecu-config'][0]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
                     break
-        if enabled:
-            # Check threshold entries for SoC0
+        if enabled and self.isRCAR and self.isElite:
+            # Check threshold entries for RCAR
             for entry in self.widgets['ecu-config'][1]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
                     break
-        if enabled:
-            # Check threshold entries for SoC1
+        if enabled and self.isSOC0 and self.isElite:
+            # Check threshold entries for SoC0
             for entry in self.widgets['ecu-config'][2]['threshold']:
+                if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                    enabled = False
+                    break
+        if enabled and self.isSOC1 and self.isElite:
+            # Check threshold entries for SoC1
+            for entry in self.widgets['ecu-config'][3]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
                     break
@@ -512,7 +505,7 @@ class StartupTimeConfig(QDialog):
 
     def save_config(self):
         data = {}
-        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Threshold', 'Power ON-OFF Delay']:
+        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Power ON-OFF Delay']:
             w = self.widgets[key][0]
             # print(w.text())
             if w.text() and len(w.text())>0:
