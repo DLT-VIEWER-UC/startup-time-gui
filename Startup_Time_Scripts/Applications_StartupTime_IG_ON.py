@@ -3214,7 +3214,7 @@ def start_startup_time_measurement(logger):
                     if setup_type == ECUType.ELITE.value:
                         filename_list = get_log_file_paths_for_elite(i, ecu_config_list, setup_type)
                     else:
-                        filename_list[ecu_type] = tuple(get_log_file_path(ecu_type, setup_type, iterations, i))
+                        filename_list[ecu_type] = tuple(get_log_file_path(ecu_type, setup_type, i))
                 else:
                     filename_list[ecu_type] = extract_log_file_paths(i, ecu_type, setup_type, logger)
                 logger.info(f"Log files for {ecu_type} in iteration {i}: {filename_list}")
