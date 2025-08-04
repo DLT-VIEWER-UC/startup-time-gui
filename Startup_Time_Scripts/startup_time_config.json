@@ -1,63 +1,66 @@
 {
   "DLT-Viewer Log Capture Time": 1,
   "Iterations": 1,
-  "Threshold": 1,
-  "serial-port-relay": "COM5",
-  "baudrate-relay": 9600,
-  "Startup Order Judgement": true,
+  "Power ON-OFF Delay": 1,
+  "Startup Order Judgement": false,
   "Pre-Generated Logs": false,
   "windows": {
     "Is Environment Path Set": false,
-    "DLT-Viewer Installed Path": "C:/Users/nanib/Downloads/SteamSetup.exe"
+    "DLT-Viewer Installed Path": "C:\\Users\\nanib\\AppData\\Local\\Programs\\dlt-viewer\\dlt-viewer.exe"
   },
   "ecu-config": [
+    {
+      "ecu-type": "PADAS",
+      "startup-order": [
+        {
+          "Order Type": "Sequential",
+          "Applications": ""
+        }
+      ],
+      "threshold-config": []
+    },
     {
       "ecu-type": "RCAR",
       "startup-order": [
         {
-          "Order Type": "Sequential",
-          "Applications": "App1"
+          "Order Type": "Parallel",
+          "Applications": "1"
         }
       ],
-      "threshold-config": [
-        {
-          "Applications": "App1",
-          "Threshold": 1
-        }
-      ]
+      "threshold-config": []
     },
     {
       "ecu-type": "SoC0",
       "startup-order": [
         {
           "Order Type": "Sequential",
-          "Applications": "App1"
+          "Applications": "1"
         }
       ],
-      "threshold-config": [
-        {
-          "Applications": "App1",
-          "Threshold": 2
-        }
-      ]
+      "threshold-config": []
     },
     {
       "ecu-type": "SoC1",
-      "startup-order": [],
+      "startup-order": [
+        {
+          "Order Type": "Sequential",
+          "Applications": "1"
+        }
+      ],
       "threshold-config": []
     }
   ],
   "ECU_setting": {
+    "RCAR_IPAddress": "192.168.1.33",
+    "Qualcomm_SoC0_IPAddress": "192.168.1.3",
+    "Qualcomm_SoC1_IPAddress": "192.168.1.58",
     "PADAS": {
       "RCAR": false
     },
     "Elite": {
       "RCAR": true,
       "SoC0": true,
-      "SoC1": false
-    },
-    "RCAR_IPAddress": "192.168.1.33",
-    "Qualcomm_SoC0_IPAddress": "192.168.1.3",
-    "Qualcomm_SoC1_IPAddress": "192.168.1.58"
+      "SoC1": true
+    }
   }
 }
