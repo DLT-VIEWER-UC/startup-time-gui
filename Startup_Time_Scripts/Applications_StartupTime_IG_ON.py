@@ -958,7 +958,6 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startu
                 overall_IG_ON_cur_iteration['status'] = False
 
         data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else '-', result]
-        logger.info('## %s, %s', process, validate_startup_order)
 
         if validate_startup_order:
             # Create a data row for the process
@@ -3310,3 +3309,6 @@ def start_startup_time_measurement(logger):
         logger.info(f"Total script execution time: {(script_end_time-script_start_time):.3f} seconds")
     print("Final response :: ", isSuccess)
     return isSuccess
+
+# if __name__ == "__main__":
+#     print("Final Result:", start_startup_time_measurement(setup_logging()))

@@ -1,0 +1,653 @@
+0 2025/06/30 17:55:30.000000 244395.4530 0 ECU APP CON 0 control request non-verbose 0 [get_software_version]
+1 2025/06/30 17:55:30.000000 244395.4530 0 ECU APP CON 0 control request non-verbose 0 [set_default_log_level] 04 72 65 6d 6f 00 00 00
+2 2025/06/30 17:55:30.000000 244395.4530 0 ECU APP CON 0 control request non-verbose 0 [set_default_trace_status] 00 72 65 6d 6f 00 00 00
+3 2025/06/30 17:55:30.000000 244395.4680 0 ECU APP CON 0 control request non-verbose 0 [set_verbose_mode] 01 00 00 00
+4 2025/06/30 17:55:30.000000 244395.4680 0 ECU APP CON 0 control request non-verbose 0 [set_timing_packets] 00 01 00 00
+5 2025/06/30 17:55:30.644772 3.2180 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 02 00 00 00 00
+6 2025/06/30 17:55:30.646101 1.3490 0 ECU1 DLTD INTM 1691724 log info verbose 1 Daemon launched. Starting to output traces...
+7 2025/06/30 17:55:30.647206 1.6275 1 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'PHMD' registered for PID 1765389, Description=PlatformHealthManager
+8 2025/06/30 17:55:30.652326 1.3781 0 ECU1 PHMD MP 1765389 log info verbose 4 CreateMessageQueue 70 : Finished CreateMessageQueue
+9 2025/06/30 17:55:30.653549 1.6275 0 ECU1 PHMD PHM 1765389 log info verbose 1 SigTermHandler is set and Initialized.
+10 2025/06/30 17:55:30.655079 1.6275 0 ECU1 PHMD MAIN 1765389 log info verbose 4 main 62 : PHM main program started
+11 2025/06/30 17:55:30.656525 1.6285 2 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'EMFC' registered for PID 1589306, Description=executionmanager
+12 2025/06/30 17:55:30.657803 1.0250 0 ECU1 EMFC EM 1589306 log info verbose 4 KPIT Adaptive Autosar Execution Management.... KSAR Adaptive 20-11 Version M2.7 13-May-2025
+13 2025/06/30 17:55:30.659287 1.0250 0 ECU1 EMFC EMEX 1589306 log info verbose 3 InitSigHandler 2332 : EM: SigTermHandler is set and Initialized.
+14 2025/06/30 17:55:30.660541 1.0250 1 ECU1 EMFC EM 1589306 log info verbose 3 main 98 : EM: ApplicationExecutionManager initialized...
+15 2025/06/30 17:55:30.662643 1.0250 1 ECU1 EMFC EMEX 1589306 log info verbose 3 Run 186 : EM: ApplicationExecutionManager Run method started
+16 2025/06/30 17:55:30.665076 1.0250 2 ECU1 EMFC EMEX 1589306 log info verbose 3 GetExecutionManagerConfig 2377 : EM: GetExecutionManagerConfig started
+17 2025/06/30 17:55:30.666938 1.0250 3 ECU1 EMFC EMEX 1589306 log info verbose 6 GetExecutionManagerConfig 2445 : EM: SchedulingPolicy : schedulingpolicyroundrobin SchedulingPriority : 30
+18 2025/06/30 17:55:30.668160 1.0250 4 ECU1 EMFC EMEX 1589306 log info verbose 3 GetExecutionManagerConfig 2457 : EM: Setting Policy and Priority to EXM successful...
+19 2025/06/30 17:55:30.669250 1.0250 5 ECU1 EMFC EMEX 1589306 log info verbose 3 InitializeResourceGroups 365 : EM: Initializing Resource Groups
+20 2025/06/30 17:55:30.671018 1.6285 0 ECU1 PHMD HM 1765389 log info verbose 4 Initialize 64 : Starting Initialize
+21 2025/06/30 17:55:30.672358 1.0270 0 ECU1 EMFC DFLT 1589306 log warn verbose 4 SIPC_2181 : Failed to Parse Dynamic App Install Parameter : ProcessDynAppInstallSection 206
+22 2025/06/30 17:55:30.673577 1.0280 1 ECU1 EMFC DFLT 1589306 log warn verbose 4 SIPC_2167 : 'events' member is missing, not an array or is empty. : ReadServiceObjectEvents 467
+23 2025/06/30 17:55:30.674666 1.0280 2 ECU1 EMFC DFLT 1589306 log warn verbose 4 SIPC_2170 : 'subscribedEvents' is missing, not an array or is empty. : ParseServiceSubscriberInfo 729
+24 2025/06/30 17:55:30.675619 1.0280 3 ECU1 EMFC DFLT 1589306 log warn verbose 4 SIPC_2171 : 'clients' section is missing, not an array or array is empty. : ProcessClientsSection 755
+25 2025/06/30 17:55:30.676542 1.0280 4 ECU1 EMFC DFLT 1589306 log info verbose 4 CreateReadWriteSharedMemory 147 : Read-Write Shared Memory created successfully!
+26 2025/06/30 17:55:30.677806 1.0280 5 ECU1 EMFC DFLT 1589306 log warn verbose 4 SIPC_2075 : Failed to register publishers events : CreateServiceEventObj 489
+27 2025/06/30 17:55:30.678872 1.0300 6 ECU1 EMFC DFLT 1589306 log warn verbose 4 SIPC_2071 : Failed to update the client state. : Init 147
+28 2025/06/30 17:55:30.680177 1.0300 7 ECU1 EMFC DFLT 1589306 log warn verbose 4 SIPC_2072 : Failed to check subscriber status inside main thread. : Init 150
+29 2025/06/30 17:55:30.681399 1.0300 8 ECU1 EMFC DFLT 1589306 log warn verbose 4 SIPC_2073 : Failed to start a thread for getting client state. : Init 154
+30 2025/06/30 17:55:30.682916 1.0300 6 ECU1 EMFC EMEX 1589306 log info verbose 3 InitTransportProxy 445 : EM: InitTransportProxy Done!
+31 2025/06/30 17:55:30.684170 1.0320 7 ECU1 EMFC EMEX 1589306 log warn verbose 5 EXM_2011: Scanopt 1917 : EM: No binary is present for the process : /ksar/function_clusters/ara-exec/bin
+32 2025/06/30 17:55:30.693054 1.0330 8 ECU1 EMFC EMEX 1589306 log warn verbose 5 EXM_2011: Scanopt 1917 : EM: No binary is present for the process : /ksar/function_clusters/tsync/bin
+33 2025/06/30 17:55:30.696078 1.0680 9 ECU1 EMFC EMEX 1589306 log info verbose 3 PerformInitializing 481 : EM: Execution manager initialization is completed!!
+34 2025/06/30 17:55:30.697915 1.0680 10 ECU1 EMFC EMEX 1589306 log info verbose 7 SetState 1037 : EM: SetState() start: state chng cnt: 1 updateFlag_: 0
+35 2025/06/30 17:55:30.699653 1.0690 11 ECU1 EMFC EMEX 1589306 log info verbose 4 Execute 1410 : EM: Size of startupCheckResults 7
+36 2025/06/30 17:55:30.701157 1.0690 0 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: dltdaemon spawn started time: 1069
+37 2025/06/30 17:55:30.702288 1.0690 1 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: dltdaemon and Error Message: No such process
+38 2025/06/30 17:55:30.709864 1.0690 2 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/function_clusters/automotive-dlt/bin/dltdaemon
+39 2025/06/30 17:55:30.712042 1.0710 3 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: dltdaemon with pid: 1691724
+40 2025/06/30 17:55:30.713286 1.3460 4 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: dltdaemon started successfully.
+41 2025/06/30 17:55:30.714400 1.3460 12 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process dltdaemon.0 , Pid: 1691724 is started. Timestamp: 1346075 us
+42 2025/06/30 17:55:30.715665 1.3460 5 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: healthmanager spawn started time: 1346
+43 2025/06/30 17:55:30.717012 1.3470 6 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: healthmanager and Error Message: No such process
+44 2025/06/30 17:55:30.718642 1.3470 7 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/function_clusters/healthmanager/bin/healthmanager
+45 2025/06/30 17:55:30.720241 1.3500 8 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: healthmanager with pid: 1765389
+46 2025/06/30 17:55:30.721599 1.3500 9 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: healthmanager started successfully.
+47 2025/06/30 17:55:30.723014 1.3500 13 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process healthmanager.0 , Pid: 1765389 is started. Timestamp: 1350078 us
+48 2025/06/30 17:55:30.724292 1.3500 10 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: ipcd spawn started time: 1350
+49 2025/06/30 17:55:30.725413 1.3500 11 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: ipcd and Error Message: No such process
+50 2025/06/30 17:55:30.726726 1.3510 12 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/function_clusters/ipc/bin/ipcd
+51 2025/06/30 17:55:30.728179 1.6305 0 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
+52 2025/06/30 17:55:30.729523 1.6315 1 ECU1 PHMD HM 1765389 log info verbose 4 Initialize 67 : Finished Initialize
+53 2025/06/30 17:55:30.731510 1.6315 1 ECU1 PHMD MAIN 1765389 log info verbose 4 main 70 : ProcessMessage thread running
+54 2025/06/30 17:55:30.732985 1.6315 1 ECU1 PHMD MP 1765389 log info verbose 4 ProcessMessage 90 : Starting ProcessMessage
+55 2025/06/30 17:55:30.734349 1.6325 13 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: ipcd with pid: 1790034
+56 2025/06/30 17:55:30.742863 1.6325 14 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: ipcd started successfully.
+57 2025/06/30 17:55:30.745534 1.6325 14 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process ipcd.0 , Pid: 1790034 is started. Timestamp: 1632524 us
+58 2025/06/30 17:55:30.747334 1.6325 15 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: access_manager spawn started time: 1632
+59 2025/06/30 17:55:30.749676 1.6325 16 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/function_clusters/iam/bin/access_manager
+60 2025/06/30 17:55:30.751041 1.6345 2 ECU1 PHMD MAIN 1765389 log info verbose 4 main 74 : PHM Initialized & Ready for Monitoring
+61 2025/06/30 17:55:30.752685 1.9140 3 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'ipcd' registered for PID 1790034, Description=IPCDaemon
+62 2025/06/30 17:55:30.754028 1.6355 17 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: access_manager with pid: 1790036
+63 2025/06/30 17:55:30.755358 1.9140 18 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: access_manager started successfully.
+64 2025/06/30 17:55:30.756692 1.9140 15 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process access_manager.0 , Pid: 1790036 is started. Timestamp: 1914077 us
+65 2025/06/30 17:55:30.758151 1.9140 16 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : healthmanager , Pid: 1765389 and ExecutionState: 0 , timestamp 1914077 us
+66 2025/06/30 17:55:30.759504 1.9150 4 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'IAM' registered for PID 1790036, Description=accessmanager
+67 2025/06/30 17:55:30.760901 1.6860 0 ECU1 IAM IAMC 1790036 log info verbose 4 main 105 : Setting up IPC server
+68 2025/06/30 17:55:30.762330 1.9140 17 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : ipcd , Pid: 1790034 and ExecutionState: 0 , timestamp 1914077 us
+69 2025/06/30 17:55:30.764077 1.9140 18 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : access_manager , Pid: 1790036 and ExecutionState: 0 , timestamp 1914077 us
+70 2025/06/30 17:55:30.770254 1.9150 1 ECU1 IAM IAMC 1790036 log info verbose 4 main 111 : Loading grants
+71 2025/06/30 17:55:30.779231 1.9150 0 ECU1 IAM iam 1790036 log info verbose 4 MessagePump 142 : Socket binding completed, Listining.
+72 2025/06/30 17:55:30.781757 1.9170 2 ECU1 IAM IAMC 1790036 log warn verbose 4 IAM_2002 - No any access control list is available in installed application : AppendGrantsFromSubfolders 103
+73 2025/06/30 17:55:30.783599 1.9170 3 ECU1 IAM IAMC 1790036 log info verbose 4 InitGrantStorage 302 : No grants loaded. All access will be forbidden.
+74 2025/06/30 17:55:30.786051 1.9170 4 ECU1 IAM IAMC 1790036 log info verbose 4 LogAllGrants 159 : Loaded grants:
+75 2025/06/30 17:55:30.788729 1.9170 5 ECU1 IAM IAMC 1790036 log info verbose 6 LogAllGrants 166 : Total of 0 grants loaded.
+76 2025/06/30 17:55:30.790469 1.9170 6 ECU1 IAM IAMC 1790036 log info verbose 4 main 129 : Initializing the AccessManager
+77 2025/06/30 17:55:30.793032 1.9180 7 ECU1 IAM IAMC 1790036 log info verbose 4 main 134 : Setting up signal handlers
+78 2025/06/30 17:55:30.796048 1.9180 0 ECU1 IAM AMCX 1790036 log info verbose 4 ProcessGrantQueryRequests 90 : Entering main event loop
+79 2025/06/30 17:55:30.798195 1.9220 19 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process dltdaemon.0 [Running]
+80 2025/06/30 17:55:30.800311 1.9220 19 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: dltdaemon - Init(Up) Time: 852993 us
+81 2025/06/30 17:55:30.802904 1.9220 20 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: someipd spawn started time: 1922
+82 2025/06/30 17:55:30.805635 2.2000 21 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: someipd and Error Message: No such process
+83 2025/06/30 17:55:30.814462 2.2000 22 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/function_clusters/someip/bin/someipd
+84 2025/06/30 17:55:30.817408 2.2010 23 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: someipd with pid: 1806410
+85 2025/06/30 17:55:30.819970 2.2010 24 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: someipd started successfully.
+86 2025/06/30 17:55:30.822064 2.2010 20 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process someipd.0 , Pid: 1806410 is started. Timestamp: 2201078 us
+87 2025/06/30 17:55:30.824718 2.2020 2 ECU1 PHMD MP 1765389 log info verbose 4 ProcessMessage 99 : Received request for Operation::Init
+88 2025/06/30 17:55:30.832254 2.2040 21 ECU1 EMFC EMEX 1589306 log info verbose 3 ProcessStartupConfiguration 1527 : EM: Startup Sequence Checkpoint reported start
+89 2025/06/30 17:55:30.835323 2.2040 22 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process healthmanager.0 [Running]
+90 2025/06/30 17:55:30.837859 2.2040 25 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: healthmanager - Init(Up) Time: 858003 us
+91 2025/06/30 17:55:30.839661 2.2040 23 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process ipcd.0 [Running]
+92 2025/06/30 17:55:30.849558 2.2040 26 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: ipcd - Init(Up) Time: 854001 us
+93 2025/06/30 17:55:30.852525 2.2040 24 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process access_manager.0 [Running]
+94 2025/06/30 17:55:30.855052 2.2050 27 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: access_manager - Init(Up) Time: 572555 us
+95 2025/06/30 17:55:30.858251 2.2050 3 ECU1 PHMD MP 1765389 log info verbose 4 ProcessMessage 105 : Received request for Operation::SupervisedEntityRegister
+96 2025/06/30 17:55:30.861100 2.2060 0 ECU1 PHMD DS 1765389 log info verbose 5 NextCheckpointReached 79 : ID : 7001
+97 2025/06/30 17:55:30.864052 2.2290 5 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'some' registered for PID 1806410, Description=Someip Daemon
+98 2025/06/30 17:55:30.866133 2.2320 25 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : someipd , Pid: 1806410 and ExecutionState: 0 , timestamp 2232078 us
+99 2025/06/30 17:55:30.874969 2.2320 26 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process someipd.0 [Running]
+100 2025/06/30 17:55:30.877452 2.2320 28 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: someipd - Init(Up) Time: 310001 us
+101 2025/06/30 17:55:30.879065 2.2320 29 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: statemanager spawn started time: 2232
+102 2025/06/30 17:55:30.880638 2.2320 30 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/function_clusters/stm/bin/statemanager
+103 2025/06/30 17:55:30.882757 2.3730 0 ECU1 some PER 1806410 log warn verbose 4 PER_2084 : Unable to insert kvsdataItem entry : GetConsolidatedKvsPairs 1370
+104 2025/06/30 17:55:30.884250 2.5090 1 ECU1 some PER 1806410 log warn verbose 4 PER_2084 : Unable to insert kvsdataItem entry : GetConsolidatedKvsPairs 1370
+105 2025/06/30 17:55:30.885740 2.5120 31 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: statemanager with pid: 1806415
+106 2025/06/30 17:55:30.887996 2.5120 32 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: statemanager started successfully.
+107 2025/06/30 17:55:30.890509 2.5120 27 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process statemanager.0 , Pid: 1806415 is started. Timestamp: 2512078 us
+108 2025/06/30 17:55:30.892811 2.5540 6 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'SM' registered for PID 1806415, Description=StateManager
+109 2025/06/30 17:55:30.895489 2.5560 0 ECU1 SM DFLT 1806415 log warn verbose 4 SIPC_2181 : Failed to Parse Dynamic App Install Parameter : ProcessDynAppInstallSection 206
+110 2025/06/30 17:55:30.897342 2.5570 1 ECU1 SM DFLT 1806415 log warn verbose 4 SIPC_2166 : 'services' is missing, is not an array or is empty in shared memory pool object. : ProcessServicesSection 339
+111 2025/06/30 17:55:30.906278 2.5570 28 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : statemanager , Pid: 1806415 and ExecutionState: 0 , timestamp 2557079 us
+112 2025/06/30 17:55:30.909033 2.5570 2 ECU1 SM DFLT 1806415 log warn verbose 4 SIPC_2172 : Missing or invalid 'events' member in client object, invalid array or array is empty. : ReadClientObjectEvents 890
+113 2025/06/30 17:55:30.910925 2.5570 29 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process statemanager.0 [Running]
+114 2025/06/30 17:55:30.912489 2.5570 33 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: statemanager - Init(Up) Time: 325000 us
+115 2025/06/30 17:55:30.914732 2.5580 3 ECU1 SM DFLT 1806415 log info verbose 4 CreateReadWriteSharedMemoryForClientMethod 230 : Read-Write Shared Memory for Client Method created successfully!
+116 2025/06/30 17:55:30.916607 2.5580 4 ECU1 SM DFLT 1806415 log warn verbose 4 SIPC_2077 : Failed to register client events : CreateClientEventObj 579
+117 2025/06/30 17:55:30.918389 2.5600 5 ECU1 SM DFLT 1806415 log warn verbose 4 SIPC_2071 : Failed to update the client state. : Init 147
+118 2025/06/30 17:55:30.920119 2.5600 6 ECU1 SM DFLT 1806415 log warn verbose 4 SIPC_2072 : Failed to check subscriber status inside main thread. : Init 150
+119 2025/06/30 17:55:30.922074 2.5600 7 ECU1 SM DFLT 1806415 log warn verbose 4 SIPC_2073 : Failed to start a thread for getting client state. : Init 154
+120 2025/06/30 17:55:30.924408 2.5600 0 ECU1 SM APP 1806415 log info verbose 4 Execute 80 : State Management Execute called..
+121 2025/06/30 17:55:30.929646 2.5610 0 ECU1 SM SM 1806415 log info verbose 4 ReadUpdatedFunctionGroup 124 : SM: Reading updated Function Group
+122 2025/06/30 17:55:30.931640 2.5610 4 ECU1 PHMD MP 1765389 log info verbose 4 ProcessMessage 99 : Received request for Operation::Init
+123 2025/06/30 17:55:30.934495 2.5620 5 ECU1 PHMD MP 1765389 log info verbose 4 ProcessMessage 105 : Received request for Operation::SupervisedEntityRegister
+124 2025/06/30 17:55:30.937170 2.5630 34 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: functiongroupmanager spawn started time: 2563
+125 2025/06/30 17:55:30.940288 2.5630 35 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/functiongroupmanager/bin/functiongroupmanager
+126 2025/06/30 17:55:30.942234 2.5640 8 ECU1 SM DFLT 1806415 log info verbose 4 StartTimer 117 : Timer is started.
+127 2025/06/30 17:55:30.943823 2.8420 36 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: functiongroupmanager with pid: 1835094
+128 2025/06/30 17:55:30.945655 2.8420 37 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: functiongroupmanager started successfully.
+129 2025/06/30 17:55:30.947528 2.8430 30 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process functiongroupmanager.0 , Pid: 1835094 is started. Timestamp: 2843078 us
+130 2025/06/30 17:55:30.949300 2.8890 7 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'FGM' registered for PID 1835094, Description=Function Group Manager Context
+131 2025/06/30 17:55:30.950984 2.8950 31 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : functiongroupmanager , Pid: 1835094 and ExecutionState: 0 , timestamp 2895082 us
+132 2025/06/30 17:55:30.952718 2.8950 32 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process functiongroupmanager.0 [Running]
+133 2025/06/30 17:55:30.955227 2.8950 38 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: functiongroupmanager - Init(Up) Time: 332002 us
+134 2025/06/30 17:55:30.957476 2.9010 33 ECU1 EMFC EMEX 1589306 log info verbose 3 SetFunctionGroupStates 1004 : EM: State transition successful
+135 2025/06/30 17:55:30.959820 2.9010 34 ECU1 EMFC EMEX 1589306 log info verbose 4 SetState 1149 : EM: SetState() end 1
+136 2025/06/30 17:55:30.961515 2.9010 35 ECU1 EMFC EMEX 1589306 log info verbose 3 Run 204 : EM: SetState <MachineFG.Startup> completed
+137 2025/06/30 17:55:30.963123 2.9010 36 ECU1 EMFC EMEX 1589306 log info verbose 3 Run 210 : EM: Startup Sequence Checkpoint reported end
+138 2025/06/30 17:55:30.964660 2.9010 9 ECU1 SM DFLT 1806415 log info verbose 4 StopTimer 125 : Timer successfully deleted.
+139 2025/06/30 17:55:30.966280 2.9020 0 ECU1 SM STCL 1806415 log info verbose 3 GetInitialMachineState 354 : EM: Initial machine state transition successful
+140 2025/06/30 17:55:30.968089 2.9030 1 ECU1 PHMD DS 1765389 log info verbose 5 NextCheckpointReached 79 : ID : 7002
+141 2025/06/30 17:55:30.969688 2.9040 2 ECU1 PHMD DS 1765389 log warn verbose 5 PHM_2003 : Deadline Supervision Failure : TimerHandler 67 DeadlineStartup
+142 2025/06/30 17:55:30.971850 2.9050 3 ECU1 PHMD DS 1765389 log info verbose 6 TimerHandler 68 : Deadline timer expired, Duration: 698 ms
+143 2025/06/30 17:55:30.973694 2.9090 0 ECU1 SM PER 1806415 log warn verbose 4 PER_2084 : Unable to insert kvsdataItem entry : GetConsolidatedKvsPairs 1370
+144 2025/06/30 17:55:30.975308 2.9100 0 ECU1 SM DPO 1806415 log info verbose 4 Init 158 : SM : Offering Services
+145 2025/06/30 17:55:30.977139 2.9270 1 ECU1 SM SM 1806415 log info verbose 4 Run 111 : Adaptive AUTOSAR State Management running
+146 2025/06/30 17:55:30.978694 2.9290 0 ECU1 SM SMVS 1806415 log info verbose 4 SmVsmRecoveryAction 55 : SM : Found Instance Id for VSM
+147 2025/06/30 17:55:30.981121 2.9300 0 ECU1 SM RA 1806415 log info verbose 4 Offer 121 : RecoveryAction Starting Offer
+148 2025/06/30 17:55:30.982696 2.9300 1 ECU1 SM RA 1806415 log info verbose 4 RecoveryHandlerThread 101 : Starting RecoveryAction RecoveryHandlerThread
+149 2025/06/30 17:55:30.985549 2.9300 2 ECU1 SM RA 1806415 log info verbose 4 Offer 124 : RecoveryAction Finished Offer
+150 2025/06/30 17:55:30.987409 2.9310 0 ECU1 SM HA 1806415 log info verbose 4 Offer 113 : HealthChannelAction Starting Offer
+151 2025/06/30 17:55:30.989018 2.9320 1 ECU1 SM HA 1806415 log info verbose 4 RecoveryHandlerThread 84 : HealthChannelAction Starting RecoveryHandlerThread
+152 2025/06/30 17:55:30.990626 2.9320 2 ECU1 SM HA 1806415 log info verbose 4 Offer 116 : HealthChannelAction Finished Offer
+153 2025/06/30 17:55:30.992324 2.9330 2 ECU1 SM SM 1806415 log info verbose 4 ReadUpdateSessionFromKVS 677 : SM: Reading Persisted data for Update session
+154 2025/06/30 17:55:30.993933 2.9400 0 ECU1 some SMIP 1806410 log warn verbose 6 SIP_1075 : Failed to add the requester 12490 : AddRequester : 177
+155 2025/06/30 17:55:30.995642 3.2180 8 ECU1 DLTD INTM 1691724 log info verbose 1 New client connection #20 established, Total Clients : 1
+156 2025/06/30 17:55:30.997349 3.2200 4 ECU1 PHMD DS 1765389 log info verbose 5 NextCheckpointReached 79 : ID : 3003
+157 2025/06/30 17:55:30.999109 3.2200 37 ECU1 EMFC EMEX 1589306 log info verbose 4 SetStateProcess 670 : EM: SetState request: 1MachineFGDriving
+158 2025/06/30 17:55:31.001233 3.2200 38 ECU1 EMFC EMEX 1589306 log info verbose 7 SetState 1037 : EM: SetState() start: state chng cnt: 2 updateFlag_: 0
+159 2025/06/30 17:55:31.003026 3.2200 39 ECU1 EMFC EMEX 1589306 log info verbose 5 SetState 1111 : EM: SetState() input state: Driving does not match with any of the config machine state
+160 2025/06/30 17:55:31.004660 3.2200 40 ECU1 EMFC EMEX 1589306 log info verbose 4 Execute 1410 : EM: Size of startupCheckResults 23
+161 2025/06/30 17:55:31.006307 3.2200 39 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: crypto_keystorage_manager spawn started time: 3220
+162 2025/06/30 17:55:31.007953 3.2210 40 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/function_clusters/ara-crypto/bin/crypto_keystorage_manager
+163 2025/06/30 17:55:31.013115 3.2230 41 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: crypto_keystorage_manager with pid: 1970271
+164 2025/06/30 17:55:31.017681 3.2230 42 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: crypto_keystorage_manager started successfully.
+165 2025/06/30 17:55:31.020550 3.2240 41 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process crypto_keystorage_manager.0 , Pid: 1970271 is started. Timestamp: 3224082 us
+166 2025/06/30 17:55:31.022740 3.2240 43 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_4_C12 spawn started time: 3224
+167 2025/06/30 17:55:31.026005 3.2240 44 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_4_C12 and Error Message: No such process
+168 2025/06/30 17:55:31.028922 3.2240 45 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_4_C12/bin/Test_App_4_C12
+169 2025/06/30 17:55:31.030858 2.9410 3 ECU1 SM SM 1806415 log info verbose 7 SetFunctionGroup 136 : SM: Valid FunctionGroup Received MachineFG :: Driving
+170 2025/06/30 17:55:31.032709 3.2180 1 ECU1 SM STCL 1806415 log info verbose 3 SetState 255 : EM: SetState initiated with FunctionGroupState
+171 2025/06/30 17:55:31.034586 3.2190 2 ECU1 SM STCL 1806415 log info verbose 3 Send_to_Shm 169 : EM: transportStateClient_ Send_to_Shm execution started
+172 2025/06/30 17:55:31.036489 3.2190 10 ECU1 SM DFLT 1806415 log info verbose 4 StartTimer 117 : Timer is started.
+173 2025/06/30 17:55:31.038580 3.2280 46 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_4_C12 with pid: 1970273
+174 2025/06/30 17:55:31.040531 3.5040 9 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 1970273, Description=Test AppD Context
+175 2025/06/30 17:55:31.042361 3.2280 47 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_4_C12 started successfully.
+176 2025/06/30 17:55:31.044338 3.5040 42 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_4_C12.0 , Pid: 1970273 is started. Timestamp: 3504078 us
+177 2025/06/30 17:55:31.046239 3.5040 48 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_3_C12 spawn started time: 3504
+178 2025/06/30 17:55:31.048172 3.2510 0 ECU1 TAP_ TAP_ 1970273 log info verbose 1 Starting testing#2 CPU usage --- 10%CPU
+179 2025/06/30 17:55:31.050088 3.5050 49 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_3_C12 and Error Message: No such process
+180 2025/06/30 17:55:31.051893 3.5050 50 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_3_C12/bin/Test_App_3_C12
+181 2025/06/30 17:55:31.053701 3.5080 51 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_3_C12 with pid: 2015322
+182 2025/06/30 17:55:31.055557 3.5080 52 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_3_C12 started successfully.
+183 2025/06/30 17:55:31.057534 3.5080 43 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_3_C12.0 , Pid: 2015322 is started. Timestamp: 3508079 us
+184 2025/06/30 17:55:31.059299 3.5080 53 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_1_C12 spawn started time: 3508
+185 2025/06/30 17:55:31.061062 3.5090 54 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_1_C12 and Error Message: No such process
+186 2025/06/30 17:55:31.062797 3.5090 55 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_1_C12/bin/Test_App_1_C12
+187 2025/06/30 17:55:31.064520 3.5120 56 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_1_C12 with pid: 2015332
+188 2025/06/30 17:55:31.066240 3.5120 57 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_1_C12 started successfully.
+189 2025/06/30 17:55:31.068000 3.5130 44 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_1_C12.0 , Pid: 2015332 is started. Timestamp: 3513079 us
+190 2025/06/30 17:55:31.069733 3.5130 58 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_29_M500 spawn started time: 3513
+191 2025/06/30 17:55:31.074308 3.7907 10 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2015322, Description=Test AppC Context
+192 2025/06/30 17:55:31.076264 3.5480 0 ECU1 TAP_ TAP_ 2015322 log info verbose 1 Starting testing#2 CPU usage --- 10%CPU
+193 2025/06/30 17:55:31.078242 3.5130 59 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_29_M500 and Error Message: No such process
+194 2025/06/30 17:55:31.080087 3.7907 60 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_29_M500/bin/Test_App_29_M500
+195 2025/06/30 17:55:31.081901 3.7937 61 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_29_M500 with pid: 2068572
+196 2025/06/30 17:55:31.084376 3.7937 62 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_29_M500 started successfully.
+197 2025/06/30 17:55:31.086517 3.7937 45 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_29_M500.0 , Pid: 2068572 is started. Timestamp: 3793737 us
+198 2025/06/30 17:55:31.094206 3.7937 63 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_30_M500 spawn started time: 3793
+199 2025/06/30 17:55:31.096522 3.7937 64 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_30_M500 and Error Message: No such process
+200 2025/06/30 17:55:31.099094 3.7947 65 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_30_M500/bin/Test_App_30_M500
+201 2025/06/30 17:55:31.101067 3.7970 66 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_30_M500 with pid: 2072678
+202 2025/06/30 17:55:31.103160 3.7970 67 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_30_M500 started successfully.
+203 2025/06/30 17:55:31.107188 3.7970 46 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_30_M500.0 , Pid: 2072678 is started. Timestamp: 3797081 us
+204 2025/06/30 17:55:31.109145 3.7970 68 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_28_M500 spawn started time: 3797
+205 2025/06/30 17:55:31.111323 3.7980 69 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_28_M500 and Error Message: No such process
+206 2025/06/30 17:55:31.113240 3.7980 70 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_28_M500/bin/Test_App_28_M500
+207 2025/06/30 17:55:31.216421 4.0770 0 ECU1 DA1 DC1 0 control response non-verbose 0 [get_software_version ok] DLT Package Version: 2.18.8 STABLE, Package Revision: AMexternal_libs_R20V2.2.13, build on May 9 2025 14:52:26 -SYSTEMD -SYSTEMD_WATCHDOG -TEST -SHM
+208 2025/06/30 17:55:31.218721 4.0770 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_log_level ok]
+209 2025/06/30 17:55:31.407245 4.3570 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_trace_status ok]
+210 2025/06/30 17:55:31.409347 4.3580 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_verbose_mode not_supported]
+211 2025/06/30 17:55:31.411352 4.3580 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_timing_packets ok]
+212 2025/06/30 17:55:31.413460 4.3580 11 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2068572, Description=Test Appn Context
+213 2025/06/30 17:55:31.415473 3.8470 0 ECU1 TAP_ TAP_ 2068572 log info verbose 1 Starting testing#6 CPU usage
+214 2025/06/30 17:55:31.417442 3.8000 71 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_28_M500 with pid: 2072680
+215 2025/06/30 17:55:31.419520 4.0770 72 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_28_M500 started successfully.
+216 2025/06/30 17:55:31.421983 4.0770 47 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_28_M500.0 , Pid: 2072680 is started. Timestamp: 4077079 us
+217 2025/06/30 17:55:31.424272 4.0770 73 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_27_M500 spawn started time: 4077
+218 2025/06/30 17:55:31.426205 4.0780 74 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_27_M500 and Error Message: No such process
+219 2025/06/30 17:55:31.428105 4.0780 75 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_27_M500/bin/Test_App_27_M500
+220 2025/06/30 17:55:31.430129 4.1060 76 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_27_M500 with pid: 2261098
+221 2025/06/30 17:55:31.432045 4.3580 77 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_27_M500 started successfully.
+222 2025/06/30 17:55:31.433950 4.3580 48 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_27_M500.0 , Pid: 2261098 is started. Timestamp: 4358081 us
+223 2025/06/30 17:55:31.435926 4.3580 78 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_26_M500 spawn started time: 4358
+224 2025/06/30 17:55:31.439362 4.3590 12 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2072678, Description=Test Appo Context
+225 2025/06/30 17:55:31.441877 3.8500 0 ECU1 TAP_ TAP_ 2072678 log info verbose 1 Starting testing#6 CPU usage
+226 2025/06/30 17:55:31.442762 4.3580 79 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_26_M500 and Error Message: No such process
+227 2025/06/30 17:55:31.443546 4.3590 80 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_26_M500/bin/Test_App_26_M500
+228 2025/06/30 17:55:31.444503 4.3600 13 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2072680, Description=Test Appm Context
+229 2025/06/30 17:55:31.445436 3.8510 0 ECU1 TAP_ TAP_ 2072680 log info verbose 1 Starting testing#6 CPU usage
+230 2025/06/30 17:55:31.446481 4.3600 14 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2261098, Description=Test Appl Context
+231 2025/06/30 17:55:31.478991 4.1863 0 ECU1 TAP_ TAP_ 2261098 log info verbose 1 Starting testing#6 CPU usage
+232 2025/06/30 17:55:31.479838 4.3670 81 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_26_M500 with pid: 2285675
+233 2025/06/30 17:55:31.480764 4.3670 82 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_26_M500 started successfully.
+234 2025/06/30 17:55:31.481622 4.3670 49 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_26_M500.0 , Pid: 2285675 is started. Timestamp: 4367080 us
+235 2025/06/30 17:55:31.482374 4.3670 83 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_25_M500 spawn started time: 4367
+236 2025/06/30 17:55:31.483180 4.3680 84 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_25_M500 and Error Message: No such process
+237 2025/06/30 17:55:31.691545 4.6440 15 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2285675, Description=Test Appk Context
+238 2025/06/30 17:55:31.692552 4.3680 85 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_25_M500/bin/Test_App_25_M500
+239 2025/06/30 17:55:31.693487 4.4650 0 ECU1 TAP_ TAP_ 2285675 log info verbose 1 Starting testing#6 CPU usage
+240 2025/06/30 17:55:31.694483 4.6460 86 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_25_M500 with pid: 2306156
+241 2025/06/30 17:55:31.695669 4.6460 87 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_25_M500 started successfully.
+242 2025/06/30 17:55:31.696800 4.6470 50 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_25_M500.0 , Pid: 2306156 is started. Timestamp: 4647084 us
+243 2025/06/30 17:55:31.697639 4.6470 88 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_24_M500 spawn started time: 4647
+244 2025/06/30 17:55:31.698608 4.6470 89 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_24_M500 and Error Message: No such process
+245 2025/06/30 17:55:31.699463 4.6470 90 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_24_M500/bin/Test_App_24_M500
+246 2025/06/30 17:55:31.700293 4.6510 91 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_24_M500 with pid: 2306158
+247 2025/06/30 17:55:31.701307 4.6510 92 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_24_M500 started successfully.
+248 2025/06/30 17:55:31.713531 4.6510 51 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_24_M500.0 , Pid: 2306158 is started. Timestamp: 4651084 us
+249 2025/06/30 17:55:31.714476 4.6510 93 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_23_M500 spawn started time: 4651
+250 2025/06/30 17:55:31.715613 4.6520 94 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_23_M500 and Error Message: No such process
+251 2025/06/30 17:55:31.716404 4.6520 95 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_23_M500/bin/Test_App_23_M500
+252 2025/06/30 17:55:31.737024 4.6570 96 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_23_M500 with pid: 2306159
+253 2025/06/30 17:55:31.737865 4.6570 97 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_23_M500 started successfully.
+254 2025/06/30 17:55:31.738613 4.6570 52 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_23_M500.0 , Pid: 2306159 is started. Timestamp: 4657084 us
+255 2025/06/30 17:55:31.984395 4.9370 16 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2306156, Description=Test Appj Context
+256 2025/06/30 17:55:31.985436 4.6570 98 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_22_M500 spawn started time: 4657
+257 2025/06/30 17:55:31.986249 4.9370 99 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_22_M500 and Error Message: No such process
+258 2025/06/30 17:55:31.986940 4.7590 0 ECU1 TAP_ TAP_ 2306156 log info verbose 1 Starting testing#6 CPU usage
+259 2025/06/30 17:55:31.987580 4.9380 17 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2306158, Description=Test Appi Context
+260 2025/06/30 17:55:31.988215 4.7590 0 ECU1 TAP_ TAP_ 2306158 log info verbose 1 Starting testing#6 CPU usage
+261 2025/06/30 17:55:31.988830 4.9370 100 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_22_M500/bin/Test_App_22_M500
+262 2025/06/30 17:55:31.989521 4.9380 18 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2306159, Description=Test Apph Context
+263 2025/06/30 17:55:31.990173 4.7697 0 ECU1 TAP_ TAP_ 2306159 log info verbose 1 Starting testing#6 CPU usage
+264 2025/06/30 17:55:31.990830 4.9440 101 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_22_M500 with pid: 2306160
+265 2025/06/30 17:55:31.991489 4.9440 102 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_22_M500 started successfully.
+266 2025/06/30 17:55:31.992152 4.9440 53 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_22_M500.0 , Pid: 2306160 is started. Timestamp: 4944086 us
+267 2025/06/30 17:55:31.998002 4.9440 103 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_11_C5 spawn started time: 4944
+268 2025/06/30 17:55:31.998869 4.9450 104 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_11_C5 and Error Message: No such process
+269 2025/06/30 17:55:31.999792 4.9450 105 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_11_C5/bin/Test_App_11_C5
+270 2025/06/30 17:55:32.028274 4.9480 106 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_11_C5 with pid: 2306161
+271 2025/06/30 17:55:32.029375 4.9480 107 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_11_C5 started successfully.
+272 2025/06/30 17:55:32.030159 4.9480 54 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_11_C5.0 , Pid: 2306161 is started. Timestamp: 4948086 us
+273 2025/06/30 17:55:32.276932 5.2290 19 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2306161, Description=Test AppK Context
+274 2025/06/30 17:55:32.277946 4.9480 108 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_21_M500 spawn started time: 4948
+275 2025/06/30 17:55:32.279051 5.2290 20 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2306160, Description=Test Appg Context
+276 2025/06/30 17:55:32.280060 5.2290 109 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_21_M500 and Error Message: No such process
+277 2025/06/30 17:55:32.280921 5.2290 110 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_21_M500/bin/Test_App_21_M500
+278 2025/06/30 17:55:32.281748 5.0640 0 ECU1 TAP_ TAP_ 2306161 log info verbose 1 Starting testing#11 CPU usage --- 5%CPU
+279 2025/06/30 17:55:32.282676 5.0670 0 ECU1 TAP_ TAP_ 2306160 log info verbose 1 Starting testing#6 CPU usage
+280 2025/06/30 17:55:32.283466 5.2360 111 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_21_M500 with pid: 2310151
+281 2025/06/30 17:55:32.284328 5.2360 112 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_21_M500 started successfully.
+282 2025/06/30 17:55:32.285082 5.2360 55 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_21_M500.0 , Pid: 2310151 is started. Timestamp: 5236083 us
+283 2025/06/30 17:55:32.285797 5.2360 113 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_6_C12 spawn started time: 5236
+284 2025/06/30 17:55:32.286687 5.2370 114 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_6_C12 and Error Message: No such process
+285 2025/06/30 17:55:32.287596 5.2370 115 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_6_C12/bin/Test_App_6_C12
+286 2025/06/30 17:55:32.329077 5.2420 116 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_6_C12 with pid: 2310258
+287 2025/06/30 17:55:32.330253 5.2420 117 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_6_C12 started successfully.
+288 2025/06/30 17:55:32.331540 5.2420 56 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_6_C12.0 , Pid: 2310258 is started. Timestamp: 5242083 us
+289 2025/06/30 17:55:32.332363 5.2420 118 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_20_M500 spawn started time: 5242
+290 2025/06/30 17:55:32.570267 5.5210 21 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2310258, Description=Test AppF Context
+291 2025/06/30 17:55:32.571138 5.2420 119 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_20_M500 and Error Message: No such process
+292 2025/06/30 17:55:32.571868 5.5210 120 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_20_M500/bin/Test_App_20_M500
+293 2025/06/30 17:55:32.572577 5.5220 22 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2310151, Description=Test Appf Context
+294 2025/06/30 17:55:32.573276 5.4260 0 ECU1 TAP_ TAP_ 2310258 log info verbose 1 Starting testing#2 CPU usage --- 10%CPU
+295 2025/06/30 17:55:32.574025 5.4260 0 ECU1 TAP_ TAP_ 2310151 log info verbose 1 Starting testing#6 CPU usage
+296 2025/06/30 17:55:32.574881 5.5270 121 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_20_M500 with pid: 2310259
+297 2025/06/30 17:55:32.575629 5.5270 122 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_20_M500 started successfully.
+298 2025/06/30 17:55:32.576610 5.5280 57 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_20_M500.0 , Pid: 2310259 is started. Timestamp: 5528085 us
+299 2025/06/30 17:55:32.577639 5.5280 123 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_5_C12 spawn started time: 5528
+300 2025/06/30 17:55:32.578525 5.5280 124 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_5_C12 and Error Message: No such process
+301 2025/06/30 17:55:32.579624 5.5280 125 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_5_C12/bin/Test_App_5_C12
+302 2025/06/30 17:55:32.616146 5.5330 126 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_5_C12 with pid: 2310260
+303 2025/06/30 17:55:32.617037 5.5330 127 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_5_C12 started successfully.
+304 2025/06/30 17:55:32.618084 5.5330 58 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_5_C12.0 , Pid: 2310260 is started. Timestamp: 5533085 us
+305 2025/06/30 17:55:32.618998 5.5330 128 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_2_C12 spawn started time: 5533
+306 2025/06/30 17:55:32.619821 5.5340 129 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_2_C12 and Error Message: No such process
+307 2025/06/30 17:55:32.620652 5.5340 130 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_2_C12/bin/Test_App_2_C12
+308 2025/06/30 17:55:32.621595 5.5380 131 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_2_C12 with pid: 2310261
+309 2025/06/30 17:55:32.870374 5.8190 23 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2310259, Description=Test Appe Context
+310 2025/06/30 17:55:32.871402 5.5380 132 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_2_C12 started successfully.
+311 2025/06/30 17:55:32.872320 5.8190 59 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_2_C12.0 , Pid: 2310261 is started. Timestamp: 5819081 us
+312 2025/06/30 17:55:32.873327 5.8190 133 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_19_M500 spawn started time: 5819
+313 2025/06/30 17:55:32.874091 5.8200 24 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2310260, Description=Test AppE Context
+314 2025/06/30 17:55:32.874816 5.8200 134 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_19_M500 and Error Message: No such process
+315 2025/06/30 17:55:32.875562 5.8200 135 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_19_M500/bin/Test_App_19_M500
+316 2025/06/30 17:55:32.876267 5.7400 0 ECU1 TAP_ TAP_ 2310259 log info verbose 1 Starting testing#6 CPU usage
+317 2025/06/30 17:55:32.877116 5.7410 0 ECU1 TAP_ TAP_ 2310260 log info verbose 1 Starting testing#2 CPU usage --- 10%CPU
+318 2025/06/30 17:55:32.877846 5.8260 136 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_19_M500 with pid: 2310262
+319 2025/06/30 17:55:32.878585 5.8260 137 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_19_M500 started successfully.
+320 2025/06/30 17:55:32.879329 5.8260 60 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_19_M500.0 , Pid: 2310262 is started. Timestamp: 5826081 us
+321 2025/06/30 17:55:32.880072 5.8260 138 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_18_M500 spawn started time: 5826
+322 2025/06/30 17:55:32.880952 5.8260 139 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_18_M500 and Error Message: No such process
+323 2025/06/30 17:55:32.881752 5.8260 140 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_18_M500/bin/Test_App_18_M500
+324 2025/06/30 17:55:32.914450 5.8320 141 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_18_M500 with pid: 2310263
+325 2025/06/30 17:55:32.915982 5.8320 142 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_18_M500 started successfully.
+326 2025/06/30 17:55:32.917362 5.8320 61 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_18_M500.0 , Pid: 2310263 is started. Timestamp: 5832081 us
+327 2025/06/30 17:55:33.161303 6.1110 25 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2310262, Description=Test Appd Context
+328 2025/06/30 17:55:33.162135 5.8320 143 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_17_M500 spawn started time: 5832
+329 2025/06/30 17:55:33.162903 6.1110 26 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2310263, Description=Test Appc Context
+330 2025/06/30 17:55:33.163632 6.1110 144 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_17_M500 and Error Message: No such process
+331 2025/06/30 17:55:33.164500 6.1110 145 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_17_M500/bin/Test_App_17_M500
+332 2025/06/30 17:55:33.165217 6.0190 0 ECU1 TAP_ TAP_ 2310263 log info verbose 1 Starting testing#6 CPU usage
+333 2025/06/30 17:55:33.165938 6.0190 0 ECU1 TAP_ TAP_ 2310262 log info verbose 1 Starting testing#6 CPU usage
+334 2025/06/30 17:55:33.166639 6.1200 146 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_17_M500 with pid: 2310264
+335 2025/06/30 17:55:33.167330 6.1200 147 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_17_M500 started successfully.
+336 2025/06/30 17:55:33.168017 6.1200 62 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_17_M500.0 , Pid: 2310264 is started. Timestamp: 6120080 us
+337 2025/06/30 17:55:33.168732 6.1200 148 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: Test_App_16_M500 spawn started time: 6120
+338 2025/06/30 17:55:33.169440 6.1200 149 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: Test_App_16_M500 and Error Message: No such process
+339 2025/06/30 17:55:33.170124 6.1200 150 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/Test_App_16_M500/bin/Test_App_16_M500
+340 2025/06/30 17:55:33.209321 6.1280 151 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: Test_App_16_M500 with pid: 2310265
+341 2025/06/30 17:55:33.210238 6.1280 152 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: Test_App_16_M500 started successfully.
+342 2025/06/30 17:55:33.211067 6.1280 63 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process Test_App_16_M500.0 , Pid: 2310265 is started. Timestamp: 6128080 us
+343 2025/06/30 17:55:33.211874 6.1340 64 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_4_C12 , Pid: 1970273 and ExecutionState: 0 , timestamp 6134080 us
+344 2025/06/30 17:55:33.212736 6.1340 65 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_3_C12 , Pid: 2015322 and ExecutionState: 0 , timestamp 6134080 us
+345 2025/06/30 17:55:33.457411 6.1340 66 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_1_C12 , Pid: 2015332 and ExecutionState: 0 , timestamp 6134080 us
+346 2025/06/30 17:55:33.458394 6.4140 67 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_29_M500 , Pid: 2068572 and ExecutionState: 0 , timestamp 6414080 us
+347 2025/06/30 17:55:33.459482 6.4150 27 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2310264, Description=Test Appb Context
+348 2025/06/30 17:55:33.460336 6.4140 68 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_30_M500 , Pid: 2072678 and ExecutionState: 0 , timestamp 6414080 us
+349 2025/06/30 17:55:33.461192 6.4140 69 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_28_M500 , Pid: 2072680 and ExecutionState: 0 , timestamp 6414080 us
+350 2025/06/30 17:55:33.462018 6.4140 70 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_27_M500 , Pid: 2261098 and ExecutionState: 0 , timestamp 6414080 us
+351 2025/06/30 17:55:33.462844 6.4150 71 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_26_M500 , Pid: 2285675 and ExecutionState: 0 , timestamp 6415079 us
+352 2025/06/30 17:55:33.463688 6.4150 72 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_25_M500 , Pid: 2306156 and ExecutionState: 0 , timestamp 6415079 us
+353 2025/06/30 17:55:33.734414 6.6950 28 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'TAP_' registered for PID 2310265, Description=Test Appa Context
+354 2025/06/30 17:55:33.735328 6.4150 73 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_24_M500 , Pid: 2306158 and ExecutionState: 0 , timestamp 6415079 us
+355 2025/06/30 17:55:33.736474 6.4150 74 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_23_M500 , Pid: 2306159 and ExecutionState: 0 , timestamp 6415079 us
+356 2025/06/30 17:55:33.737388 6.4150 75 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_11_C5 , Pid: 2306161 and ExecutionState: 0 , timestamp 6415079 us
+357 2025/06/30 17:55:33.738254 6.4150 76 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_22_M500 , Pid: 2306160 and ExecutionState: 0 , timestamp 6415079 us
+358 2025/06/30 17:55:33.739238 6.4150 77 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_6_C12 , Pid: 2310258 and ExecutionState: 0 , timestamp 6415079 us
+359 2025/06/30 17:55:33.742065 6.6950 78 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_21_M500 , Pid: 2310151 and ExecutionState: 0 , timestamp 6695081 us
+360 2025/06/30 17:55:33.747696 6.6950 79 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_20_M500 , Pid: 2310259 and ExecutionState: 0 , timestamp 6695081 us
+361 2025/06/30 17:55:33.748517 6.6950 80 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_5_C12 , Pid: 2310260 and ExecutionState: 0 , timestamp 6695081 us
+362 2025/06/30 17:55:33.749240 6.6950 81 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_2_C12 , Pid: 2310261 and ExecutionState: 0 , timestamp 6695081 us
+363 2025/06/30 17:55:33.749958 6.6950 82 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_19_M500 , Pid: 2310262 and ExecutionState: 0 , timestamp 6695081 us
+364 2025/06/30 17:55:33.750651 6.6950 83 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_18_M500 , Pid: 2310263 and ExecutionState: 0 , timestamp 6695081 us
+365 2025/06/30 17:55:33.751365 6.6950 84 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_17_M500 , Pid: 2310264 and ExecutionState: 0 , timestamp 6695081 us
+366 2025/06/30 17:55:33.776255 6.6950 85 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : Test_App_16_M500 , Pid: 2310265 and ExecutionState: 0 , timestamp 6695081 us
+367 2025/06/30 17:55:33.777139 6.6950 86 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process crypto_keystorage_manager.0 [Running]
+368 2025/06/30 17:55:33.777886 6.6950 153 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: crypto_keystorage_manager - Init(Up) Time: 3475002 us
+369 2025/06/30 17:55:33.778636 6.6960 87 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_4_C12.0 [Running]
+370 2025/06/30 17:55:33.779472 6.6960 154 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_4_C12 - Init(Up) Time: 3471993 us
+371 2025/06/30 17:55:33.780331 6.6960 88 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_3_C12.0 [Running]
+372 2025/06/30 17:55:34.021795 6.6960 155 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_3_C12 - Init(Up) Time: 3191997 us
+373 2025/06/30 17:55:34.022726 6.9753 89 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_1_C12.0 [Running]
+374 2025/06/30 17:55:34.023548 6.9753 156 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_1_C12 - Init(Up) Time: 3467273 us
+375 2025/06/30 17:55:34.024378 6.9763 90 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_29_M500.0 [Running]
+376 2025/06/30 17:55:34.025171 6.9763 157 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_29_M500 - Init(Up) Time: 3463273 us
+377 2025/06/30 17:55:34.025930 6.9763 91 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_30_M500.0 [Running]
+378 2025/06/30 17:55:34.026755 6.9763 158 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_30_M500 - Init(Up) Time: 3182614 us
+379 2025/06/30 17:55:34.027661 6.9773 92 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_28_M500.0 [Running]
+380 2025/06/30 17:55:34.028472 6.9773 159 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_28_M500 - Init(Up) Time: 3180270 us
+381 2025/06/30 17:55:34.029252 6.9773 93 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_27_M500.0 [Running]
+382 2025/06/30 17:55:34.030010 6.9783 160 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_27_M500 - Init(Up) Time: 2901272 us
+383 2025/06/30 17:55:34.030789 6.9783 94 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_26_M500.0 [Running]
+384 2025/06/30 17:55:34.031688 6.9783 161 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_26_M500 - Init(Up) Time: 2620270 us
+385 2025/06/30 17:55:34.032957 6.9783 95 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_25_M500.0 [Running]
+386 2025/06/30 17:55:34.033788 6.9783 162 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_25_M500 - Init(Up) Time: 2611271 us
+387 2025/06/30 17:55:34.035031 6.9793 96 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_24_M500.0 [Running]
+388 2025/06/30 17:55:34.036053 6.9793 163 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_24_M500 - Init(Up) Time: 2332267 us
+389 2025/06/30 17:55:34.036945 6.9793 97 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_23_M500.0 [Running]
+390 2025/06/30 17:55:34.038261 6.9793 164 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_23_M500 - Init(Up) Time: 2328268 us
+391 2025/06/30 17:55:34.039216 6.9803 98 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_22_M500.0 [Running]
+392 2025/06/30 17:55:34.297576 6.9803 165 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_22_M500 - Init(Up) Time: 2323267 us
+393 2025/06/30 17:55:34.298635 7.2560 99 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_11_C5.0 [Running]
+394 2025/06/30 17:55:34.299462 7.2560 166 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_11_C5 - Init(Up) Time: 2311996 us
+395 2025/06/30 17:55:34.300254 7.2560 100 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_21_M500.0 [Running]
+396 2025/06/30 17:55:34.300998 7.2560 167 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_21_M500 - Init(Up) Time: 2307996 us
+397 2025/06/30 17:55:34.302090 7.2560 101 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_6_C12.0 [Running]
+398 2025/06/30 17:55:34.303110 7.2560 168 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_6_C12 - Init(Up) Time: 2019999 us
+399 2025/06/30 17:55:34.304157 7.2570 102 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_20_M500.0 [Running]
+400 2025/06/30 17:55:34.305265 7.2570 169 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_20_M500 - Init(Up) Time: 2014999 us
+401 2025/06/30 17:55:34.306336 7.2570 103 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_5_C12.0 [Running]
+402 2025/06/30 17:55:34.307290 7.2570 170 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_5_C12 - Init(Up) Time: 1728997 us
+403 2025/06/30 17:55:34.308540 7.2570 104 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_2_C12.0 [Running]
+404 2025/06/30 17:55:34.309861 7.2570 171 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_2_C12 - Init(Up) Time: 1723997 us
+405 2025/06/30 17:55:34.327459 7.2580 105 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_19_M500.0 [Running]
+406 2025/06/30 17:55:34.328454 7.2580 172 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_19_M500 - Init(Up) Time: 1439001 us
+407 2025/06/30 17:55:34.329249 7.2580 106 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_18_M500.0 [Running]
+408 2025/06/30 17:55:34.330007 7.2580 173 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_18_M500 - Init(Up) Time: 1432001 us
+409 2025/06/30 17:55:34.330748 7.2580 107 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_17_M500.0 [Running]
+410 2025/06/30 17:55:34.331505 7.2580 174 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_17_M500 - Init(Up) Time: 1426001 us
+411 2025/06/30 17:55:34.332349 7.2590 108 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process Test_App_16_M500.0 [Running]
+412 2025/06/30 17:55:34.587871 7.2590 175 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: Test_App_16_M500 - Init(Up) Time: 1139002 us
+413 2025/06/30 17:55:34.588809 7.5430 109 ECU1 EMFC EMEX 1589306 log info verbose 3 SetFunctionGroupStates 1004 : EM: State transition successful
+414 2025/06/30 17:55:34.589641 7.5430 110 ECU1 EMFC EMEX 1589306 log info verbose 4 SetState 1149 : EM: SetState() end 2
+415 2025/06/30 17:55:34.590438 7.5430 11 ECU1 SM DFLT 1806415 log info verbose 4 StopTimer 125 : Timer successfully deleted.
+416 2025/06/30 17:55:34.591443 7.5430 3 ECU1 SM STCL 1806415 log info verbose 4 Send_to_Shm 187 : EM: SetStateResponse received with status: 0
+417 2025/06/30 17:55:34.592391 7.5430 4 ECU1 SM STCL 1806415 log info verbose 3 ProcessSetStateThread 247 : EM: Send_to_Shm executed successfully with stateMessage
+418 2025/06/30 17:55:34.593264 7.5430 4 ECU1 SM SM 1806415 log info verbose 7 SetFunctionGroup 186 : SM: FunctionGroup state change successful for MachineFG :: Driving
+419 2025/06/30 17:55:34.594345 7.5430 1 ECU1 SM DPO 1806415 log info verbose 4 SetState 210 : SM: FG State Change Result :: Success
+420 2025/06/30 17:55:34.595356 7.5430 5 ECU1 SM SM 1806415 log info verbose 7 SetFunctionGroup 136 : SM: Valid FunctionGroup Received DiagFG :: On
+421 2025/06/30 17:55:34.596334 7.5430 5 ECU1 SM STCL 1806415 log info verbose 3 SetState 255 : EM: SetState initiated with FunctionGroupState
+422 2025/06/30 17:55:34.597239 7.5440 6 ECU1 SM STCL 1806415 log info verbose 3 Send_to_Shm 169 : EM: transportStateClient_ Send_to_Shm execution started
+423 2025/06/30 17:55:34.598250 7.5440 12 ECU1 SM DFLT 1806415 log info verbose 4 StartTimer 117 : Timer is started.
+424 2025/06/30 17:55:34.600383 7.5450 5 ECU1 PHMD DS 1765389 log info verbose 5 NextCheckpointReached 79 : ID : 3004
+425 2025/06/30 17:55:34.601458 7.5450 6 ECU1 PHMD DS 1765389 log warn verbose 5 PHM_2003 : Deadline Supervision Failure : TimerHandler 67 stateChangeDeadlineSupervision
+426 2025/06/30 17:55:34.602797 7.5450 7 ECU1 PHMD DS 1765389 log info verbose 5 NextCheckpointReached 79 : ID : 3003
+427 2025/06/30 17:55:34.603667 7.5450 8 ECU1 PHMD DS 1765389 log info verbose 6 TimerHandler 68 : Deadline timer expired, Duration: 4325 ms
+428 2025/06/30 17:55:34.633994 7.5480 111 ECU1 EMFC EMEX 1589306 log info verbose 4 SetStateProcess 670 : EM: SetState request: 1DiagFGOn
+429 2025/06/30 17:55:34.634912 7.5480 112 ECU1 EMFC EMEX 1589306 log info verbose 7 SetState 1037 : EM: SetState() start: state chng cnt: 3 updateFlag_: 0
+430 2025/06/30 17:55:34.635869 7.5480 113 ECU1 EMFC EMEX 1589306 log info verbose 4 Execute 1410 : EM: Size of startupCheckResults 1
+431 2025/06/30 17:55:34.636638 7.5480 176 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: ucm_subordinate spawn started time: 7548
+432 2025/06/30 17:55:34.637380 7.5480 177 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/function_clusters/ucm_subordinate/bin/ucm_subordinate
+433 2025/06/30 17:55:34.638100 7.5510 178 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: ucm_subordinate with pid: 2310266
+434 2025/06/30 17:55:34.638820 7.5510 179 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: ucm_subordinate started successfully.
+435 2025/06/30 17:55:34.874825 6.3680 0 ECU1 TAP_ TAP_ 2310264 log info verbose 1 Starting testing#6 CPU usage
+436 2025/06/30 17:55:34.875787 6.3687 0 ECU1 TAP_ TAP_ 2310265 log info verbose 1 Starting testing#6 CPU usage
+437 2025/06/30 17:55:34.876646 7.8280 29 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'UCM' registered for PID 2310266, Description=UCMS
+438 2025/06/30 17:55:34.877609 7.5774 0 ECU1 UCM APP 2310266 log info verbose 4 Execute 87 : Package Management Execute called..
+439 2025/06/30 17:55:34.879006 7.5510 114 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process ucm_subordinate.0 , Pid: 2310266 is started. Timestamp: 7551081 us
+440 2025/06/30 17:55:34.879902 7.8290 1 ECU1 UCM APP 2310266 log info verbose 4 ReportRunningState 81 : ReportRunningState successful
+441 2025/06/30 17:55:34.880658 7.8310 0 ECU1 UCM PER 2310266 log warn verbose 4 PER_2084 : Unable to insert kvsdataItem entry : GetConsolidatedKvsPairs 1370
+442 2025/06/30 17:55:34.881445 7.8320 0 ECU1 UCM IMPL 2310266 log info verbose 5 PackageManagerImpl 111 : Reading machine manifest :: /ksar/etc/json/machine_manifest.json
+443 2025/06/30 17:55:34.882156 7.8320 1 ECU1 UCM IMPL 2310266 log info verbose 5 operator() 122 : UCM Subordinate ID :: ECU_1/UCM_A
+444 2025/06/30 17:55:34.883031 7.8350 115 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : ucm_subordinate , Pid: 2310266 and ExecutionState: 0 , timestamp 7835080 us
+445 2025/06/30 17:55:34.883845 7.8350 116 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process ucm_subordinate.0 [Running]
+446 2025/06/30 17:55:34.884584 7.8350 180 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: ucm_subordinate - Init(Up) Time: 286999 us
+447 2025/06/30 17:55:34.893768 7.8390 0 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 859 is available
+448 2025/06/30 17:55:34.894622 7.8390 1 ECU1 UCM SM-N 2310266 log info verbose 2 UCM: Created proxy for UpdateRequest with instance: 859
+449 2025/06/30 17:55:34.895407 7.8390 1 ECU1 some SMIP 1806410 log warn verbose 6 SIP_1075 : Failed to add the requester 372 : AddRequester : 177
+450 2025/06/30 17:55:34.896246 7.8390 2 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 836 is available
+451 2025/06/30 17:55:34.897028 7.8390 3 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 849 is available
+452 2025/06/30 17:55:34.897826 7.8390 4 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 859 is available
+453 2025/06/30 17:55:34.924085 7.8390 5 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 836 is available
+454 2025/06/30 17:55:34.924959 7.8400 6 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 849 is available
+455 2025/06/30 17:55:34.925709 7.8400 7 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 859 is available
+456 2025/06/30 17:55:34.926469 7.8400 8 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 836 is available
+457 2025/06/30 17:55:34.927243 7.8400 9 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 849 is available
+458 2025/06/30 17:55:34.927978 7.8400 10 ECU1 UCM SM-N 2310266 log info verbose 3 UCM: StateManagerInterface UpdateRequest Instance 859 is available
+459 2025/06/30 17:55:34.928854 7.8410 117 ECU1 EMFC EMEX 1589306 log info verbose 3 SetFunctionGroupStates 1004 : EM: State transition successful
+460 2025/06/30 17:55:35.168205 7.8410 118 ECU1 EMFC EMEX 1589306 log info verbose 4 SetState 1149 : EM: SetState() end 3
+461 2025/06/30 17:55:35.169549 8.1200 13 ECU1 SM DFLT 1806415 log info verbose 4 StopTimer 125 : Timer successfully deleted.
+462 2025/06/30 17:55:35.170867 8.1200 7 ECU1 SM STCL 1806415 log info verbose 4 Send_to_Shm 187 : EM: SetStateResponse received with status: 0
+463 2025/06/30 17:55:35.171994 8.1200 8 ECU1 SM STCL 1806415 log info verbose 3 ProcessSetStateThread 247 : EM: Send_to_Shm executed successfully with stateMessage
+464 2025/06/30 17:55:35.173246 8.1200 6 ECU1 SM SM 1806415 log info verbose 7 SetFunctionGroup 186 : SM: FunctionGroup state change successful for DiagFG :: On
+465 2025/06/30 17:55:35.174611 8.1200 2 ECU1 SM DPO 1806415 log info verbose 4 SetState 210 : SM: FG State Change Result :: Success
+466 2025/06/30 17:55:35.175930 8.1210 9 ECU1 PHMD DS 1765389 log info verbose 5 NextCheckpointReached 79 : ID : 3004
+467 2025/06/30 17:55:35.177379 8.1210 10 ECU1 PHMD DS 1765389 log warn verbose 5 PHM_2003 : Deadline Supervision Failure : TimerHandler 67 stateChangeDeadlineSupervision
+468 2025/06/30 17:55:35.178679 8.1210 7 ECU1 SM SM 1806415 log info verbose 7 SetFunctionGroup 136 : SM: Valid FunctionGroup Received RecogSoC0_HDIAG0_FG :: On
+469 2025/06/30 17:55:35.179650 8.1210 9 ECU1 SM STCL 1806415 log info verbose 3 SetState 255 : EM: SetState initiated with FunctionGroupState
+470 2025/06/30 17:55:35.180770 8.1210 11 ECU1 PHMD DS 1765389 log info verbose 6 TimerHandler 68 : Deadline timer expired, Duration: 576 ms
+471 2025/06/30 17:55:35.182253 8.1210 10 ECU1 SM STCL 1806415 log info verbose 3 Send_to_Shm 169 : EM: transportStateClient_ Send_to_Shm execution started
+472 2025/06/30 17:55:35.183453 8.1210 14 ECU1 SM DFLT 1806415 log info verbose 4 StartTimer 117 : Timer is started.
+473 2025/06/30 17:55:35.184310 8.1230 12 ECU1 PHMD DS 1765389 log info verbose 5 NextCheckpointReached 79 : ID : 3003
+474 2025/06/30 17:55:35.185801 8.1240 119 ECU1 EMFC EMEX 1589306 log info verbose 4 SetStateProcess 670 : EM: SetState request: 1RecogSoC0_HDIAG0_FGOn
+475 2025/06/30 17:55:35.187168 8.1240 120 ECU1 EMFC EMEX 1589306 log info verbose 7 SetState 1037 : EM: SetState() start: state chng cnt: 4 updateFlag_: 0
+476 2025/06/30 17:55:35.188524 8.1240 121 ECU1 EMFC EMEX 1589306 log info verbose 4 Execute 1410 : EM: Size of startupCheckResults 1
+477 2025/06/30 17:55:35.189844 8.1240 181 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 466 : EM: App: h-diag-app-soc0 spawn started time: 8124
+478 2025/06/30 17:55:35.191175 8.1240 182 ECU1 EMFC EMAP 1589306 log error verbose 8 EXM_1042: StartAppUsingPosixSpawn 510 : EM: qnxuser is not available : Process: h-diag-app-soc0 and Error Message: No such process
+479 2025/06/30 17:55:35.192626 8.1240 183 ECU1 EMFC EMAP 1589306 log info verbose 8 StartAppUsingPosixSpawn 543 : EM: Application: h-diag-app-soc0 ShallRunOns size: 1 ShallNotRunOns size: 0
+480 2025/06/30 17:55:35.194084 8.1240 184 ECU1 EMFC EMAP 1589306 log info verbose 4 StartAppUsingPosixSpawn 569 : EM: posix_spawn: /ksar/opt/h-diag-app-soc0/bin/h-diag-app-soc0
+481 2025/06/30 17:55:35.205455 8.1260 185 ECU1 EMFC EMAP 1589306 log info verbose 6 StartAppUsingPosixSpawn 614 : EM: App spawned: h-diag-app-soc0 with pid: 2310267
+482 2025/06/30 17:55:35.461112 8.1260 186 ECU1 EMFC EMAP 1589306 log info verbose 5 StartAppUsingPosixSpawn 630 : EM: App: h-diag-app-soc0 started successfully.
+483 2025/06/30 17:55:35.462900 8.4060 30 ECU1 DLTD INTM 1691724 log info verbose 1 ApplicationID 'HDAG' registered for PID 2310267, Description=HDAG
+484 2025/06/30 17:55:35.464842 8.4060 122 ECU1 EMFC EMEX 1589306 log info verbose 9 ProcessStartupConfiguration 1479 :EM: Process h-diag-app-soc0.0 , Pid: 2310267 is started. Timestamp: 8406081 us
+485 2025/06/30 17:55:35.466519 8.4120 123 ECU1 EMFC EMEX 1589306 log info verbose 11 CheckApplicationsStateReports 292 : EM: Execution state reported for application : h-diag-app-soc0 , Pid: 2310267 and ExecutionState: 0 , timestamp 8412082 us
+486 2025/06/30 17:55:35.468248 8.4120 124 ECU1 EMFC EMEX 1589306 log info verbose 5 ProcessStartupConfiguration 1535 :EM: Process h-diag-app-soc0.0 [Running]
+487 2025/06/30 17:55:35.470049 8.4120 187 ECU1 EMFC EMAP 1589306 log info verbose 7 GetAppInitTime 447 : EM: Application: h-diag-app-soc0 - Init(Up) Time: 287998 us
+488 2025/06/30 17:55:35.471773 8.4190 125 ECU1 EMFC EMEX 1589306 log info verbose 3 SetFunctionGroupStates 1004 : EM: State transition successful
+489 2025/06/30 17:55:35.473084 8.4190 126 ECU1 EMFC EMEX 1589306 log info verbose 4 SetState 1149 : EM: SetState() end 4
+490 2025/06/30 17:55:35.474281 8.4190 15 ECU1 SM DFLT 1806415 log info verbose 4 StopTimer 125 : Timer successfully deleted.
+491 2025/06/30 17:55:35.475540 8.4190 11 ECU1 SM STCL 1806415 log info verbose 4 Send_to_Shm 187 : EM: SetStateResponse received with status: 0
+492 2025/06/30 17:55:35.476738 8.4190 12 ECU1 SM STCL 1806415 log info verbose 3 ProcessSetStateThread 247 : EM: Send_to_Shm executed successfully with stateMessage
+493 2025/06/30 17:55:35.478003 8.4190 8 ECU1 SM SM 1806415 log info verbose 7 SetFunctionGroup 186 : SM: FunctionGroup state change successful for RecogSoC0_HDIAG0_FG :: On
+494 2025/06/30 17:55:35.479647 8.4190 3 ECU1 SM DPO 1806415 log info verbose 4 SetState 210 : SM: FG State Change Result :: Success
+495 2025/06/30 17:55:35.494873 8.4200 13 ECU1 PHMD DS 1765389 log info verbose 5 NextCheckpointReached 79 : ID : 3004
+496 2025/06/30 17:55:35.496474 8.4200 14 ECU1 PHMD DS 1765389 log warn verbose 5 PHM_2003 : Deadline Supervision Failure : TimerHandler 67 stateChangeDeadlineSupervision
+497 2025/06/30 17:55:35.497697 8.4200 15 ECU1 PHMD DS 1765389 log info verbose 6 TimerHandler 68 : Deadline timer expired, Duration: 296 ms
+498 2025/06/30 17:55:35.498705 8.4220 31 ECU1 DLTD INTM 1691724 log info verbose 1 Unregistered ApID 'FGM'
+499 2025/06/30 17:55:35.499735 8.4220 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 01 00 00 00 00
+500 2025/06/30 17:55:35.500600 8.4220 32 ECU1 DLTD INTM 1691724 log info verbose 1 Client connection #19 closed. Total Clients : 1
+501 2025/06/30 17:55:35.513653 8.4330 188 ECU1 EMFC EMAP 1589306 log warn verbose 7 EXM_2006: CheckAppState 403 : EM: Process termination based on request: functiongroupmanager.0 terminated cause: 0
+502 2025/06/30 17:55:35.715446 8.6310 1 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
+503 2025/06/30 17:55:39.699720 12.6390 0 ECU1 HDAG HCON 2310267 log error verbose 1 handles empty and proxy is not assigned :
+504 2025/06/30 17:55:39.923887 12.8400 2 ECU1 UCM IMPL 2310266 log info verbose 4 ReadClaimedFgJson : 3107 Reading claimedfg json file
+505 2025/06/30 17:55:39.925522 12.8400 0 ECU1 UCM UCMR 2310266 log info verbose 4 Run 67 : Adaptive AUTOSAR Update And Configuration Management running
+506 2025/06/30 17:55:40.786397 13.7420 0 ECU1 UCM PKMN 2310266 log info verbose 3 955 NotifyPreinstalledDiagData initiated
+507 2025/06/30 17:55:40.787462 13.7420 3 ECU1 UCM IMPL 2310266 log info verbose 2 NotifyPreinstalledDiagData 3147
+508 2025/06/30 17:55:40.788217 13.7430 4 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: h-diag-app-soc0
+509 2025/06/30 17:55:40.788942 13.7430 5 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3193 : DEXT.JSON file exists for app :: h-diag-app-soc0
+510 2025/06/30 17:55:40.789636 13.7430 6 ECU1 UCM IMPL 2310266 log info verbose 4 GetDiagExtractData 1273 : Parsing content of DEXT.JSON file
+511 2025/06/30 17:55:40.790341 13.7450 7 ECU1 UCM IMPL 2310266 log info verbose 4 GetDiagExtractData 1279 : Reading DEXT.json file completed and closed file.
+512 2025/06/30 17:55:40.791140 13.7450 8 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: functiongroupmanager
+513 2025/06/30 17:55:40.791924 13.7450 9 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: functiongroupmanager
+514 2025/06/30 17:55:40.792790 13.7450 10 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_1_C12
+515 2025/06/30 17:55:40.793697 13.7450 11 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_1_C12
+516 2025/06/30 17:55:40.794461 13.7450 12 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_2_C12
+517 2025/06/30 17:55:40.795248 13.7450 13 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_2_C12
+518 2025/06/30 17:55:40.796129 13.7450 14 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_3_C12
+519 2025/06/30 17:55:40.797024 13.7450 15 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_3_C12
+520 2025/06/30 17:55:40.799147 13.7460 16 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_4_C12
+521 2025/06/30 17:55:40.800090 13.7460 17 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_4_C12
+522 2025/06/30 17:55:40.800945 13.7460 18 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_16_M500
+523 2025/06/30 17:55:40.802115 13.7460 19 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_16_M500
+524 2025/06/30 17:55:40.803309 13.7460 20 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_17_M500
+525 2025/06/30 17:55:40.804262 13.7460 21 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_17_M500
+526 2025/06/30 17:55:40.805485 13.7460 22 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_18_M500
+527 2025/06/30 17:55:40.806612 13.7460 23 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_18_M500
+528 2025/06/30 17:55:40.825095 13.7470 24 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_19_M500
+529 2025/06/30 17:55:40.826053 13.7470 25 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_19_M500
+530 2025/06/30 17:55:40.826903 13.7470 26 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_5_C12
+531 2025/06/30 17:55:40.827668 13.7470 27 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_5_C12
+532 2025/06/30 17:55:40.828719 13.7470 28 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_20_M500
+533 2025/06/30 17:55:41.066191 13.7470 29 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_20_M500
+534 2025/06/30 17:55:41.067039 14.0230 30 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_6_C12
+535 2025/06/30 17:55:41.067827 14.0230 31 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_6_C12
+536 2025/06/30 17:55:41.068507 14.0230 32 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_21_M500
+537 2025/06/30 17:55:41.069326 14.0230 33 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_21_M500
+538 2025/06/30 17:55:41.070123 14.0230 34 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_11_C5
+539 2025/06/30 17:55:41.070805 14.0230 35 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_11_C5
+540 2025/06/30 17:55:41.071779 14.0240 36 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_22_M500
+541 2025/06/30 17:55:41.072577 14.0240 37 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_22_M500
+542 2025/06/30 17:55:41.074091 14.0240 38 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_23_M500
+543 2025/06/30 17:55:41.075026 14.0240 39 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_23_M500
+544 2025/06/30 17:55:41.075846 14.0240 40 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_24_M500
+545 2025/06/30 17:55:41.076647 14.0240 41 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_24_M500
+546 2025/06/30 17:55:41.077432 14.0240 42 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_25_M500
+547 2025/06/30 17:55:41.078276 14.0240 43 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_25_M500
+548 2025/06/30 17:55:41.086538 14.0250 44 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_26_M500
+549 2025/06/30 17:55:41.088096 14.0250 45 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_26_M500
+550 2025/06/30 17:55:41.089000 14.0250 46 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_27_M500
+551 2025/06/30 17:55:41.090011 14.0250 47 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_27_M500
+552 2025/06/30 17:55:41.090802 14.0250 48 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_28_M500
+553 2025/06/30 17:55:41.383622 14.0250 49 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_28_M500
+554 2025/06/30 17:55:41.384984 14.3030 50 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_29_M500
+555 2025/06/30 17:55:41.386264 14.3030 51 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_29_M500
+556 2025/06/30 17:55:41.387530 14.3030 52 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3188 : bin folder exists for app :: Test_App_30_M500
+557 2025/06/30 17:55:41.388808 14.3040 53 ECU1 UCM IMPL 2310266 log info verbose 4 NotifyPreinstalledDiagData 3205 : DEXT.JSON file not exists for app :: Test_App_30_M500
+558 2025/06/30 17:55:41.389818 14.3040 54 ECU1 UCM IMPL 2310266 log info verbose 3 NotifyPreinstalledDiagData 3224 Notifying PreinstalledDiagData event to Diagnostic manager
+559 2025/06/30 17:55:41.391254 14.3050 55 ECU1 UCM IMPL 2310266 log info verbose 3 NotifyPreinstalledDiagData 3232 Successfully Notified PreinstalledDiagData event to Diagnostic manager
+560 2025/06/30 17:55:41.392649 14.3050 1 ECU1 UCM PKMN 2310266 log info verbose 3 957 NotifyPreinstalledDiagData completed
+561 2025/06/30 17:55:42.713984 15.6310 2 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
+562 2025/06/30 17:55:49.714020 22.6310 3 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
+563 2025/06/30 17:55:54.000000 244419.2500 0 ECU APP CON 0 control request non-verbose 0 [get_software_version]
+564 2025/06/30 17:55:54.000000 244419.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_log_level] 04 72 65 6d 6f 0c 5e d9
+565 2025/06/30 17:55:54.000000 244419.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_trace_status] 00 72 65 6d 6f ab 28 12
+566 2025/06/30 17:55:54.000000 244419.2500 0 ECU APP CON 0 control request non-verbose 0 [set_verbose_mode] 01 01 00 00
+567 2025/06/30 17:55:54.000000 244419.2500 0 ECU APP CON 0 control request non-verbose 0 [set_timing_packets] 00 01 00 00
+568 2025/06/30 17:55:54.154623 27.0860 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 02 00 00 00 00
+569 2025/06/30 17:55:54.155601 27.0790 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 01 00 00 00 00
+570 2025/06/30 17:55:54.156788 27.0790 33 ECU1 DLTD INTM 1691724 log info verbose 1 Client connection #20 closed. Total Clients : 0
+571 2025/06/30 17:55:54.158340 27.0860 34 ECU1 DLTD INTM 1691724 log info verbose 1 New client connection #19 established, Total Clients : 1
+572 2025/06/30 17:55:54.175713 27.0950 0 ECU1 DA1 DC1 0 control response non-verbose 0 [get_software_version ok] DLT Package Version: 2.18.8 STABLE, Package Revision: AMexternal_libs_R20V2.2.13, build on May 9 2025 14:52:26 -SYSTEMD -SYSTEMD_WATCHDOG -TEST -SHM
+573 2025/06/30 17:55:54.177082 27.0950 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_log_level ok]
+574 2025/06/30 17:55:54.178329 27.0950 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_trace_status ok]
+575 2025/06/30 17:55:54.179662 27.0950 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_verbose_mode not_supported]
+576 2025/06/30 17:55:54.181117 27.0950 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_timing_packets ok]
+577 2025/06/30 17:55:56.715217 29.6310 4 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
+578 2025/06/30 17:56:00.000000 244425.2500 0 ECU APP CON 0 control request non-verbose 0 [get_software_version]
+579 2025/06/30 17:56:00.000000 244425.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_log_level] 04 72 65 6d 6f 07 5e d9
+580 2025/06/30 17:56:00.000000 244425.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_trace_status] 00 72 65 6d 6f 07 5e d9
+581 2025/06/30 17:56:00.000000 244425.2500 0 ECU APP CON 0 control request non-verbose 0 [set_verbose_mode] 01 01 00 00
+582 2025/06/30 17:56:00.000000 244425.2650 0 ECU APP CON 0 control request non-verbose 0 [set_timing_packets] 00 01 00 00
+583 2025/06/30 17:56:00.145417 33.0880 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 02 00 00 00 00
+584 2025/06/30 17:56:00.146705 33.0830 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 01 00 00 00 00
+585 2025/06/30 17:56:00.148226 33.0830 35 ECU1 DLTD INTM 1691724 log info verbose 1 Client connection #19 closed. Total Clients : 0
+586 2025/06/30 17:56:00.149263 33.0880 36 ECU1 DLTD INTM 1691724 log info verbose 1 New client connection #19 established, Total Clients : 1
+587 2025/06/30 17:56:00.183680 33.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [get_software_version ok] DLT Package Version: 2.18.8 STABLE, Package Revision: AMexternal_libs_R20V2.2.13, build on May 9 2025 14:52:26 -SYSTEMD -SYSTEMD_WATCHDOG -TEST -SHM
+588 2025/06/30 17:56:00.185227 33.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_log_level ok]
+589 2025/06/30 17:56:00.187245 33.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_trace_status ok]
+590 2025/06/30 17:56:00.188461 33.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_verbose_mode not_supported]
+591 2025/06/30 17:56:00.189252 33.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_timing_packets ok]
+592 2025/06/30 17:56:03.714147 36.6310 5 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
+593 2025/06/30 17:56:08.000000 244433.2500 0 ECU APP CON 0 control request non-verbose 0 [get_software_version]
+594 2025/06/30 17:56:08.000000 244433.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_log_level] 04 72 65 6d 6f 00 00 00
+595 2025/06/30 17:56:08.000000 244433.2650 0 ECU APP CON 0 control request non-verbose 0 [set_default_trace_status] 00 72 65 6d 6f 00 00 00
+596 2025/06/30 17:56:08.000000 244433.2650 0 ECU APP CON 0 control request non-verbose 0 [set_verbose_mode] 01 01 00 00
+597 2025/06/30 17:56:08.000000 244433.2650 0 ECU APP CON 0 control request non-verbose 0 [set_timing_packets] 00 01 00 00
+598 2025/06/30 17:56:08.151429 41.0860 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 02 00 00 00 00
+599 2025/06/30 17:56:08.152555 41.0810 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 01 00 00 00 00
+600 2025/06/30 17:56:08.153458 41.0810 37 ECU1 DLTD INTM 1691724 log info verbose 1 Client connection #19 closed. Total Clients : 0
+601 2025/06/30 17:56:08.154991 41.0860 38 ECU1 DLTD INTM 1691724 log info verbose 1 New client connection #19 established, Total Clients : 1
+602 2025/06/30 17:56:08.203124 41.1020 0 ECU1 DA1 DC1 0 control response non-verbose 0 [get_software_version ok] DLT Package Version: 2.18.8 STABLE, Package Revision: AMexternal_libs_R20V2.2.13, build on May 9 2025 14:52:26 -SYSTEMD -SYSTEMD_WATCHDOG -TEST -SHM
+603 2025/06/30 17:56:08.204045 41.1020 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_log_level ok]
+604 2025/06/30 17:56:08.204849 41.1020 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_trace_status ok]
+605 2025/06/30 17:56:08.205792 41.1020 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_verbose_mode not_supported]
+606 2025/06/30 17:56:08.206624 41.1020 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_timing_packets ok]
+607 2025/06/30 17:56:10.712017 43.6310 6 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
+608 2025/06/30 17:56:15.000000 244440.2500 0 ECU APP CON 0 control request non-verbose 0 [get_software_version]
+609 2025/06/30 17:56:15.000000 244440.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_log_level] 04 72 65 6d 6f 00 00 00
+610 2025/06/30 17:56:15.000000 244440.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_trace_status] 00 72 65 6d 6f 00 00 00
+611 2025/06/30 17:56:15.000000 244440.2500 0 ECU APP CON 0 control request non-verbose 0 [set_verbose_mode] 01 01 00 00
+612 2025/06/30 17:56:15.000000 244440.2500 0 ECU APP CON 0 control request non-verbose 0 [set_timing_packets] 00 01 00 00
+613 2025/06/30 17:56:15.141172 48.0850 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 02 00 00 00 00
+614 2025/06/30 17:56:15.142042 48.0810 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 01 00 00 00 00
+615 2025/06/30 17:56:15.142798 48.0810 39 ECU1 DLTD INTM 1691724 log info verbose 1 Client connection #19 closed. Total Clients : 0
+616 2025/06/30 17:56:15.143528 48.0850 40 ECU1 DLTD INTM 1691724 log info verbose 1 New client connection #19 established, Total Clients : 1
+617 2025/06/30 17:56:15.176225 48.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [get_software_version ok] DLT Package Version: 2.18.8 STABLE, Package Revision: AMexternal_libs_R20V2.2.13, build on May 9 2025 14:52:26 -SYSTEMD -SYSTEMD_WATCHDOG -TEST -SHM
+618 2025/06/30 17:56:15.177155 48.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_log_level ok]
+619 2025/06/30 17:56:15.178004 48.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_trace_status ok]
+620 2025/06/30 17:56:15.178780 48.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_verbose_mode not_supported]
+621 2025/06/30 17:56:15.180458 48.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_timing_packets ok]
+622 2025/06/30 17:56:17.710413 50.6310 7 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
+623 2025/06/30 17:56:22.000000 244447.2500 0 ECU APP CON 0 control request non-verbose 0 [get_software_version]
+624 2025/06/30 17:56:22.000000 244447.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_log_level] 04 72 65 6d 6f 16 5e d9
+625 2025/06/30 17:56:22.000000 244447.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_trace_status] 00 72 65 6d 6f 00 00 00
+626 2025/06/30 17:56:22.000000 244447.2500 0 ECU APP CON 0 control request non-verbose 0 [set_verbose_mode] 01 01 00 00
+627 2025/06/30 17:56:22.000000 244447.2650 0 ECU APP CON 0 control request non-verbose 0 [set_timing_packets] 00 01 00 00
+628 2025/06/30 17:56:22.140182 55.0880 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 02 00 00 00 00
+629 2025/06/30 17:56:22.141522 55.0830 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 01 00 00 00 00
+630 2025/06/30 17:56:22.142764 55.0830 41 ECU1 DLTD INTM 1691724 log info verbose 1 Client connection #19 closed. Total Clients : 0
+631 2025/06/30 17:56:22.143625 55.0880 42 ECU1 DLTD INTM 1691724 log info verbose 1 New client connection #19 established, Total Clients : 1
+632 2025/06/30 17:56:22.176421 55.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [get_software_version ok] DLT Package Version: 2.18.8 STABLE, Package Revision: AMexternal_libs_R20V2.2.13, build on May 9 2025 14:52:26 -SYSTEMD -SYSTEMD_WATCHDOG -TEST -SHM
+633 2025/06/30 17:56:22.177750 55.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_log_level ok]
+634 2025/06/30 17:56:22.178632 55.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_trace_status ok]
+635 2025/06/30 17:56:22.179659 55.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_verbose_mode not_supported]
+636 2025/06/30 17:56:22.180463 55.0970 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_timing_packets ok]
+637 2025/06/30 17:56:24.715996 57.6310 8 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
+638 2025/06/30 17:56:30.000000 244455.2500 0 ECU APP CON 0 control request non-verbose 0 [get_software_version]
+639 2025/06/30 17:56:30.000000 244455.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_log_level] 04 72 65 6d 6f 02 5e d9
+640 2025/06/30 17:56:30.000000 244455.2500 0 ECU APP CON 0 control request non-verbose 0 [set_default_trace_status] 00 72 65 6d 6f 06 5e d9
+641 2025/06/30 17:56:30.000000 244455.2500 0 ECU APP CON 0 control request non-verbose 0 [set_verbose_mode] 01 01 00 00
+642 2025/06/30 17:56:30.000000 244455.2500 0 ECU APP CON 0 control request non-verbose 0 [set_timing_packets] 00 01 00 00
+643 2025/06/30 17:56:30.140427 63.0870 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 02 00 00 00 00
+644 2025/06/30 17:56:30.141593 63.0820 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 01 00 00 00 00
+645 2025/06/30 17:56:30.142492 63.0820 43 ECU1 DLTD INTM 1691724 log info verbose 1 Client connection #19 closed. Total Clients : 0
+646 2025/06/30 17:56:30.143511 63.0870 44 ECU1 DLTD INTM 1691724 log info verbose 1 New client connection #19 established, Total Clients : 1
+647 2025/06/30 17:56:30.178166 63.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [get_software_version ok] DLT Package Version: 2.18.8 STABLE, Package Revision: AMexternal_libs_R20V2.2.13, build on May 9 2025 14:52:26 -SYSTEMD -SYSTEMD_WATCHDOG -TEST -SHM
+648 2025/06/30 17:56:30.179270 63.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_log_level ok]
+649 2025/06/30 17:56:30.180011 63.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_default_trace_status ok]
+650 2025/06/30 17:56:30.180728 63.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_verbose_mode not_supported]
+651 2025/06/30 17:56:30.181498 63.0940 0 ECU1 DA1 DC1 0 control response non-verbose 0 [set_timing_packets ok]
+652 2025/06/30 17:56:31.711124 64.6310 9 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification

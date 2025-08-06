@@ -3,7 +3,7 @@
   "Iterations": 1,
   "Power ON-OFF Delay": 1,
   "Startup Order Judgement": false,
-  "Pre-Generated Logs": false,
+  "Pre-Generated Logs": true,
   "windows": {
     "Is Environment Path Set": false,
     "DLT-Viewer Installed Path": "C:\\Users\\nanib\\AppData\\Local\\Programs\\dlt-viewer\\dlt-viewer.exe"
