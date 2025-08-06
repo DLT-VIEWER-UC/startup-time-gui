@@ -98,15 +98,15 @@ application_startup_time_columns = ['No.', 'Services/Applications', 'Application
 
 # Define the column names for the application startup time data with minimum, maximum, and average values
 application_startup_time_min_max_avg_columns = ['Services/Applications', 'Minimum (sec)', 'Maximum (sec)',
-                                                'Average (sec)', 'Average\n from\n IG ON (sec)', 'Startup Time\n Threshold\n (sec)']
+                                                'Average (sec)', 'Average\n from\n IG ON (sec)', 'Startup Time\n Threshold\n (sec)', 'Number of\n measurements']
 
 application_info_columns = ['Services/Applications', 'Init(Up) Time (us)', 'Init(Up) Time (ms)']
 
 application_start_end_time_min_max_avg_columns = ['Services/Applications', 'Minimum (ms)', 'Maximum (ms)',
-                                                  'Average (ms)']
+                                                  'Average (ms)', 'Number of\n measurements']
 
 applications_overall_status_columns = ['No. of Iterations', 'Total Time\n to Startup\n Last Application\n from IG ON (sec)',
-                                        'Startup time\n judgement', 'Result of the\n enabled judgement\n item', 'Order\n Mismatch\n Count', 'Not\n Found\n Count', 'Not\n Configured\n Count']
+                                        'Startup time\n judgement', 'Result of the\n enabled judgement\n item', 'Order\n Mismatch\n Count', 'Not\n Found\n Count', 'Not\n Configured\n Count', 'Missing\n Application\n Judgement']
 
 appendix_columns = ['Column Name', 'Description']
 startup_field_descriptions = [
@@ -893,7 +893,7 @@ def get_expected_startup_order(application_name, application_startup_order, logg
  
 
 
-def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
+def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startup_order, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
     """
     Writes application startup timing data to Excel worksheet with comprehensive validation.
    
@@ -956,7 +956,6 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             else:
                 result = 'FAIL'
                 overall_IG_ON_cur_iteration['status'] = False
-        logger.info(">>> %s, %s, %s", process, process, process_timing_info)
 
         data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else '-', result]
         logger.info('## %s, %s', process, validate_startup_order)
@@ -1107,7 +1106,7 @@ def create_header(sheet, ecu_type, validate_startup_order, app_columns):
         header = f'Overall Test Case Status for each Iteration on {ecu_type}'
         columns = applications_overall_status_columns
         if not validate_startup_order:
-            columns=columns[:-4]
+            columns=columns[:-5]+ columns[-1:]  # Remove startup order validation columns if not enabled
 
     elif app_columns == 'startup_appendix':
        header = f'Field Description for \n Services/Applications Startup Completion Time on {ecu_type}'
@@ -1213,6 +1212,8 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
                     application_startup_order_status[i][OrderFailureType.APPLICATION_NOT_FOUND.name],
                     application_startup_order_status[i][OrderFailureType.APPLICATION_NOT_CONFIGURED.name]
                 ])
+            # Check if the process names match in dltstart_timestamps and process_timing_info
+            data_row.append('PASS' if set(overall_IG_ON_iteration[i]['dltstart_timestamps'].keys()) == set([cur['process'] for cur in overall_IG_ON_iteration[i]['process_timing_info']]) else 'FAIL')
             summary_sheet.append(data_row)
            
             # Apply hyperlink formatting to the first cell in the last row
@@ -1297,6 +1298,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
             'min_time': round_decimal_half_up(min_time, 4),
             'max_time': round_decimal_half_up(max_time, 4),
             'avg_time': round_decimal_half_up(avg_time, 4),
+            'count': len(times)
         }
        
         # Append the data row to the list
@@ -1307,7 +1309,14 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
 
     # Append the sorted data to the Excel sheet
     for data_row in data:
-        sheet.append([data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], float(data_row['avg_time']) + OFFSET_TIME, threshold_map[ecu_type][data_row['process']] if data_row['process'] in threshold_map[ecu_type] else '-'])
+        sheet.append([data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], float(data_row['avg_time']) + OFFSET_TIME, threshold_map[ecu_type][data_row['process']] if data_row['process'] in threshold_map[ecu_type] else '-', data_row['count']])
+
+        # Apply color formatting to the count cell (last column)
+        count_cell = sheet.cell(row=sheet.max_row, column=7)  # Column 7 is the count column
+        if data_row['count'] == config['Iterations']:
+            count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
+        else:
+            count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
 
         # Store the average difference in the differences dictionary
         differences[data_row['process']] = float(data_row['avg_time'])
@@ -1334,6 +1343,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
             'min_time': round_decimal_half_up(min_time, 4),
             'max_time': round_decimal_half_up(max_time, 4),
             'avg_time': round_decimal_half_up(avg_time, 4),
+            'count': len(start_times)
         }
        
         # Append the data row to the list
@@ -1344,7 +1354,14 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
        
       # Append the sorted data to the Excel sheet
     for data_row in individual_list:
-        sheet.append([data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time']])
+        sheet.append([data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], data_row['count']])
+        
+        # Apply color formatting to the count cell (last column)
+        count_cell = sheet.cell(row=sheet.max_row, column=5)  # Column 5 is the count column
+        if data_row['count'] == config['Iterations']:
+            count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
+        else:
+            count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
 
         # Store the average difference in the differences dictionary
         individual_differences[data_row['process']] = float(data_row['avg_time'])
@@ -1522,7 +1539,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
     start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'startup_time_columns')
 
     # Write the data to the Excel sheet
-    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config.get('Startup Order Judgement'), application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
+    write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startup_order, config.get('Startup Order Judgement'), application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
 
     # Plot the differences as a graph
     plot_process_startup_time_graph(dltstart_timestamps, sheet, start_row, ecu_type, False)
@@ -2898,7 +2915,9 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         overall_IG_ON_iteration[i] = {
             'timestamp': max(dltstart_timestamps.values()),
             'status': True,
-            'passed_count': 0
+            'passed_count': 0,
+            'dltstart_timestamps': dltstart_timestamps,
+            'process_timing_info': process_timing_info
         }
         print ("overall_IG_ON_iteration:"+str(overall_IG_ON_iteration))
 
