@@ -21,7 +21,7 @@ from openpyxl.utils import get_column_letter
 from pathlib import Path
 from datetime import datetime
 import logging
-from typing import Final
+from typing import Final, List
 from enum import Enum
 import threading
 from collections import OrderedDict
@@ -883,14 +883,23 @@ def get_expected_startup_order(application_name, application_startup_order, logg
         if application_name in order:
             logger.info('order type: %s, %s, %s', order_type, order_type.lower(), OrderType.SEQUENTIAL.value)
             if order_type.lower() == OrderType.SEQUENTIAL.value:
-                return str(cur_pos + order.index(application_name) + 1)
+                return [order_type, (cur_pos + order.index(application_name) + 1), 1]
             else:
-                if len(order) == 1:
-                    return str(cur_pos + 1)
-                return str(cur_pos + 1) + '~' + str(cur_pos + len(order))
-        cur_pos += len(order)
-    return None
- 
+                return [order_type, cur_pos + 1, len(order)]
+        if order_type.lower() == OrderType.SEQUENTIAL.value:
+            cur_pos += len(order)
+        else:
+            cur_pos += 1
+    return [None, None, None]
+
+def get_expected_startup_order_str(order_type, expected_order, grp_len):
+    if not expected_order:
+        return '-'
+    else:
+        if order_type.lower() == OrderType.SEQUENTIAL.value:
+            return f'Se{expected_order}'
+        else:
+            return f'Pa{expected_order}-{grp_len}'
 
 
 def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startup_order, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
@@ -944,7 +953,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startu
         sheet.append(['', '', '', '', '', '', '', '', '', 0, 0, 0])
        
     start_row = sheet.max_row + 1
-
+    relative_startup_order = []
     # Iterate over the DLTStart timestamps and differences in parallel using zip
     for position, (process, dltstart_line) in enumerate(dltstart_timestamps.items()):
         # Check if the process names match
@@ -961,12 +970,9 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startu
 
         if validate_startup_order:
             # Create a data row for the process
-            expected_order = get_expected_startup_order(process, application_startup_order, logger)
-            if not expected_order:
-                expected_order='-'
-            data_row.append(str(expected_order))
-           
-            order_failure_type = validate_ind_app_startup_order(process, position + 1, application_startup_order)
+            odr_type, expected_order, grp_len = get_expected_startup_order(process, application_startup_order, logger)
+            data_row.append(get_expected_startup_order_str(odr_type, expected_order, grp_len))
+            order_failure_type = validate_ind_app_startup_order(expected_order, relative_startup_order)
             if order_failure_type != 0:
                 data_row.extend([
                     'FAIL',
@@ -994,10 +1000,8 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startu
                     data_row = ['-', app, '-', '-', '-', '-', '-']
                
                     if validate_startup_order:
-                        expected_order = get_expected_startup_order(app, application_startup_order, logger)
-                        if not expected_order:
-                            expected_order='-'
-                        data_row.extend([str(expected_order), 'FAIL', '', '⬤', ''])
+                        odr_type, expected_order, grp_len = get_expected_startup_order(app, application_startup_order, logger)
+                        data_row.extend([get_expected_startup_order_str(odr_type, expected_order, grp_len), 'FAIL', '', '⬤', ''])
                         application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
                         application_startup_order_status_iteration['startup_order_status'] = False
                     sheet.append(data_row)
@@ -1840,73 +1844,18 @@ def extract_dltstart_timestamps(lines, logger):
     # Return the dictionary of process start timestamps
     return app_start_timestamps
 
-def validate_ind_app_startup_order(application, position, application_startup_order):
-    """
-    Validates whether an individual application started in its expected order position.
-   
-    This function checks if a specific application started in the correct sequence
-    according to the configured startup order. It handles both sequential and
-    parallel startup configurations and returns specific failure types for analysis.
-   
-    Args:
-        application (str): Name of the application to validate
-        position (int): Actual startup position of the application (1-based)
-        application_startup_order (list): List of tuples containing (order_type, app_list)
-                                        where order_type is 'Sequential' or 'Parallel'
-                                       
-    Returns:
-        int: Failure type code from OrderFailureType enum:
-             - 0: No failure (application started in correct order)
-             - 1: ORDER_MISMATCH - Application started in wrong position
-             - 2: APPLICATION_NOT_CONFIGURED - Application not found in startup order config
-             - 3: APPLICATION_NOT_FOUND - Application missing from logs (handled elsewhere)
-             
-    Validation Logic:
-        Sequential Order:
-        - Applications must start in exact specified sequence
-        - Each application has a specific expected position
-       
-        Parallel Order:
-        - Applications within a group can start in any order
-        - All applications in group share the same position range
-       
-    Position Calculation:
-        - Maintains running position counter across order groups
-        - Sequential: Exact position matching
-        - Parallel: Range-based position matching
-       
-    Example Configuration:
-        [('Sequential', ['app1', 'app2']), ('Parallel', ['app3', 'app4'])]
-       
-    Expected Positions:
-        - app1: position 1
-        - app2: position 2  
-        - app3: positions 3-4
-        - app4: positions 3-4
-       
-    Note:
-        This function is part of the startup order validation system that ensures
-        applications start in the correct sequence for proper system initialization.
-    """
-    for order_type, order in application_startup_order:
-        if len(order) >= position:
-            if order_type.lower() == OrderType.SEQUENTIAL.value:
-                if order[position - 1] == application:
-                    return 0
-                else:
-                    break
-            else:
-                if application in order:
-                    return 0
-                else:
-                    break                
+def validate_ind_app_startup_order(expected_order: int, relative_startup_order: List[int]) -> int:
+    if not expected_order:
+        return 2
+    elif len(relative_startup_order) == 0:
+        relative_startup_order.append(expected_order)
+        return 0
+    else:
+        if relative_startup_order[-1] <= expected_order:
+            relative_startup_order.append(expected_order)
+            return 0
         else:
-            position -= len(order)
-    for order_type, order in application_startup_order:
-        if application in order:
             return 1
-    return 2
-
 
 def validate_app_startup_order(dltstart_timestamps, application_startup_order):
     """
