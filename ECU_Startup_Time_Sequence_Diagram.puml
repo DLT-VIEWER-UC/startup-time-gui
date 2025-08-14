@@ -1,0 +1,198 @@
+@startuml ECU_Startup_Time_Measurement_System
+
+title ECU Startup Time Measurement System - Detailed Sequence Diagram
+
+actor User
+participant "Main GUI" as GUI
+participant "Config Window" as Config
+participant "Applications_StartupTime_IG_ON" as MainScript
+participant "DLT Viewer" as DLT
+participant "ECU Hardware" as ECU
+participant "Power Relay" as Relay
+participant "Log Parser" as Parser
+participant "Excel Generator" as Excel
+participant "Report Generator" as Report
+
+== Configuration Phase ==
+
+User -> GUI: Launch Application
+GUI -> Config: Open Configuration Window
+Config -> Config: load_config()
+note right: Loads startup_time_config.json
+
+Config -> User: Display Configuration UI
+User -> Config: Configure Settings
+note right
+- DLT-Viewer Log Capture Time
+- Iterations
+- Power ON-OFF Delay
+- Startup Order Judgement
+- ECU Configurations (IP, Type)
+- Threshold Settings
+end note
+
+User -> Config: Save Configuration
+Config -> Config: save_config()
+Config -> GUI: Configuration Complete
+
+== Test Initialization Phase ==
+
+User -> GUI: Start Test
+GUI -> MainScript: start_startup_time_measurement()
+MainScript -> MainScript: setup_logging()
+note right: Initialize colored logging system
+
+MainScript -> MainScript: load_config()
+MainScript -> MainScript: validate_ip_address()
+note right: Validate all ECU IP addresses
+
+MainScript -> MainScript: remove_png_files()
+note right: Clean up previous graph files
+
+MainScript -> MainScript: create_dlp_files()
+note right: Generate DLT project files for each ECU
+
+== Test Execution Loop ==
+
+loop For each iteration (1 to N)
+    
+    == Power Control Phase ==
+    MainScript -> Relay: power_ON_OFF_Relay()
+    Relay -> ECU: Power ON
+    note right: Start ECU boot sequence
+    
+    MainScript -> MainScript: Wait for boot delay
+    
+    == Log Capture Phase ==
+    MainScript -> DLT: capture_logs_from_dlt_viewer()
+    DLT -> ECU: Connect via IP
+    DLT -> DLT: Start log capture
+    note right: Capture logs for configured duration
+    
+    DLT -> MainScript: Log file saved
+    
+    == Log Processing Phase ==
+    MainScript -> MainScript: process_log_file()
+    MainScript -> Parser: extract_welcome_timestamp()
+    Parser -> Parser: Search for welcome timestamp
+    Parser -> MainScript: Welcome timestamp
+    
+    MainScript -> Parser: extract_dltstart_timestamps()
+    Parser -> Parser: Parse application start timestamps
+    Parser -> MainScript: Application timestamps
+    
+    MainScript -> Parser: extract_process_timestamps()
+    Parser -> Parser: Parse process timing information
+    Parser -> MainScript: Process timing data
+    
+    == Data Analysis Phase ==
+    MainScript -> MainScript: calculate_differences()
+    note right: Calculate startup times relative to welcome timestamp
+    
+    MainScript -> MainScript: validate_app_startup_order()
+    note right: Check if applications started in expected order
+    
+    == Excel Reporting Phase ==
+    MainScript -> Excel: create_workBook()
+    Excel -> Excel: Create workbook with multiple sheets
+    
+    MainScript -> Excel: write_data_to_excel()
+    Excel -> Excel: Write iteration data to sheet
+    Excel -> Excel: format_excel_cells()
+    Excel -> Excel: adjust_column_width()
+    
+    MainScript -> Excel: add_logfile_hyperlink()
+    Excel -> Excel: Add hyperlink to source log file
+    
+    == Power Control Phase ==
+    MainScript -> Relay: Power OFF
+    Relay -> ECU: Power OFF
+    MainScript -> MainScript: Wait for power off delay
+    
+end loop
+
+== Final Report Generation Phase ==
+
+MainScript -> Excel: export_and_plot_average_data_to_excel()
+Excel -> Excel: Calculate min/max/average statistics
+Excel -> Excel: plot_process_startup_time_graph()
+note right: Generate startup time graphs
+
+Excel -> Excel: plot_process_individual_apps_avg_graph()
+note right: Generate individual app performance graphs
+
+Excel -> Excel: plot_process_start_end_time_graph()
+note right: Generate start/end time analysis graphs
+
+MainScript -> Excel: generate_apps_startup_report_from_QNX_startup()
+Excel -> Excel: Create comprehensive startup report
+
+MainScript -> Excel: generate_apps_start_end_time_report()
+Excel -> Excel: Create start/end time report
+
+MainScript -> Excel: each_iteration_test_status()
+Excel -> Excel: Create overall test status summary
+
+MainScript -> Excel: add_appendix_sheet()
+Excel -> Excel: Add documentation appendix
+
+== Report Finalization ==
+
+MainScript -> Report: save_workbook_and_generate_reports()
+Report -> Report: Save Excel file with timestamp
+Report -> Report: Apply final formatting
+Report -> User: Display report location
+
+MainScript -> MainScript: remove_png_files()
+note right: Clean up temporary graph files
+
+MainScript -> GUI: Test Complete
+GUI -> User: Show completion message
+
+== Error Handling (Throughout Process) ==
+
+alt Error in any phase
+    MainScript -> MainScript: Log error with colorlog
+    MainScript -> User: Display error message
+    MainScript -> MainScript: Cleanup resources
+end
+
+== Data Structures Used ==
+
+note over MainScript
+Key Data Structures:
+- dltstart_timestamps: Dict of app startup times
+- process_timing_info: Process start/end times
+- application_startup_order: Expected vs actual order
+- workbook_map: Excel workbooks per ECU type
+- threshold_map: Performance thresholds
+- config: Configuration parameters
+end note
+
+== Configuration Data Flow ==
+
+note over Config
+Configuration includes:
+- ECU Types: RCAR, SoC0, SoC1, PADAS
+- Network: IP addresses per ECU
+- Timing: Capture duration, iterations
+- Analysis: Startup order validation
+- Thresholds: Performance limits
+- Hardware: Power relay settings
+end note
+
+== Report Output Structure ==
+
+note over Excel
+Excel Report Contains:
+1. Individual iteration data
+2. Min/Max/Average analysis
+3. Startup order validation
+4. Performance threshold checks
+5. Visual graphs and charts
+6. Log file hyperlinks
+7. Test status summary
+8. Documentation appendix
+end note
+
+@enduml
