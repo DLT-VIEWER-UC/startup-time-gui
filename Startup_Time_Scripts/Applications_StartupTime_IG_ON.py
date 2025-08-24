@@ -94,19 +94,19 @@ def setup_logging():
 # Define the column names for the application startup time data
 application_startup_time_columns = ['No.', 'Services/Applications', 'Application Startup\n Time (sec)',
                                     'IG ON\n to\n QNX Startup (sec)', 'Total Time\n from\n IG ON (sec)',
-                                    'Startup Time\n Threshold\n (sec)', 'Startup time\n judgement', 'Expected Order', 'Result of the\n enabled judgement\n item', 'Order\n Mismatch', 'Not\n Found', 'Not\n Configured']
+                                    'Startup Time\n Threshold\n (sec)', 'Startup time\n judgement', 'Expected Order', 'Result of the\n enabled judgement\n item', 'Order\n Mismatch', 'Not\n Found', 'Not\n Configured', 'Terminated', 'Terminated', 'Terminated']
 
 # Define the column names for the application startup time data with minimum, maximum, and average values
-application_startup_time_min_max_avg_columns = ['Services/Applications', 'Minimum (sec)', 'Maximum (sec)',
-                                                'Average (sec)', 'Average\n from\n IG ON (sec)', 'Startup Time\n Threshold\n (sec)', 'Number of\n measurements']
+application_startup_time_min_max_avg_columns = ['No.', 'Services/Applications', 'Minimum (sec)', 'Maximum (sec)',
+                                                'Average (sec)', 'Average\n from\n IG ON (sec)', 'Startup Time\n Threshold\n (sec)', 'Number of\n measurements', 'Terminated\n Count']
 
-application_info_columns = ['Services/Applications', 'Init(Up) Time (us)', 'Init(Up) Time (ms)']
+application_info_columns = ['No.', 'Services/Applications', 'Init(Up) Time (us)', 'Init(Up) Time (ms)']
 
-application_start_end_time_min_max_avg_columns = ['Services/Applications', 'Minimum (ms)', 'Maximum (ms)',
+application_start_end_time_min_max_avg_columns = ['No.', 'Services/Applications', 'Minimum (ms)', 'Maximum (ms)',
                                                   'Average (ms)', 'Number of\n measurements']
 
 applications_overall_status_columns = ['No. of Iterations', 'Total Time\n to Startup\n Last Application\n from IG ON (sec)',
-                                        'Startup time\n judgement', 'Result of the\n enabled judgement\n item', 'Order\n Mismatch\n Count', 'Not\n Found\n Count', 'Not\n Configured\n Count', 'Missing\n Application\n Judgement']
+                                        'Startup time\n judgement', 'Result of the\n enabled judgement\n item', 'Order\n Mismatch\n Count', 'Not\n Found\n Count', 'Not\n Configured\n Count', 'Missing\n Application\n Judgement', 'Terminated\n Count']
 
 appendix_columns = ['Column Name', 'Description']
 startup_field_descriptions = [
@@ -117,6 +117,8 @@ startup_field_descriptions = [
    ("IG ON to QNX + KSAR Startup", "This is the offfset time from IG ON to QNX startup and from QNX startup to KSAR start time. \n Offset time = IG ON to QNX startup + QNX startup to KSAR startup."),
    ("Total Time", "This is the Total time taken from IG ON to Application Startup completion. \n Total time = Apps Startup +  InitUp Time/1000000 + offset time (IG ON to QNX + KSAR Startup.")
 ]
+
+other_header_columns = []
 
 # Define a border style for cells in the Excel sheet
 border_style = Border(left=Side(border_style='thin'), right=Side(border_style='thin'),
@@ -262,7 +264,7 @@ def adjust_column_width(sheet, ecu_type, logger):
     for col in sheet.columns:
         # Initialize a variable to track the maximum content length within the column
         max_length = 0
-       
+        max_value = ''
         # Extract the letter representing the label of the current column
         column_letter = get_column_letter(col[0].column)
 
@@ -279,13 +281,17 @@ def adjust_column_width(sheet, ecu_type, logger):
 
                 # Attempt to retrieve the content of the cell and check its length
                 cell_content = str(cell.value)
-               
+                if cell_content.startswith('=HYPERLINK'):
+                    # If the cell is a hyperlink, extract the display text
+                    cell_content = cell_content.split(', "')[1]
                 # Check if the cell's alignment has wrap text enabled
                 if cell.alignment.wrap_text:
                     lines = cell_content.split('\n')
                     max_length = max(max(len(line) for line in lines), max_length)
                 else:
                     # If wrap text is not enabled, use the length of the cell content directly
+                    if len(cell_content) > max_length:
+                        max_value = cell_content
                     max_length = max(len(cell_content), max_length)
 
             except (TypeError, AttributeError, ValueError) as e:
@@ -342,12 +348,16 @@ def format_excel_cells(sheet, start_row):
             # Check if the cell value is a column header
             if cell.value in (application_startup_time_columns + application_startup_time_min_max_avg_columns
                               + application_info_columns + application_start_end_time_min_max_avg_columns +
-                              applications_overall_status_columns):
+                              applications_overall_status_columns + other_header_columns):
                
                 # Apply a green fill color and bold font to column headers
                 cell.fill = PatternFill(start_color="B5E6A2", end_color="B5E6A2", fill_type="solid")
                 cell.font = Font(bold=True)
                 cell.border = border_style
+                if '\n' in cell.value:
+                    cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                else:
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
                 continue
            
             elif cell.value == "PASS":
@@ -684,7 +694,7 @@ def plot_process_startup_time_graph(differences, sheet, start_row, ecu_type, avg
 
         # Add the plot to the Excel sheet
         img = Image(plot_image)
-        sheet.add_image(img, f'N{start_row}')
+        sheet.add_image(img, f'Q{start_row}')
 
 def get_log_file_path(ecu_type, setup_type, index):
     """
@@ -902,7 +912,7 @@ def get_expected_startup_order_str(order_type, expected_order, grp_len):
             return f'Pa{expected_order}-{grp_len}'
 
 
-def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startup_order, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
+def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
     """
     Writes application startup timing data to Excel worksheet with comprehensive validation.
    
@@ -950,10 +960,13 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startu
 
     startup_order_count_idx = sheet.max_row + 1
     if validate_startup_order:
-        sheet.append(['', '', '', '', '', '', '', '', '', 0, 0, 0])
+        sheet.append(['', '', '', '', '', '', '', '', '', 0, 0, 0, 'Applicable', 'Signal', 'Cause'])
+    else:
+        sheet.append(['', '', '', '', '', '', '', 'Applicable', 'Signal', 'Cause'])
        
     start_row = sheet.max_row + 1
     relative_startup_order = []
+    encountered_apps = set(dltstart_timestamps.keys())
     # Iterate over the DLTStart timestamps and differences in parallel using zip
     for position, (process, dltstart_line) in enumerate(dltstart_timestamps.items()):
         # Check if the process names match
@@ -984,6 +997,16 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startu
                 application_startup_order_status_iteration['startup_order_status'] = False
             else:
                 data_row.extend(['PASS', '', '', ''])
+        if process in process_timing_info:
+            terminated_signal = process_timing_info[process]['terminated_signal']
+            terminated_cause = process_timing_info[process]['terminated_cause']
+            if terminated_signal or terminated_cause:
+                application_startup_order_status_iteration['terminated_applications_count'] += 1
+            if terminated_signal:
+                application_startup_order_status_iteration['terminated_signal_count'] += 1
+            if terminated_cause:
+                application_startup_order_status_iteration['terminated_cause_count'] += 1
+            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
 
         # Append the data row to the sheet
         sheet.append(data_row)
@@ -995,15 +1018,25 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startu
     if validate_startup_order:
         for order_type, order in application_startup_order:
             for app in order:
+                overall_IG_ON_cur_iteration['configured_applications'].add(app)
                 if app not in dltstart_timestamps:
-               
+                    encountered_apps.add(app)
                     data_row = ['-', app, '-', '-', '-', '-', '-']
                
-                    if validate_startup_order:
-                        odr_type, expected_order, grp_len = get_expected_startup_order(app, application_startup_order, logger)
-                        data_row.extend([get_expected_startup_order_str(odr_type, expected_order, grp_len), 'FAIL', '', '⬤', ''])
-                        application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
-                        application_startup_order_status_iteration['startup_order_status'] = False
+                    odr_type, expected_order, grp_len = get_expected_startup_order(app, application_startup_order, logger)
+                    data_row.extend([get_expected_startup_order_str(odr_type, expected_order, grp_len), 'FAIL', '', '⬤', ''])
+                    application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
+                    application_startup_order_status_iteration['startup_order_status'] = False
+                    terminated_signal = process_timing_info[app]['terminated_signal'] if app in process_timing_info else None
+                    terminated_cause = process_timing_info[app]['terminated_cause'] if app in process_timing_info else None
+                    if terminated_signal or terminated_cause:
+                        application_startup_order_status_iteration['terminated_applications_count'] += 1
+                        if terminated_signal:
+                            application_startup_order_status_iteration['terminated_signal_count'] += 1
+                        if terminated_cause:
+                            application_startup_order_status_iteration['terminated_cause_count'] += 1
+                    data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
+                    
                     sheet.append(data_row)
         # Update the last three cells of the row at startup_order_count_idx with the current counts and highlight in yellow
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
@@ -1012,24 +1045,62 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startu
             application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name],
             application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name]
         ]
-        # Merge cells from column 1 to 9 in the current row with the above row
-        for col in range(1, 10):
-            sheet.merge_cells(
-            start_row=startup_order_count_idx - 1,
-            start_column=col,
-            end_row=startup_order_count_idx,
-            end_column=col
-            )
         for offset, count in enumerate(counts, start=10):
             cell = sheet.cell(row=startup_order_count_idx, column=offset)
             cell.value = count
             cell.fill = yellow_fill
             cell.border = border_style
-        # Ensure all cells in the merged range have borders
-        for col in range(1, 10):
-            for row in range(startup_order_count_idx - 1, startup_order_count_idx + 1):
-                cell = sheet.cell(row=row, column=col)
-                cell.border = border_style
+                
+    for process, process_data in process_timing_info.items():
+        if process_data['terminated_signal'] or process_data['terminated_cause']:
+            overall_IG_ON_cur_iteration['terminated_applications'].add(process)
+        if process not in encountered_apps:
+            data_row = ['-', process, '-', '-', '-', '-', '-']
+            if validate_startup_order:
+                data_row.extend(['-', 'FAIL', '', '', '⬤'])
+                application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name] += 1
+                application_startup_order_status_iteration['startup_order_status'] = False
+            terminated_signal = process_data['terminated_signal']
+            terminated_cause = process_data['terminated_cause']
+            if terminated_signal or terminated_cause:
+                application_startup_order_status_iteration['terminated_applications_count'] += 1
+                if terminated_signal:
+                    application_startup_order_status_iteration['terminated_signal_count'] += 1
+                if terminated_cause:
+                    application_startup_order_status_iteration['terminated_cause_count'] += 1
+            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
+            sheet.append(data_row)
+    
+    # Merge cells from column 1 to 9 in the current row with the above row
+    for col in range(1, 10 if validate_startup_order else 8):
+        sheet.merge_cells(
+        start_row=startup_order_count_idx - 1,
+        start_column=col,
+        end_row=startup_order_count_idx,
+        end_column=col
+        )
+    
+    sheet.merge_cells(
+        start_row=startup_order_count_idx - 1,
+        start_column=13 if validate_startup_order else 8,
+        end_row=startup_order_count_idx - 1,
+        end_column=15 if validate_startup_order else 10
+        )
+    # Ensure all cells in the merged range have borders
+    for col in range(1, 10 if validate_startup_order else 8):
+        for row in range(startup_order_count_idx - 1, startup_order_count_idx + 1):
+            cell = sheet.cell(row=row, column=col)
+            cell.border = border_style
+    for col in range(13 if validate_startup_order else 8, 16 if validate_startup_order else 11):
+        cell = sheet.cell(row=startup_order_count_idx - 1, column=col)
+        cell.border = border_style
+    
+    terminated_count_cell = sheet.cell(row=startup_order_count_idx, column=13 if validate_startup_order else 8)
+    terminated_count_cell.value = f'Applicable ({application_startup_order_status_iteration["terminated_applications_count"]})'
+    
+
+    other_header_columns.extend([terminated_count_cell.value, 'Signal', 'Cause'])
+
     # Apply the border style to the entire merged range
     for row in sheet[merged_range]:
         for cell in row:
@@ -1099,7 +1170,7 @@ def create_header(sheet, ecu_type, validate_startup_order, app_columns):
         header = f'Services/Applications Startup Time on {ecu_type}'
         columns = application_startup_time_columns
         if not validate_startup_order:
-            columns=columns[:-5]
+            columns=columns[:7] + columns[-3:]  # Remove startup order validation columns if not enabled
    
     elif app_columns == 'info_columns':
         header = f'Services/Applications Init(Up) Time on {ecu_type}'
@@ -1109,7 +1180,7 @@ def create_header(sheet, ecu_type, validate_startup_order, app_columns):
         header = f'Overall Test Case Status for each Iteration on {ecu_type}'
         columns = applications_overall_status_columns
         if not validate_startup_order:
-            columns=columns[:-5]+ columns[-1:]  # Remove startup order validation columns if not enabled
+            columns=columns[:3]+ columns[-2:]  # Remove startup order validation columns if not enabled
 
     elif app_columns == 'startup_appendix':
        header = f'Field Description for \n Services/Applications Startup Completion Time on {ecu_type}'
@@ -1216,7 +1287,9 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
                     application_startup_order_status[i][OrderFailureType.APPLICATION_NOT_CONFIGURED.name]
                 ])
             # Check if the process names match in dltstart_timestamps and process_timing_info
-            data_row.append('PASS' if set(overall_IG_ON_iteration[i]['dltstart_timestamps'].keys()) == set([cur['process'] for cur in overall_IG_ON_iteration[i]['process_timing_info']]) else 'FAIL')
+            data_row.append('PASS' if set(overall_IG_ON_iteration[i]['dltstart_timestamps'].keys()) == set(process for process, item in overall_IG_ON_iteration[i]['process_timing_info'].items() if item['start_time_ms']) else 'FAIL')
+            if i in application_startup_order_status:
+                data_row.append(application_startup_order_status[i]['terminated_applications_count'])
             summary_sheet.append(data_row)
            
             # Apply hyperlink formatting to the first cell in the last row
@@ -1224,9 +1297,26 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
             cell.font = Font(bold=True, underline='single', color='0000FF')
    
     format_excel_cells(summary_sheet, start_row)
+    
+
+def get_ind_app_terminated_count(app, overall_IG_ON_iteration):
+    app_terminated_count = 0
+    for index, summary_info in overall_IG_ON_iteration.items():
+        if app in summary_info['process_timing_info']:
+            if summary_info['process_timing_info'][app]['terminated_signal'] or summary_info['process_timing_info'][app]['terminated_cause']:
+                app_terminated_count += 1
+    return app_terminated_count
+
+def get_app_configured_and_terminated_list(overall_IG_ON_iteration):
+    configured_apps = set()
+    terminated_apps = set()
+    for index, summary_info in overall_IG_ON_iteration.items():
+        configured_apps.update(summary_info['configured_applications'])
+        terminated_apps.update(summary_info['terminated_applications'])
+    return configured_apps.union(terminated_apps)
 
 
-def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, process_start_times, config, logger):
+def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger):
     """
     Generates comprehensive statistical analysis and visualizations of application startup performance.
    
@@ -1286,9 +1376,10 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
     # Initialize an empty list to store the data
     data = []
     individual_list = []
+    app_configured_and_terminated_list = get_app_configured_and_terminated_list(overall_IG_ON_iteration)
 
     # Iterate over each process and its times
-    for process, times in process_times.items():
+    for index, (process, times) in enumerate(process_times.items()):
         # Calculate the minimum, maximum, and average times for the process
         min_time = min(times)
         max_time = max(times)
@@ -1297,11 +1388,13 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
        
         # Create a dictionary for the process with the minimum, maximum, and average times
         data_row = {
+            'index': index + 1,
             'process': process,
             'min_time': round_decimal_half_up(min_time, 4),
             'max_time': round_decimal_half_up(max_time, 4),
             'avg_time': round_decimal_half_up(avg_time, 4),
-            'count': len(times)
+            'count': len(times),
+            'terminated_count': get_ind_app_terminated_count(process, overall_IG_ON_iteration)
         }
        
         # Append the data row to the list
@@ -1309,20 +1402,44 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
 
     # Sort the data based on the average time
     data.sort(key=lambda x: x['avg_time'])
+    for process in app_configured_and_terminated_list:
+        if process not in process_times:
+            data_row = {
+                'index': '-',
+                'process': process,
+                'min_time': '-',
+                'max_time': '-',
+                'avg_time': '-',
+                'count': '-',
+                'terminated_count': get_ind_app_terminated_count(process, overall_IG_ON_iteration)
+            }
+            data.append(data_row)
 
     # Append the sorted data to the Excel sheet
     for data_row in data:
-        sheet.append([data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], float(data_row['avg_time']) + OFFSET_TIME, threshold_map[ecu_type][data_row['process']] if data_row['process'] in threshold_map[ecu_type] else '-', data_row['count']])
+        sheet.append([
+            data_row['index'], 
+            data_row['process'], 
+            data_row['min_time'], 
+            data_row['max_time'], 
+            data_row['avg_time'], 
+            float(data_row['avg_time']) + OFFSET_TIME if data_row['avg_time'] != '-' else '-', 
+            threshold_map[ecu_type][data_row['process']] if data_row['process'] in threshold_map[ecu_type] else '-', 
+            data_row['count'], 
+            data_row['terminated_count']
+        ])
 
         # Apply color formatting to the count cell (last column)
-        count_cell = sheet.cell(row=sheet.max_row, column=7)  # Column 7 is the count column
-        if data_row['count'] == config['Iterations']:
-            count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
-        else:
-            count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+        count_cell = sheet.cell(row=sheet.max_row, column=8)  # Column 8 is the count column
+        if data_row['count'] != '-':
+            if data_row['count'] == config['Iterations']:
+                count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
+            else:
+                count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
 
         # Store the average difference in the differences dictionary
-        differences[data_row['process']] = float(data_row['avg_time'])
+        if data_row['avg_time'] != '-':
+            differences[data_row['process']] = float(data_row['avg_time'])
 
     # Plot the average data as a graph
     plot_process_startup_time_graph(differences, sheet, start_row, ecu_type, True)
@@ -1333,7 +1450,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
     # Create a header in the Excel sheet for the average data
     start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'min_max_avg_individual')
 
-    for process, start_times in process_start_times.items():
+    for index, (process, start_times) in enumerate(process_start_times.items()):
         # Calculate the minimum, maximum, and average start times for the process
         min_time = min(start_times)
         max_time = max(start_times)
@@ -1342,6 +1459,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
 
         # Create a dictionary for the process with the minimum, maximum, and average times
         data_row = {
+            'index': index + 1,
             'process': process,
             'min_time': round_decimal_half_up(min_time, 4),
             'max_time': round_decimal_half_up(max_time, 4),
@@ -1354,20 +1472,33 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
 
     # Sort the data based on the average time
     individual_list.sort(key=lambda x: x['avg_time'])    
+    for process in app_configured_and_terminated_list:
+        if process not in process_times:
+            data_row = {
+                'index': '-',
+                'process': process,
+                'min_time': '-',
+                'max_time': '-',
+                'avg_time': '-',
+                'count': '-'
+            }
+            individual_list.append(data_row)
        
       # Append the sorted data to the Excel sheet
     for data_row in individual_list:
-        sheet.append([data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], data_row['count']])
+        sheet.append([data_row['index'], data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], data_row['count']])
         
         # Apply color formatting to the count cell (last column)
-        count_cell = sheet.cell(row=sheet.max_row, column=5)  # Column 5 is the count column
-        if data_row['count'] == config['Iterations']:
-            count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
-        else:
-            count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+        count_cell = sheet.cell(row=sheet.max_row, column=6)  # Column 6 is the count column
+        if data_row['count'] != '-':
+            if data_row['count'] == config['Iterations']:
+                count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
+            else:
+                count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
 
         # Store the average difference in the differences dictionary
-        individual_differences[data_row['process']] = float(data_row['avg_time'])
+        if data_row['avg_time'] != '-':
+            individual_differences[data_row['process']] = float(data_row['avg_time'])
    
     # Plot the average data as a graph
     plot_process_individual_apps_avg_graph(individual_differences, sheet, start_row, ecu_type)
@@ -1476,14 +1607,19 @@ def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, co
     """
     # Create the header for the Excel sheet
     start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'info_columns')
+    filtered_data = []
 
-    for item in process_timing_info:
-        if item['start_time_ms']:
-            data_row = [item['process'], float(item['start_time_ms'])*1000,float(item['start_time_ms'])]
+    for index, (process, process_data) in enumerate(process_timing_info.items()):
+        if process_data['start_time_ms']:
+            data_row = [index + 1, process, float(process_data['start_time_ms'])*1000, float(process_data['start_time_ms'])]
+            sheet.append(data_row)
+            filtered_data.append(process_data)
+        else:
+            data_row = ['-', process, '-', '-']
             sheet.append(data_row)
 
     # Plot the startup graph
-    plot_process_start_end_time_graph(ecu_type, process_timing_info, sheet, start_row)
+    plot_process_start_end_time_graph(ecu_type, filtered_data, sheet, start_row)
 
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
@@ -1542,7 +1678,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
     start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'startup_time_columns')
 
     # Write the data to the Excel sheet
-    write_data_to_excel(ecu_type, dltstart_timestamps, sheet, application_startup_order, config.get('Startup Order Judgement'), application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
+    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config.get('Startup Order Judgement'), application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
 
     # Plot the differences as a graph
     plot_process_startup_time_graph(dltstart_timestamps, sheet, start_row, ecu_type, False)
@@ -1556,7 +1692,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
     adjust_column_width(sheet, ecu_type, logger)
 
 
-def extract_and_sort_process_timestamps(process_Start_End_timestamps, ecu_type, logger):
+def extract_and_sort_process_timestamps(process_Start_End_timestamps, logger):
     """
     Extracts and sorts process initialization timing information from raw timestamp data.
    
@@ -1598,23 +1734,27 @@ def extract_and_sort_process_timestamps(process_Start_End_timestamps, ecu_type, 
         This function is crucial for converting raw log parsing results into
         the structured format required by reporting and visualization functions.
     """
-    process_timing_info = []
+    process_timing_info = {}
     for process, time in process_Start_End_timestamps.items():  
         # Check if both start and end times are available
-        # if 'start' in time and 'end' in time:            
-        start_time_ms = float(time['init_time'] if 'init_time' in time else '0')
-        # logger.info(f"Process: {process}, Start Time: {time['start']}, End Time: {time['end']}, Time Difference: {start_time_ms} ms")
-
-        process_timing_info.append({
-        'process': process,
-        'start_time_ms': start_time_ms
-    })
-
-        # Check if only end time is available
+        # if 'start' in time and 'end' in time:       
         if 'init_time' not in time:
             logger.warning(f"Process: {process}, Init: Not Available")
+        
+        # logger.info(f"Process: {process}, Start Time: {time['start']}, End Time: {time['end']}, Time Difference: {start_time_ms} ms")
+
+        process_timing_info[process] = {
+            'process': process,
+            'start_time_ms': float(time['init_time']) if 'init_time' in time else None,
+            'terminated_signal': time.get('terminated_signal', None),
+            'terminated_cause': time.get('terminated_cause', None)
+        }
      
-    process_timing_info.sort(key=lambda x: x['start_time_ms'] if x.get('start_time_ms')is not None else float('inf'))
+    # Sort the dictionary by start_time_ms values and convert to OrderedDict to maintain order
+    process_timing_info = OrderedDict(
+        sorted(process_timing_info.items(), 
+               key=lambda x: x[1]['start_time_ms'] if x[1].get('start_time_ms') is not None else float('inf'))
+    )
     return process_timing_info
 
 
@@ -1758,7 +1898,31 @@ def extract_process_timestamps(lines):
                    process_Start_End_timestamps[process_name]['init_time'] = init_timestamp
                    # Log the process name and end timestamp
                    # logger.info(f"Process name: {process_name}, End Timestamp: {end_timestamp}")
-
+        elif 'EM: Process' in line:
+            if 'was terminated by signal' in line:
+                line_parts = line.split('EM: Process ')
+                if len(line_parts) > 1:
+                    app_terminated_signal_info = line_parts[1]
+                    app_terminated_signal_info_parts = app_terminated_signal_info.split(' was terminated by signal ')
+                    if len(app_terminated_signal_info_parts) > 1:
+                        process_name = app_terminated_signal_info_parts[0].strip()
+                        process_name = process_name.removesuffix('.0')
+                        signal_number = app_terminated_signal_info_parts[1].strip()
+                        if process_name not in process_Start_End_timestamps:
+                            process_Start_End_timestamps[process_name] = {}
+                        process_Start_End_timestamps[process_name]['terminated_signal'] = signal_number
+            elif 'terminated cause:' in line:
+                line_parts = line.split('EM: Process ')
+                if len(line_parts) > 1:
+                    app_terminated_cause_info = line_parts[1]
+                    app_terminated_cause_info_parts = app_terminated_cause_info.split(' terminated cause: ')
+                    if len(app_terminated_cause_info_parts) > 1:
+                        process_name = app_terminated_cause_info_parts[0].strip()
+                        process_name = process_name.removesuffix('.0')
+                        terminated_cause = app_terminated_cause_info_parts[1].strip()
+                        if process_name not in process_Start_End_timestamps:
+                            process_Start_End_timestamps[process_name] = {}
+                        process_Start_End_timestamps[process_name]['terminated_cause'] = terminated_cause
     return process_Start_End_timestamps
 
 
@@ -2722,7 +2886,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
     return True
 
        
-def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config, sheet, overall_IG_ON_iteration, process_start_times, process_times, application_startup_order,application_startup_order_status, logger):
+def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config, sheet, overall_IG_ON_iteration, process_start_times, process_times, application_startup_order, application_startup_order_status, logger):
     """
     Processes a single ECU log file for one test iteration, extracting timing data and generating reports.
    
@@ -2825,27 +2989,32 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             'startup_order_status': True, #validate_app_startup_order(dltstart_timestamps, application_startup_order),
             OrderFailureType.ORDER_MISMATCH.name: 0,
             OrderFailureType.APPLICATION_NOT_FOUND.name: 0,
-            OrderFailureType.APPLICATION_NOT_CONFIGURED.name: 0
+            OrderFailureType.APPLICATION_NOT_CONFIGURED.name: 0,
+            'terminated_applications_count': 0,
+            'terminated_signal_count': 0,
+            'terminated_cause_count': 0
         }
        
         process_Start_End_timestamps = extract_process_timestamps(lines)
         print ("process_Start_End_timestamp:"+str(process_Start_End_timestamps))
-        if not process_Start_End_timestamps or len(process_Start_End_timestamps)==0:
+        if not process_Start_End_timestamps or not any('init_time' in process_Start_End_timestamps[key] for key in process_Start_End_timestamps):
             logger.error("Error: Unable to extract process timestamps.")
             return False
 
-        process_timing_info = extract_and_sort_process_timestamps(process_Start_End_timestamps, ecu_type, logger)
+        process_timing_info = extract_and_sort_process_timestamps(process_Start_End_timestamps, logger)
         print ("process_timing_info:"+str(process_timing_info))
        
         if not process_timing_info:
             logger.error("Error: No report data available.")
             return False    
 
-        for item in process_timing_info:
+        for process, item in process_timing_info.items():
             # logger.info(f"Process: {item['process']} Start Timestamp: {item['start_clock']} End Timestamp: {item['end_clock']} start_time_ms: {item['start_time_ms']}")
 
             # Check if the process is already in the process start times dictionary
             process = item['process']
+            if not item['start_time_ms']:
+                continue
             if process not in process_start_times:
                 # If the process is not in the dictionary, add it with an empty list
                 process_start_times[process] = []
@@ -2865,7 +3034,9 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             'status': True,
             'passed_count': 0,
             'dltstart_timestamps': dltstart_timestamps,
-            'process_timing_info': process_timing_info
+            'process_timing_info': process_timing_info,
+            'configured_applications': set(),
+            'terminated_applications': set()
         }
         print ("overall_IG_ON_iteration:"+str(overall_IG_ON_iteration))
 
@@ -2876,6 +3047,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
 
     except Exception as e:
         logger.error(f"Exception :: {e}")
+        raise e
         return False
     return True
    
@@ -2955,7 +3127,7 @@ def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_it
     each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status)
 
     # Export the average data to the Excel sheet
-    export_and_plot_average_data_to_excel(summary_sheet, ecu_type, process_times, process_start_times, config, logger)
+    export_and_plot_average_data_to_excel(summary_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
 
     # Save the Excel workbook
     workbook.save(report_file)
@@ -3251,6 +3423,7 @@ def start_startup_time_measurement(logger):
         isSuccess = False
     except Exception as e:
         logger.error(f"An error occurred: {e}")
+        raise e
         isSuccess = False
     finally:
         remove_png_files(logger)
@@ -3259,5 +3432,5 @@ def start_startup_time_measurement(logger):
     print("Final response :: ", isSuccess)
     return isSuccess
 
-# if __name__ == "__main__":
-#     print("Final Result:", start_startup_time_measurement(setup_logging()))
+if __name__ == "__main__":
+    print("Final Result:", start_startup_time_measurement(setup_logging()))

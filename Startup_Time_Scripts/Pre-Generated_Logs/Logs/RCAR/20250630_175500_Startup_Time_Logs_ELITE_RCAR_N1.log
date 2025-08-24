@@ -1468,6 +1468,7 @@
 1467 2025/06/30 17:55:33.248897 5.7541 156 ECU1 VIAP VIPR 344115 log info verbose 2 [HEVIADI][Send] heviadi_ADCAN8_APS_06CD5506_DeviceTime_06CD5506 Send value = 0
 1468 2025/06/30 17:55:33.249608 5.7541 157 ECU1 VIAP VIPR 344115 log info verbose 2 [HEVIADI][Send] heviadi_AFCAN11_ESB_03AD5587_ESB_RESET_FLAG_03AD5587 Send value = 0
 1469 2025/06/30 17:55:33.250359 5.7561 126 ECU1 EMFC EMAP 319511 log warn verbose 7 CheckAppState 607 : EM: Process functiongroupmanager.0 terminated cause: 0
+1469 2025/06/30 17:55:33.250359 5.7561 126 ECU1 EMFC EMAP 319511 log warn verbose 7 CheckAppState 607 : EM: Process functiongroupmanager.0 was terminated by signal 10
 1470 2025/06/30 17:55:33.251069 5.7551 158 ECU1 VIAP VIPR 344115 log info verbose 1 [HEVIADI-APP-Provider][PSIM-SOMEIP-EVENTS]:AllCanBusOut_EVT Provider Publishing/Sending events AD_Elite_HEVIADI_AllCan_Service_heviadiAllCanBusOut_EVT
 1471 2025/06/30 17:55:33.252040 5.7561 159 ECU1 VIAP VIPR 344115 log info verbose 1 [HEVIADI-APP-Provider][PSIM-SOMEIP-EVENTS]:radcanBusOut_EVT Provider Publishing/Sending events AD_Elite_HEVIADI_FWRU_Service_heviadiradcanBusOut_EVT
 1472 2025/06/30 17:55:33.253107 5.7581 209 ECU1 VIAP VICN 344115 log info verbose 1 [HEVIADI][Read] Read Data Check
@@ -1503,6 +1504,8 @@
 1502 2025/06/30 17:55:33.278848 5.7911 224 ECU1 VIAP VICN 344115 log info verbose 2 [HEVIADI][Read] g_tCanRxEsb03ad5587Afcan11Data_.ESB_RESET_FLAG_03AD5587 Read value = 0
 1503 2025/06/30 17:55:33.279818 5.7911 22 ECU1 TSP S2S 344117 log info verbose 3 Serializer 62 S2S_3001 - Starting serialization process.
 1504 2025/06/30 17:55:33.280768 5.7911 23 ECU1 TSP S2S 344117 log info verbose 4 Serializer Line: 72 S2S_3002 - Serialization process completed successfully.
+1469 2025/06/30 17:55:33.250359 5.7561 126 ECU1 EMFC EMAP 319511 log warn verbose 7 CheckAppState 607 : EM: Process diag-default-services-app.0 terminated cause: 1
+1469 2025/06/30 17:55:33.250359 5.7561 126 ECU1 EMFC EMAP 319511 log warn verbose 7 CheckAppState 607 : EM: Process diag-default-services-app.0 was terminated by signal 11
 1505 2025/06/30 17:55:33.281556 5.7931 166 ECU1 VIAP VIPR 344115 log info verbose 1 [HEVIADI][Send] heviadiAllCanBusOut_STRUCTURE Send
 1506 2025/06/30 17:55:33.282247 5.7941 167 ECU1 VIAP VIPR 344115 log info verbose 2 [HEVIADI][Send] heviadi_ADCAN8_APS_06CD5506_APS_ALIVE_COUNTER_06CD5506 Send value = 0
 1507 2025/06/30 17:55:33.283111 5.7941 168 ECU1 VIAP VIPR 344115 log info verbose 2 [HEVIADI][Send] heviadi_ADCAN8_APS_06CD5506_DeviceTime_06CD5506 Send value = 0
@@ -1638,6 +1641,8 @@
 1637 2025/06/30 17:55:33.397300 5.9161 212 ECU1 VIAP VIPR 344115 log info verbose 1 [HEVIADI-APP-Provider][PSIM-SOMEIP-EVENTS]:AllCanBusOut_EVT Provider Publishing/Sending events AD_Elite_HEVIADI_AllCan_Service_heviadiAllCanBusOut_EVT
 1638 2025/06/30 17:55:33.399356 5.9161 213 ECU1 VIAP VIPR 344115 log info verbose 1 [HEVIADI-APP-Provider][PSIM-SOMEIP-EVENTS]:radcanBusOut_EVT Provider Publishing/Sending events AD_Elite_HEVIADI_FWRU_Service_heviadiradcanBusOut_EVT
 1639 2025/06/30 17:55:33.401348 5.9181 25 ECU1 VIAP VICN 344115 log info verbose 1 [HEVIADI][Read] Read Data Check
+1469 2025/06/30 17:55:33.250359 5.7561 126 ECU1 EMFC EMAP 319511 log warn verbose 7 CheckAppState 607 : EM: Process qam-mng-app.0 terminated cause: 
+1469 2025/06/30 17:55:33.250359 5.7561 126 ECU1 EMFC EMAP 319511 log warn verbose 7 CheckAppState 607 : EM: Process qam-mng-app.0 was terminated by signal 
 1640 2025/06/30 17:55:33.402722 5.9191 26 ECU1 VIAP VICN 344115 log info verbose 2 [HEVIADI][Read] adihelper::ADIData::tCanRxAps06cd5506Adcan8Data_.APS_ALIVE_COUNTER_06CD5506 Read value = 0
 1641 2025/06/30 17:55:33.403677 5.9191 27 ECU1 VIAP VICN 344115 log info verbose 2 [HEVIADI][Read] adihelper::ADIData::timeStamp06cd5506vhcl_ Read value = 0
 1642 2025/06/30 17:55:33.404886 5.9191 28 ECU1 VIAP VICN 344115 log info verbose 2 [HEVIADI][Read] adihelper::ADIData::tCanRxEsb03ad5587Afcan11Data_.ESB_RESET_FLAG_03AD5587 Read value = 0
