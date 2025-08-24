@@ -3,6 +3,10 @@
   "Iterations": 1,
   "Power ON-OFF Delay": 1,
   "Startup Order Judgement": true,
+  "Application Registration": false,
+  "Order Mismatch Judgement": false,
+  "Not Found Judgement": true,
+  "Not Configured Judgement": false,
   "Pre-Generated Logs": true,
   "windows": {
     "Is Environment Path Set": false,

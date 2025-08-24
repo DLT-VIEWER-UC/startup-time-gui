@@ -911,8 +911,25 @@ def get_expected_startup_order_str(order_type, expected_order, grp_len):
         else:
             return f'Pa{expected_order}-{grp_len}'
 
+def fill_disabled_cell_with_grey(order_mismatch_col, not_found_col, not_configured_col, sheet, config):
+    validate_startup_order = config.get('Startup Order Judgement', False)
+    app_registration = config.get('Application Registration', False)
+    order_mismatch_judgement = config.get('Order Mismatch Judgement', False)
+    not_found_judgement = config.get('Not Found Judgement', False)
+    not_configured_judgement = config.get('Not Configured Judgement', False)
+    if validate_startup_order and app_registration:
+        if not order_mismatch_judgement:
+            order_mismatch_cell = sheet.cell(row=sheet.max_row, column=order_mismatch_col)
+            order_mismatch_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+        if not not_found_judgement:
+            not_found_cell = sheet.cell(row=sheet.max_row, column=not_found_col)
+            not_found_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+        if not not_configured_judgement:
+            not_configured_cell = sheet.cell(row=sheet.max_row, column=not_configured_col)
+            not_configured_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
 
-def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, validate_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
+
+def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
     """
     Writes application startup timing data to Excel worksheet with comprehensive validation.
    
@@ -957,7 +974,11 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         This function is central to the reporting system and provides the detailed
         data that feeds into summary reports and visualizations.
     """
-
+    validate_startup_order = config.get('Startup Order Judgement', False)
+    app_registration = config.get('Application Registration', False)
+    order_mismatch_judgement = config.get('Order Mismatch Judgement', False)
+    not_found_judgement = config.get('Not Found Judgement', False)
+    not_configured_judgement = config.get('Not Configured Judgement', False)
     startup_order_count_idx = sheet.max_row + 1
     if validate_startup_order:
         sheet.append(['', '', '', '', '', '', '', '', '', 0, 0, 0, 'Applicable', 'Signal', 'Cause'])
@@ -983,20 +1004,33 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
 
         if validate_startup_order:
             # Create a data row for the process
-            odr_type, expected_order, grp_len = get_expected_startup_order(process, application_startup_order, logger)
-            data_row.append(get_expected_startup_order_str(odr_type, expected_order, grp_len))
-            order_failure_type = validate_ind_app_startup_order(expected_order, relative_startup_order)
-            if order_failure_type != 0:
-                data_row.extend([
-                    'FAIL',
-                    '⬤' if OrderFailureType.ORDER_MISMATCH.name == OrderFailureType(order_failure_type).name else '',
-                    '',
-                    '⬤' if OrderFailureType.APPLICATION_NOT_CONFIGURED.name == OrderFailureType(order_failure_type).name else ''
-                ])
-                application_startup_order_status_iteration[OrderFailureType(order_failure_type).name] += 1
-                application_startup_order_status_iteration['startup_order_status'] = False
+            if app_registration:
+                odr_type, expected_order, grp_len = get_expected_startup_order(process, application_startup_order, logger)
+                data_row.append(get_expected_startup_order_str(odr_type, expected_order, grp_len))
+                order_failure_type = validate_ind_app_startup_order(expected_order, relative_startup_order)
+                if order_failure_type != 0:
+                    if application_startup_order_status_iteration['startup_order_status']:
+                        application_startup_order_status_iteration['startup_order_status'] = bool(
+                            (OrderFailureType.ORDER_MISMATCH.name == OrderFailureType(order_failure_type).name and not order_mismatch_judgement) or
+                            (OrderFailureType.APPLICATION_NOT_CONFIGURED.name == OrderFailureType(order_failure_type).name and not not_configured_judgement)
+                        )
+                    status = '-'
+                    if any((order_mismatch_judgement, not_found_judgement, not_configured_judgement)):
+                        status = 'PASS' if (
+                            (OrderFailureType.ORDER_MISMATCH.name == OrderFailureType(order_failure_type).name and not order_mismatch_judgement) or
+                            (OrderFailureType.APPLICATION_NOT_CONFIGURED.name == OrderFailureType(order_failure_type).name and not not_configured_judgement)
+                        ) else 'FAIL'
+                    data_row.extend([
+                        status,
+                        '⬤' if OrderFailureType.ORDER_MISMATCH.name == OrderFailureType(order_failure_type).name else '',
+                        '',
+                        '⬤' if OrderFailureType.APPLICATION_NOT_CONFIGURED.name == OrderFailureType(order_failure_type).name else ''
+                    ])
+                    application_startup_order_status_iteration[OrderFailureType(order_failure_type).name] += 1
+                else:
+                    data_row.extend(['PASS' if any((order_mismatch_judgement, not_found_judgement, not_configured_judgement)) else '-', '', '', ''])
             else:
-                data_row.extend(['PASS', '', '', ''])
+                data_row.extend(['-', '-', '-', '-', '-'])
         if process in process_timing_info:
             terminated_signal = process_timing_info[process]['terminated_signal']
             terminated_cause = process_timing_info[process]['terminated_cause']
@@ -1010,7 +1044,9 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
 
         # Append the data row to the sheet
         sheet.append(data_row)
-       
+
+        fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
+
     # Merge cells in column D for the rows created in this scenario
     merged_range = f'D{start_row}:D{sheet.max_row}'
     sheet.merge_cells(merged_range)
@@ -1022,11 +1058,18 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 if app not in dltstart_timestamps:
                     encountered_apps.add(app)
                     data_row = ['-', app, '-', '-', '-', '-', '-']
-               
-                    odr_type, expected_order, grp_len = get_expected_startup_order(app, application_startup_order, logger)
-                    data_row.extend([get_expected_startup_order_str(odr_type, expected_order, grp_len), 'FAIL', '', '⬤', ''])
-                    application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
-                    application_startup_order_status_iteration['startup_order_status'] = False
+
+                    if app_registration:
+                        if application_startup_order_status_iteration['startup_order_status']:
+                            application_startup_order_status_iteration['startup_order_status'] = not not_found_judgement
+                        status = '-'
+                        if any((order_mismatch_judgement, not_found_judgement, not_configured_judgement)):
+                            status = 'FAIL' if not_found_judgement else 'PASS'
+                        odr_type, expected_order, grp_len = get_expected_startup_order(app, application_startup_order, logger)
+                        data_row.extend([get_expected_startup_order_str(odr_type, expected_order, grp_len), status, '', '⬤', ''])
+                        application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
+                    else:
+                        data_row.extend(['-', '-', '-', '-', '-'])
                     terminated_signal = process_timing_info[app]['terminated_signal'] if app in process_timing_info else None
                     terminated_cause = process_timing_info[app]['terminated_cause'] if app in process_timing_info else None
                     if terminated_signal or terminated_cause:
@@ -1038,6 +1081,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
                     
                     sheet.append(data_row)
+                    fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
         # Update the last three cells of the row at startup_order_count_idx with the current counts and highlight in yellow
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
         counts = [
@@ -1057,9 +1101,16 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         if process not in encountered_apps:
             data_row = ['-', process, '-', '-', '-', '-', '-']
             if validate_startup_order:
-                data_row.extend(['-', 'FAIL', '', '', '⬤'])
-                application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name] += 1
-                application_startup_order_status_iteration['startup_order_status'] = False
+                if app_registration:
+                    if application_startup_order_status_iteration['startup_order_status']:
+                        application_startup_order_status_iteration['startup_order_status'] = not not_configured_judgement
+                    status = '-'
+                    if any((order_mismatch_judgement, not_found_judgement, not_configured_judgement)):
+                        status = 'FAIL' if not_configured_judgement else 'PASS'
+                    data_row.extend(['-', status, '', '', '⬤'])
+                    application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name] += 1
+                else:
+                    data_row.extend(['-', '-', '-', '-', '-'])
             terminated_signal = process_data['terminated_signal']
             terminated_cause = process_data['terminated_cause']
             if terminated_signal or terminated_cause:
@@ -1070,6 +1121,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     application_startup_order_status_iteration['terminated_cause_count'] += 1
             data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
             sheet.append(data_row)
+            fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
     
     # Merge cells from column 1 to 9 in the current row with the above row
     for col in range(1, 10 if validate_startup_order else 8):
@@ -1268,6 +1320,10 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
         This summary table is typically the first thing stakeholders review
         to get an overall assessment of system performance across test iterations.
     """
+    app_registration = config.get('Application Registration', False)
+    order_mismatch_judgement = config.get('Order Mismatch Judgement', False)
+    not_found_judgement = config.get('Not Found Judgement', False)
+    not_configured_judgement = config.get('Not Configured Judgement', False)
     start_row = create_header(summary_sheet, ecu_type, config['Startup Order Judgement'], 'overall_test_columns')
     for i in range(config['Iterations']):
         if i in overall_IG_ON_iteration:
@@ -1280,12 +1336,18 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
                 test_status = 'FAIL'
             data_row = [f'=HYPERLINK("#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
             if config['Startup Order Judgement'] and i in application_startup_order_status:
-                data_row.extend([
-                    "PASS" if application_startup_order_status[i]['startup_order_status'] else "FAIL",
-                    application_startup_order_status[i][OrderFailureType.ORDER_MISMATCH.name],
-                    application_startup_order_status[i][OrderFailureType.APPLICATION_NOT_FOUND.name],
-                    application_startup_order_status[i][OrderFailureType.APPLICATION_NOT_CONFIGURED.name]
-                ])
+                if app_registration:
+                    startup_order_status = '-'
+                    if any((order_mismatch_judgement, not_found_judgement, not_configured_judgement)):
+                        startup_order_status = "PASS" if application_startup_order_status[i]['startup_order_status'] else "FAIL"
+                    data_row.extend([
+                        startup_order_status,
+                        application_startup_order_status[i][OrderFailureType.ORDER_MISMATCH.name],
+                        application_startup_order_status[i][OrderFailureType.APPLICATION_NOT_FOUND.name],
+                        application_startup_order_status[i][OrderFailureType.APPLICATION_NOT_CONFIGURED.name]
+                    ])
+                else:
+                    data_row.extend(['-', '-', '-', '-'])
             # Check if the process names match in dltstart_timestamps and process_timing_info
             data_row.append('PASS' if set(overall_IG_ON_iteration[i]['dltstart_timestamps'].keys()) == set(process for process, item in overall_IG_ON_iteration[i]['process_timing_info'].items() if item['start_time_ms']) else 'FAIL')
             if i in application_startup_order_status:
@@ -1295,7 +1357,10 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
             # Apply hyperlink formatting to the first cell in the last row
             cell = summary_sheet.cell(row=summary_sheet.max_row, column=1)
             cell.font = Font(bold=True, underline='single', color='0000FF')
-   
+            # Apply grey fill to disabled cells
+            fill_disabled_cell_with_grey(5, 6, 7, summary_sheet, config)
+
+
     format_excel_cells(summary_sheet, start_row)
     
 
@@ -1682,7 +1747,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
     start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'startup_time_columns')
 
     # Write the data to the Excel sheet
-    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config.get('Startup Order Judgement'), application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
+    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
 
     # Plot the differences as a graph
     plot_process_startup_time_graph(dltstart_timestamps, sheet, start_row, ecu_type, False)
