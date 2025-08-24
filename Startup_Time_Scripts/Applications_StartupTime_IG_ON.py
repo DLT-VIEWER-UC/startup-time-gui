@@ -1564,7 +1564,7 @@ def add_logfile_hyperlink(report_path, log_path, sheet, ecu_type, setup_type):
     sheet.cell(row=row_no + 1, column=1).font = Font(color="0000FF")
 
 
-def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, config):
+def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, config):
     """
     Generates a detailed report of application initialization (Init/Up) times with visualization.
    
@@ -1615,6 +1615,10 @@ def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, co
             sheet.append(data_row)
             filtered_data.append(process_data)
         else:
+            data_row = ['-', process, '-', '-']
+            sheet.append(data_row)
+    for process in overall_IG_ON_cur_iteration['configured_applications']:
+        if process not in process_timing_info:
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
 
@@ -1686,7 +1690,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
 
-    generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, config)
+    generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, config)
 
     # Adjust the column width of the Excel sheet
     adjust_column_width(sheet, ecu_type, logger)
