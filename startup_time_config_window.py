@@ -42,7 +42,7 @@ class StartupTimeConfig(QDialog):
         'ecu-config': []
     }
 
-    def __init__(self, main_window):
+    def __init__(self, main_window, is_checked):
         super().__init__()
         self.main_window = main_window
         self.set_window_properties()
@@ -53,28 +53,37 @@ class StartupTimeConfig(QDialog):
         self.ecu_block_list = []
         self.startup_group_list = []
         
-        self.isElite, self.isPadas = False, False
-        self.isRCAR, self.isSOC0, self.isSOC1 = False, False, False
+        self.isElite, self.isPadas = True, True
+        self.isRCAR, self.isSOC0, self.isSOC1 = True, True, True
+
+        # Flag indicating whether any ECU is selected in the main window
+        self.is_any_ecu_selected_flag = main_window.is_any_ecu_selected_flag
         
         # Check which ECU type is enabled (only one can be selected at a time)
-        self.ecu_selection = main_window.ecu_selection_status
         # self.ecu_selection = {
         #     'Elite': {'RCAR': True, 'SoC0': False, 'SoC1': True},
         #     'PADAS': {'RCAR': False}
         # }
-
-        if self.ecu_selection.get('Elite', {}).get('RCAR', False):
-            self.isElite = True
-            self.isRCAR = True
-        if self.ecu_selection.get('Elite', {}).get('SoC0', False):
-            self.isElite = True
-            self.isSOC0 = True
-        if self.ecu_selection.get('Elite', {}).get('SoC1', False):
-            self.isElite = True
-            self.isSOC1 = True
-        if self.ecu_selection.get('PADAS', {}).get('RCAR', False):
-            self.isPadas = True
-            self.isRCAR = True
+        
+        if self.is_any_ecu_selected_flag and is_checked:
+            self.ecu_selection = main_window.ecu_selection_status
+            if self.ecu_selection.get('PADAS', {}).get('RCAR', False):
+                self.isElite = False
+                self.isSOC0 = False
+                self.isSOC1 = False
+            else:
+                if self.ecu_selection.get('Elite', {}).get('RCAR', False):
+                    self.isPadas = False
+                else:
+                    self.isRCAR = False
+                if self.ecu_selection.get('Elite', {}).get('SoC0', False):
+                    self.isPadas = False
+                else:
+                    self.isSOC0 = False
+                if self.ecu_selection.get('Elite', {}).get('SoC1', False):
+                    self.isPadas = False
+                else:
+                    self.isSOC1 = False
 
         self.init_ui()
    
