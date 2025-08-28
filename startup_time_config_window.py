@@ -34,6 +34,10 @@ class StartupTimeConfig(QDialog):
         # 'Iterations': 0,
         # 'Threshold': 0,
         'Startup Order Judgement': False,
+        'Application Registration': False,
+        'Order Mismatch Judgement': False,
+        'Not Found Judgement': False,
+        'Not Configured Judgement': False,
         'windows': {'Is Environment Path Set': False, 'DLT-Viewer Installed Path': ''},
         'ecu-config': []
     }
@@ -86,7 +90,7 @@ class StartupTimeConfig(QDialog):
 
         # Define window dimensions
         window_width = 900
-        window_height = 800
+        window_height = 850
 
         # Calculate the position to center the window
         x = main_window_x + (main_window_width - window_width) // 2
@@ -123,7 +127,7 @@ class StartupTimeConfig(QDialog):
 
         # General Settings
         general_group = QGroupBox('General Settings')
-        general_group.setFixedHeight(200)
+        general_group.setFixedHeight(220)
         general_layout = QFormLayout()
         for key, validator in [
             ('DLT-Viewer Log Capture Time', CustomIntValidator(1, 500)),
@@ -150,6 +154,51 @@ class StartupTimeConfig(QDialog):
         vcb = QCheckBox(); vcb.setChecked(self.config_data.get('Startup Order Judgement', False))
         general_layout.addRow(QLabel('Startup Order Judgement'), vcb)
         self.widgets['Startup Order Judgement'] = vcb
+        
+        # Add the four new checkboxes that depend on 'Startup Order Judgement'
+        app_registration_cb = QCheckBox(); app_registration_cb.setChecked(self.config_data.get('Application Registration', False))
+        general_layout.addRow(QLabel('Application Registration'), app_registration_cb)
+        self.widgets['Application Registration'] = app_registration_cb
+        
+        # Create horizontal layout for the three judgement checkboxes without header
+        judgement_hlayout = QHBoxLayout()
+        judgement_hlayout.setContentsMargins(0, 0, 0, 0)
+        
+        # Order Mismatch Judgement
+        order_mismatch_label = QLabel('Order Mismatch Judgement')
+        order_mismatch_cb = QCheckBox()
+        order_mismatch_cb.setChecked(self.config_data.get('Order Mismatch Judgement', False))
+        self.widgets['Order Mismatch Judgement'] = order_mismatch_cb
+        
+        # Not Found Judgement
+        not_found_label = QLabel('Not Found Judgement')
+        not_found_cb = QCheckBox()
+        not_found_cb.setChecked(self.config_data.get('Not Found Judgement', False))
+        self.widgets['Not Found Judgement'] = not_found_cb
+        
+        # Not Configured Judgement
+        not_configured_label = QLabel('Not Configured Judgement')
+        not_configured_cb = QCheckBox()
+        not_configured_cb.setChecked(self.config_data.get('Not Configured Judgement', False))
+        self.widgets['Not Configured Judgement'] = not_configured_cb
+        
+        # Add components to horizontal layout with spacing
+        judgement_hlayout.addWidget(order_mismatch_label)
+        judgement_hlayout.addSpacing(16)
+        judgement_hlayout.addWidget(order_mismatch_cb)
+        judgement_hlayout.addSpacing(40)  # Space between first and second option
+        judgement_hlayout.addWidget(not_found_label)
+        judgement_hlayout.addSpacing(16)
+        judgement_hlayout.addWidget(not_found_cb)
+        judgement_hlayout.addSpacing(40)  # Space between second and third option
+        judgement_hlayout.addWidget(not_configured_label)
+        judgement_hlayout.addSpacing(16)
+        judgement_hlayout.addWidget(not_configured_cb)
+        judgement_hlayout.addStretch()  # Push everything to the left
+        
+        # Add the horizontal layout directly to the form layout
+        general_layout.addRow(judgement_hlayout)
+        
         pre_gen_logs_cb = QCheckBox(); pre_gen_logs_cb.setChecked(self.config_data.get('Pre-Generated Logs', False))
         general_layout.addRow(QLabel('Pre-Generated Logs'), pre_gen_logs_cb)
         self.widgets['Pre-Generated Logs'] = pre_gen_logs_cb
@@ -217,7 +266,27 @@ class StartupTimeConfig(QDialog):
 
         self.ec_group.setLayout(ec_vbox)
         layout.addWidget(self.ec_group)
-        vcb.toggled.connect(lambda checked: [self.on_change_update_ok_btn_state()] + [startup_group.setEnabled(checked) for startup_group in self.startup_group_list])
+        
+        # Enable/disable the dependent checkboxes and startup groups based on 'Startup Order Judgement'
+        def toggle_startup_order_dependent_controls(checked):
+            self.on_change_update_ok_btn_state()
+            # Enable/disable startup groups
+            for startup_group in self.startup_group_list:
+                startup_group.setEnabled(checked)
+            # Enable/disable the four dependent checkboxes
+            app_registration_cb.setEnabled(checked)
+            order_mismatch_cb.setEnabled(checked)
+            not_found_cb.setEnabled(checked)
+            not_configured_cb.setEnabled(checked)
+        
+        # Set initial state for dependent controls
+        startup_order_enabled = vcb.isChecked()
+        app_registration_cb.setEnabled(startup_order_enabled)
+        order_mismatch_cb.setEnabled(startup_order_enabled)
+        not_found_cb.setEnabled(startup_order_enabled)
+        not_configured_cb.setEnabled(startup_order_enabled)
+        
+        vcb.toggled.connect(toggle_startup_order_dependent_controls)
         pre_gen_logs_cb.toggled.connect(lambda checked: [
             self.on_change_update_ok_btn_state(),
             win_group.setDisabled(checked)] + [
@@ -511,6 +580,10 @@ class StartupTimeConfig(QDialog):
             if w.text() and len(w.text())>0:
                 data[key] = int(w.text())
         data['Startup Order Judgement'] = self.widgets['Startup Order Judgement'].isChecked()
+        data['Application Registration'] = self.widgets['Application Registration'].isChecked()
+        data['Order Mismatch Judgement'] = self.widgets['Order Mismatch Judgement'].isChecked()
+        data['Not Found Judgement'] = self.widgets['Not Found Judgement'].isChecked()
+        data['Not Configured Judgement'] = self.widgets['Not Configured Judgement'].isChecked()
         data['Pre-Generated Logs'] = self.widgets['Pre-Generated Logs'].isChecked()
         data['windows'] = {
             'Is Environment Path Set': self.widgets['windows.Is Environment Path Set'].isChecked(),
