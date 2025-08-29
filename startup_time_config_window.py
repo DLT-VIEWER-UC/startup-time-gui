@@ -281,7 +281,6 @@ class StartupTimeConfig(QDialog):
                 valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isSOC1)
                 block.disableRemoveButton(valid_gb)
             block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if not self.is_any_ecu_selected_flag and not valid_gb else '0px'};}}")  # Set border color based on validity
-            print(block.styleSheet())
             for startup_group in self.startup_group_list:
                 startup_group.setEnabled(vcb.isChecked()) 
             self.ecu_block_list.append(block)
@@ -579,6 +578,22 @@ class StartupTimeConfig(QDialog):
                     enabled = False
                 if not self.isSOC1 and not self.ecu_block_list[3].disabled:
                     enabled = False
+        
+        for i in range(4):
+            for entry in self.widgets['ecu-config'][i]['startup']:
+                if self.widgets['Startup Order Judgement'].isChecked() and (not entry[2].text() or len(entry[2].text()) == 0 or entry[2].text().startswith(' ') or entry[2].text().endswith(' ')):
+                    entry[2].setStyleSheet('border: 1px solid red;')
+                else:
+                    entry[2].setStyleSheet('border: 0px;')
+            for entry in self.widgets['ecu-config'][i]['threshold']:
+                if (not entry[1].text() or len(entry[1].text()) == 0 or entry[1].text().startswith(' ') or entry[1].text().endswith(' ')):
+                    entry[1].setStyleSheet('border: 1px solid red;')
+                else:
+                    entry[1].setStyleSheet('border: 0px;')
+                if (not entry[2].text() or len(entry[2].text()) == 0 or not entry[2].text().isdigit() or not (1 <= int(entry[2].text()) <= 100)):
+                    entry[2].setStyleSheet('border: 1px solid red;')
+                else:
+                    entry[2].setStyleSheet('border: 0px;')
         for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Power ON-OFF Delay']:
             if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay'] and self.widgets['Pre-Generated Logs'].isChecked():
                 continue
