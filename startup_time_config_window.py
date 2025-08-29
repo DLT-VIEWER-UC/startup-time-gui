@@ -280,7 +280,7 @@ class StartupTimeConfig(QDialog):
                 # block.setVisible(self.isSOC1 and self.isElite)
                 valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isSOC1)
                 block.disableRemoveButton(valid_gb)
-            block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if not valid_gb else '0px'};}}")  # Set border color based on validity
+            block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if not self.is_any_ecu_selected_flag and not valid_gb else '0px'};}}")  # Set border color based on validity
             print(block.styleSheet())
             for startup_group in self.startup_group_list:
                 startup_group.setEnabled(vcb.isChecked()) 
