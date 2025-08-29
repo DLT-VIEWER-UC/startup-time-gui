@@ -1,26 +1,23 @@
+from collapsible_groupbox import CollapsibleGroupBox
 from imports_utils import *
 
 
 class CustomIntValidator(QIntValidator):
-    def __init__(self, minimum=1, maximum=300, parent=None):
-        super().__init__(minimum, maximum, parent)
-        self._min = minimum
-        self._max = maximum
-    def setRange(self, minimum, maximum):
-        self._min = minimum
-        self._max = maximum
-        super().setRange(minimum, maximum)
+    def __init__(self, min_value, max_value, parent=None):
+        super().__init__(min_value, max_value, parent)
+        self.min_value = min_value
+        self.max_value = max_value
+
     def validate(self, input_str, pos):
         if input_str == "":
             return (QIntValidator.Intermediate, input_str, pos)
-       
+
         if input_str.isdigit():
-            # Check for leading zeros
+            # Reject leading zeros unless the value is zero itself
             if input_str.startswith('0') and len(input_str) > 1:
                 return (QIntValidator.Invalid, input_str, pos)
             value = int(input_str)
- 
-            if self._min <= value:# <= self._max:
+            if self.min_value <= value <= self.max_value:
                 return (QIntValidator.Acceptable, input_str, pos)
             else:
                 return (QIntValidator.Invalid, input_str, pos)
@@ -145,17 +142,22 @@ class StartupTimeConfig(QDialog):
         ]:
             widgets_lst = list()
             le = QLineEdit(str(self.config_data.get(key, '')))
-            le.setPlaceholderText('0')
             le.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
             le.setValidator(validator)
             le.setFixedWidth(150)
             widgets_lst.append(le)
             row_layout = QHBoxLayout()
             row_layout.addWidget(le)
-            if key != 'Iterations':
-                sec_lbl = QLabel('sec')
-                row_layout.addWidget(sec_lbl)
-                widgets_lst.append(sec_lbl)
+            units_text = ''
+            if key == 'DLT-Viewer Log Capture Time':
+                units_text = '[Int: 20-500 sec]'
+            elif key == 'Iterations':
+                units_text = '[Int: 1-50]'
+            elif key == 'Power ON-OFF Delay':
+                units_text = '[Int: 20-50 sec]'
+            units_lbl = QLabel(units_text)
+            row_layout.addWidget(units_lbl)
+            widgets_lst.append(units_lbl)
             key_lbl = QLabel(key)
             widgets_lst.append(key_lbl)
             general_layout.addRow(key_lbl, row_layout)
@@ -166,7 +168,8 @@ class StartupTimeConfig(QDialog):
         
         # Add the four new checkboxes that depend on 'Startup Order Judgement'
         app_registration_cb = QCheckBox(); app_registration_cb.setChecked(self.config_data.get('Application Registration', False))
-        general_layout.addRow(QLabel('Application Registration'), app_registration_cb)
+        app_registration_label = QLabel('Application Registration')
+        general_layout.addRow(app_registration_label, app_registration_cb)
         self.widgets['Application Registration'] = app_registration_cb
         
         # Create horizontal layout for the three judgement checkboxes without header
@@ -208,9 +211,9 @@ class StartupTimeConfig(QDialog):
         # Add the horizontal layout directly to the form layout
         general_layout.addRow(judgement_hlayout)
         
-        pre_gen_logs_cb = QCheckBox(); pre_gen_logs_cb.setChecked(self.config_data.get('Pre-Generated Logs', False))
-        general_layout.addRow(QLabel('Pre-Generated Logs'), pre_gen_logs_cb)
-        self.widgets['Pre-Generated Logs'] = pre_gen_logs_cb
+        self.pre_gen_logs_cb = QCheckBox(); self.pre_gen_logs_cb.setChecked(self.config_data.get('Pre-Generated Logs', False))
+        general_layout.addRow(QLabel('Pre-Generated Logs'), self.pre_gen_logs_cb)
+        self.widgets['Pre-Generated Logs'] = self.pre_gen_logs_cb
         
         general_group.setLayout(general_layout)
         layout.addWidget(general_group)
@@ -229,7 +232,7 @@ class StartupTimeConfig(QDialog):
         path_le.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
         path_le.setMaxLength(250)
         count_lbl = QLabel(f"{len(path_le.text())} / {path_le.maxLength()}")
-        path_le.textChanged.connect(lambda text: count_lbl.setText(f"{len(text)} / {path_le.maxLength()}"))
+        path_le.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {path_le.maxLength()}"), self.update_border('windows.DLT-Viewer Installed Path')])
         browse_btn = QPushButton('Browse')
         browse_btn.clicked.connect(lambda: self.browse_path(path_le))
         hl = QHBoxLayout()
@@ -248,7 +251,7 @@ class StartupTimeConfig(QDialog):
         browse_btn.setDisabled(path_cb.isChecked())
         count_lbl.setDisabled(path_cb.isChecked())
 
-        path_cb.toggled.connect(lambda checked: [dlt_path_lbl.setDisabled(checked), path_le.setDisabled(checked), browse_btn.setDisabled(checked), count_lbl.setDisabled(checked), self.on_change_update_ok_btn_state()])
+        path_cb.toggled.connect(lambda checked: [dlt_path_lbl.setDisabled(checked), path_le.setDisabled(checked), browse_btn.setDisabled(checked), count_lbl.setDisabled(checked), self.on_change_update_ok_btn_state(), self.update_border('windows.DLT-Viewer Installed Path')])
 
         # ECU Configurations
         self.ec_group = QGroupBox('ECU Configurations')
@@ -260,14 +263,25 @@ class StartupTimeConfig(QDialog):
         for idx, ecu_type in enumerate(['PADAS', 'RCAR', 'SoC0', 'SoC1']):
             ecu_data = ecu_types.get(ecu_type, {'ecu-type': ecu_type, 'startup-order': []})
             block = self._create_ecu_block(ecu_data, idx)
+            valid_gb = True
             if ecu_type == 'PADAS':
-                block.setVisible(self.isPadas and self.isRCAR)
+                # block.setVisible(self.isPadas and self.isRCAR)
+                valid_gb = self.is_any_ecu_selected_flag and (self.isPadas and self.isRCAR)
+                block.disableRemoveButton(valid_gb)
             if ecu_type=='RCAR':
-                block.setVisible(self.isRCAR and self.isElite)
+                # block.setVisible(self.isRCAR and self.isElite)
+                valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isRCAR)
+                block.disableRemoveButton(valid_gb)
             elif ecu_type=='SoC0':
-                block.setVisible(self.isSOC0 and self.isElite)
+                # block.setVisible(self.isSOC0 and self.isElite)
+                valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isSOC0)
+                block.disableRemoveButton(valid_gb)
             elif ecu_type=='SoC1':
-                block.setVisible(self.isSOC1 and self.isElite)
+                # block.setVisible(self.isSOC1 and self.isElite)
+                valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isSOC1)
+                block.disableRemoveButton(valid_gb)
+            block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if not valid_gb else '0px'};}}")  # Set border color based on validity
+            print(block.styleSheet())
             for startup_group in self.startup_group_list:
                 startup_group.setEnabled(vcb.isChecked()) 
             self.ecu_block_list.append(block)
@@ -284,9 +298,13 @@ class StartupTimeConfig(QDialog):
                 startup_group.setEnabled(checked)
             # Enable/disable the four dependent checkboxes
             app_registration_cb.setEnabled(checked)
+            app_registration_label.setEnabled(checked)
             order_mismatch_cb.setEnabled(checked)
+            order_mismatch_label.setEnabled(checked)
             not_found_cb.setEnabled(checked)
+            not_found_label.setEnabled(checked)
             not_configured_cb.setEnabled(checked)
+            not_configured_label.setEnabled(checked)
         
         # Set initial state for dependent controls
         startup_order_enabled = vcb.isChecked()
@@ -296,10 +314,15 @@ class StartupTimeConfig(QDialog):
         not_configured_cb.setEnabled(startup_order_enabled)
         
         vcb.toggled.connect(toggle_startup_order_dependent_controls)
-        pre_gen_logs_cb.toggled.connect(lambda checked: [
+        self.pre_gen_logs_cb.toggled.connect(lambda checked: [
             self.on_change_update_ok_btn_state(),
             win_group.setDisabled(checked)] + [
             w.setDisabled(checked) for w in self.widgets['DLT-Viewer Log Capture Time'] + self.widgets['Power ON-OFF Delay']
+        ] + [
+            self.update_border('DLT-Viewer Log Capture Time'),
+            self.update_border('Power ON-OFF Delay'),
+            self.update_border('Iterations'),
+            self.update_border('windows.DLT-Viewer Installed Path')
         ])
 
         # OK/Cancel
@@ -310,12 +333,92 @@ class StartupTimeConfig(QDialog):
         btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn)
         layout.addLayout(btn_h)
 
+        self.widgets['DLT-Viewer Log Capture Time'][0].textChanged.connect(lambda text: [self.update_border('DLT-Viewer Log Capture Time')])
+        self.widgets['Iterations'][0].textChanged.connect(lambda text: [self.update_border('Iterations')])
+        self.widgets['Power ON-OFF Delay'][0].textChanged.connect(lambda text: [self.update_border('Power ON-OFF Delay')])
+
         # Trigger check box toggled event to set initial state
-        pre_gen_logs_cb.toggled.emit(pre_gen_logs_cb.isChecked())
+        self.pre_gen_logs_cb.toggled.emit(self.pre_gen_logs_cb.isChecked())
         for i, ecu_config in enumerate(self.widgets['ecu-config']):
             if len(ecu_config['startup']) == 0:
                 self.add_startup_row(i)
         
+        for idx, ecu_type in enumerate(['PADAS', 'RCAR', 'SoC0', 'SoC1']):
+            block = self.ecu_block_list[idx]
+            # Define the condition for each ECU type
+            ecu_conditions = {
+                'PADAS': self.isPadas and self.isRCAR,
+                'RCAR': self.isElite and self.isRCAR,
+                'SoC0': self.isElite and self.isSOC0,
+                'SoC1': self.isElite and self.isSOC1
+            }
+            if self.is_any_ecu_selected_flag:
+                if ecu_conditions[ecu_type]:
+                    # ECU is selected, keep it visible
+                    pass
+                elif ecu_type not in ecu_types:
+                    # ECU is not selected and not in config, remove it
+                    block.remove_button.click()
+        
+        self.on_change_update_ok_btn_state()
+
+    def update_border(self, key):
+        
+        if key == 'DLT-Viewer Log Capture Time':
+            text = self.widgets[key][0].text()
+            if self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text) <= 500):
+                self.widgets[key][0].setStyleSheet('border: 0px;')
+            else:
+                self.widgets[key][0].setStyleSheet('border: 1px solid red;')
+        elif key == 'Power ON-OFF Delay':
+            text = self.widgets[key][0].text()
+            if self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text) <= 50):
+                self.widgets[key][0].setStyleSheet('border: 0px;')
+            else:
+                self.widgets[key][0].setStyleSheet('border: 1px solid red;')
+        elif key == 'Iterations':
+            text = self.widgets[key][0].text()
+            if (text and 1 <= int(text) <= 50):
+                self.widgets[key][0].setStyleSheet('border: 0px;')
+            else:
+                self.widgets[key][0].setStyleSheet('border: 1px solid red;')
+        elif key == 'windows.DLT-Viewer Installed Path':
+            text = self.widgets[key].text()
+            if self.widgets['windows.Is Environment Path Set'].isChecked() or self.pre_gen_logs_cb.isChecked() or (text and not text.startswith(' ') and not text.endswith(' ')):
+                self.widgets[key].setStyleSheet('border: 0px;')
+            else:
+                self.widgets[key].setStyleSheet('border: 1px solid red;')
+
+    def handle_group_removed(self, removed_group):
+        """Handle when a CollapsibleGroupBox is removed - replace it with a restore button."""
+        # Check if we should add a restore button
+        # Only add restore button if ECU is not selected in main window
+        should_add_restore = True
+        
+        if self.is_any_ecu_selected_flag:
+            # Check if this ECU type is selected in the main window
+            ecu_type = removed_group.title
+            if ecu_type == 'PADAS' and  not (self.isPadas and self.isRCAR):
+                should_add_restore = False
+            elif ecu_type == 'RCAR' and not (self.isElite and self.isRCAR):
+                should_add_restore = False
+            elif ecu_type == 'SoC0' and not (self.isElite and self.isSOC0):
+                should_add_restore = False
+            elif ecu_type == 'SoC1' and not (self.isElite and self.isSOC1):
+                should_add_restore = False
+        
+        if should_add_restore:
+            # Create a restore button
+            restore_button = removed_group.create_restore_button()
+            
+            # Connect the restore button to update OK button state when clicked
+            restore_button.clicked.connect(self.on_change_update_ok_btn_state)
+            
+            # Add the restore button to the same layout position
+            if removed_group.parent_layout and removed_group.layout_index >= 0:
+                removed_group.parent_layout.insertWidget(removed_group.layout_index, restore_button)
+            
+        # Update the OK button state when a group is removed
         self.on_change_update_ok_btn_state()
 
     def ok_clicked(self):
@@ -327,7 +430,8 @@ class StartupTimeConfig(QDialog):
         super().done(result)
 
     def _create_ecu_block(self, data, idx):
-        gb = QGroupBox(data.get('ecu-type'))
+        # Create the main collapsible group box for the ECU
+        gb = CollapsibleGroupBox(data.get('ecu-type'))
         vbox = QVBoxLayout()
         
         # Startup Order Section
@@ -340,7 +444,7 @@ class StartupTimeConfig(QDialog):
             startup_fl.addRow(row)
             startup_entries.append((row, tp, apps, rem))
         add_startup_btn = QPushButton('Add Startup Order')
-        add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(i), self.on_change_update_ok_btn_state()])
+        add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(i), self.on_change_update_ok_btn_state(), gb.content_changed()])
         startup_vbox.addLayout(startup_fl)
         startup_vbox.addWidget(add_startup_btn, alignment=Qt.AlignLeft)
         startup_group.setLayout(startup_vbox)
@@ -357,14 +461,20 @@ class StartupTimeConfig(QDialog):
             threshold_fl.addRow(row)
             threshold_entries.append((row, apps, thresh))
         add_threshold_btn = QPushButton('Add Threshold Config')
-        add_threshold_btn.clicked.connect(lambda _, i=idx: [self.add_threshold_row(i), self.on_change_update_ok_btn_state()])
+        add_threshold_btn.clicked.connect(lambda _, i=idx: [self.add_threshold_row(i), self.on_change_update_ok_btn_state(), gb.content_changed()])
         threshold_vbox.addLayout(threshold_fl)
         threshold_vbox.addWidget(add_threshold_btn, alignment=Qt.AlignLeft)
         self.threshold_group.setLayout(threshold_vbox)
 
         vbox.addWidget(startup_group)
         vbox.addWidget(self.threshold_group)
-        gb.setLayout(vbox)
+        
+        # Set the content layout for the collapsible group box
+        gb.setContentLayout(vbox)
+        
+        # Connect the removed signal to handle restore functionality
+        gb.removed.connect(self.handle_group_removed)
+        
         self.startup_group_list.append(startup_group)
         self.widgets['ecu-config'].append({'startup_layout': startup_fl, 'startup': startup_entries, 'threshold_layout': threshold_fl, 'threshold': threshold_entries, 'add_startup_btn': add_startup_btn, 'add_threshold_btn': add_threshold_btn})
         return gb
@@ -400,7 +510,7 @@ class StartupTimeConfig(QDialog):
         left_form.addRow(QLabel('Applications'), apps_row)
 
         rem = QPushButton('Remove')
-        rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_startup_row(i, r), self.on_change_update_ok_btn_state()])
+        rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_startup_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
         
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
@@ -438,7 +548,7 @@ class StartupTimeConfig(QDialog):
         thresh_hl = QHBoxLayout(thresh_row)
         thresh_hl.setContentsMargins(0, 0, 0, 0)
         thresh_hl.addWidget(thresh)
-        thresh_hl.addWidget(QLabel('sec'))
+        thresh_hl.addWidget(QLabel('[Int: 1 - 100 sec]'))
         thresh_hl.addStretch()  # Push everything to the left
 
         left_form.addRow(QLabel('Applications'), apps_row)
@@ -446,7 +556,7 @@ class StartupTimeConfig(QDialog):
 
         # Right side - Remove button (centered vertically)
         rem = QPushButton('Remove')
-        rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_threshold_row(i, r), self.on_change_update_ok_btn_state()])
+        rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_threshold_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
         
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
@@ -455,6 +565,20 @@ class StartupTimeConfig(QDialog):
 
     def on_change_update_ok_btn_state(self):
         enabled = True
+        if self.is_any_ecu_selected_flag:
+            if self.isPadas:
+                for i in range(1, 4):
+                    if not self.ecu_block_list[i].disabled:
+                        enabled = False
+            elif self.isElite:
+                if not self.ecu_block_list[0].disabled:
+                    enabled = False
+                if not self.isRCAR and not self.ecu_block_list[1].disabled:
+                    enabled = False
+                if not self.isSOC0 and not self.ecu_block_list[2].disabled:
+                    enabled = False
+                if not self.isSOC1 and not self.ecu_block_list[3].disabled:
+                    enabled = False
         for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Power ON-OFF Delay']:
             if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay'] and self.widgets['Pre-Generated Logs'].isChecked():
                 continue
@@ -462,15 +586,24 @@ class StartupTimeConfig(QDialog):
             if not text or len(text) == 0:
                 enabled = False
                 break
+            if key == 'DLT-Viewer Log Capture Time':
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text) <= 500)):
+                    enabled = False
+            elif key == 'Power ON-OFF Delay':
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text) <= 50)):
+                    enabled = False
+            elif key == 'Iterations':
+                if not (text and 1 <= int(text) <= 50):
+                    enabled = False
         if enabled and not self.widgets['Pre-Generated Logs'].isChecked():
             path_cb = self.widgets['windows.Is Environment Path Set']
             path_le = self.widgets['windows.DLT-Viewer Installed Path']
-            if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0):
+            if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0 or path_le.text().startswith(' ') or path_le.text().endswith(' ')):
                 enabled = False
         if enabled:
             vcb = self.widgets['Startup Order Judgement']
             if vcb.isChecked():
-                if enabled and self.isRCAR and self.isPadas:
+                if enabled and self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
                     if len(self.widgets['ecu-config'][0]['startup']) == 0:
                         enabled=False
                     else:
@@ -478,7 +611,7 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-                if enabled and self.isRCAR and self.isElite:
+                if enabled and self.isRCAR and self.isElite and not self.ecu_block_list[1].disabled:
                     if len(self.widgets['ecu-config'][1]['startup']) == 0:
                         enabled=False
                     else:
@@ -486,7 +619,7 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-                if enabled and self.isSOC0 and self.isElite:
+                if enabled and self.isSOC0 and self.isElite and not self.ecu_block_list[2].disabled:
                     if len(self.widgets['ecu-config'][2]['startup']) == 0:
                         enabled=False
                     else:
@@ -494,7 +627,7 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-                if enabled and self.isSOC1 and self.isElite:
+                if enabled and self.isSOC1 and self.isElite and not self.ecu_block_list[3].disabled:
                     if len(self.widgets['ecu-config'][3]['startup']) == 0:
                         enabled=False
                     else:
@@ -502,25 +635,25 @@ class StartupTimeConfig(QDialog):
                             if not entry[2].text() or len(entry[2].text()) == 0:
                                 enabled = False
                                 break
-        if enabled and self.isRCAR and self.isPadas:
+        if enabled and self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
             # Check threshold entries for RCAR-PADAS
             for entry in self.widgets['ecu-config'][0]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
                     break
-        if enabled and self.isRCAR and self.isElite:
+        if enabled and self.isRCAR and self.isElite and not self.ecu_block_list[1].disabled:
             # Check threshold entries for RCAR
             for entry in self.widgets['ecu-config'][1]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
                     break
-        if enabled and self.isSOC0 and self.isElite:
+        if enabled and self.isSOC0 and self.isElite and not self.ecu_block_list[2].disabled:
             # Check threshold entries for SoC0
             for entry in self.widgets['ecu-config'][2]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
                     break
-        if enabled and self.isSOC1 and self.isElite:
+        if enabled and self.isSOC1 and self.isElite and not self.ecu_block_list[3].disabled:
             # Check threshold entries for SoC1
             for entry in self.widgets['ecu-config'][3]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
@@ -528,6 +661,11 @@ class StartupTimeConfig(QDialog):
                     break
 
         self.ok_btn.setEnabled(enabled)
+        
+    def _notify_content_changed(self, ecu_idx):
+        """Notify the corresponding ECU block that content has changed."""
+        if ecu_idx < len(self.ecu_block_list):
+            self.ecu_block_list[ecu_idx].content_changed()
            
     def add_startup_row(self, idx):
         # self.ok_btn.setDisabled(False)
@@ -540,6 +678,7 @@ class StartupTimeConfig(QDialog):
         else:
             for e in entry['startup']:
                 e[3].setDisabled(False)
+        self._notify_content_changed(idx)
 
     def remove_startup_row(self, idx, row):
         # self.ok_btn.setDisabled(False)
@@ -560,6 +699,7 @@ class StartupTimeConfig(QDialog):
         row, apps, thresh = self._create_threshold_row('', '', idx)
         entry['threshold_layout'].addRow(row)
         entry['threshold'].append((row, apps, thresh))
+        self._notify_content_changed(idx)
 
     def remove_threshold_row(self, idx, row):
         entry = self.widgets['ecu-config'][idx]
@@ -600,8 +740,13 @@ class StartupTimeConfig(QDialog):
         }
         ec = []
         for idx, item in enumerate(self.widgets['ecu-config']):
-            title = self.ecu_block_list[idx].title()
+            title = self.ecu_block_list[idx].title
             ec_item = {'ecu-type': title, 'startup-order': [], 'threshold-config': []}
+            if self.ecu_block_list[idx].disabled or ((title == 'PADAS' and not (self.isRCAR and self.isPadas)) or 
+               (title == 'RCAR' and not (self.isRCAR and self.isElite)) or 
+               (title == 'SoC0' and not (self.isSOC0 and self.isElite)) or 
+               (title == 'SoC1' and not (self.isSOC1 and self.isElite))):
+                continue
             for entry in item['startup']:
                 # entry is (row, dd, apps, count_lbl, rem)
                 _, dd, apps, _ = entry
