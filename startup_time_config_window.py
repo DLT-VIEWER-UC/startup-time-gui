@@ -62,8 +62,8 @@ class StartupTimeConfig(QDialog):
         #     'PADAS': {'RCAR': False}
         # }
         
+        self.ecu_selection = main_window.ecu_selection_status
         if self.is_any_ecu_selected_flag and is_checked:
-            self.ecu_selection = main_window.ecu_selection_status
             if self.ecu_selection.get('PADAS', {}).get('RCAR', False):
                 self.isElite = False
                 self.isSOC0 = False
@@ -280,7 +280,8 @@ class StartupTimeConfig(QDialog):
                 # block.setVisible(self.isSOC1 and self.isElite)
                 valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isSOC1)
                 block.disableRemoveButton(valid_gb)
-            block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if not self.is_any_ecu_selected_flag and not valid_gb else '0px'};}}")  # Set border color based on validity
+            print(f"ECU: {ecu_type}, Valid: {valid_gb}")
+            block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if self.is_any_ecu_selected_flag and not valid_gb else '0px'};}}")  # Set border color based on validity
             for startup_group in self.startup_group_list:
                 startup_group.setEnabled(vcb.isChecked()) 
             self.ecu_block_list.append(block)
@@ -564,6 +565,7 @@ class StartupTimeConfig(QDialog):
 
     def on_change_update_ok_btn_state(self):
         enabled = True
+        ecu_error_list = [False, False, False, False]
         if self.is_any_ecu_selected_flag:
             if self.isPadas:
                 for i in range(1, 4):
@@ -583,11 +585,15 @@ class StartupTimeConfig(QDialog):
             for entry in self.widgets['ecu-config'][i]['startup']:
                 if self.widgets['Startup Order Judgement'].isChecked() and (not entry[2].text() or len(entry[2].text()) == 0 or entry[2].text().startswith(' ') or entry[2].text().endswith(' ')):
                     entry[2].setStyleSheet('border: 1px solid red;')
+                    enabled = False
+                    ecu_error_list[i] = True
                 else:
                     entry[2].setStyleSheet('border: 0px;')
             for entry in self.widgets['ecu-config'][i]['threshold']:
                 if (not entry[1].text() or len(entry[1].text()) == 0 or entry[1].text().startswith(' ') or entry[1].text().endswith(' ')):
                     entry[1].setStyleSheet('border: 1px solid red;')
+                    enabled = False
+                    ecu_error_list[i] = True
                 else:
                     entry[1].setStyleSheet('border: 0px;')
                 if (not entry[2].text() or len(entry[2].text()) == 0 or not entry[2].text().isdigit() or not (1 <= int(entry[2].text()) <= 100)):
@@ -610,73 +616,106 @@ class StartupTimeConfig(QDialog):
             elif key == 'Iterations':
                 if not (text and 1 <= int(text) <= 50):
                     enabled = False
-        if enabled and not self.widgets['Pre-Generated Logs'].isChecked():
+        if not self.widgets['Pre-Generated Logs'].isChecked():
             path_cb = self.widgets['windows.Is Environment Path Set']
             path_le = self.widgets['windows.DLT-Viewer Installed Path']
             if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0 or path_le.text().startswith(' ') or path_le.text().endswith(' ')):
                 enabled = False
-        if enabled:
-            vcb = self.widgets['Startup Order Judgement']
-            if vcb.isChecked():
-                if enabled and self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
-                    if len(self.widgets['ecu-config'][0]['startup']) == 0:
-                        enabled=False
-                    else:
-                        for entry in self.widgets['ecu-config'][0]['startup']:
-                            if not entry[2].text() or len(entry[2].text()) == 0:
-                                enabled = False
-                                break
-                if enabled and self.isRCAR and self.isElite and not self.ecu_block_list[1].disabled:
-                    if len(self.widgets['ecu-config'][1]['startup']) == 0:
-                        enabled=False
-                    else:
-                        for entry in self.widgets['ecu-config'][1]['startup']:
-                            if not entry[2].text() or len(entry[2].text()) == 0:
-                                enabled = False
-                                break
-                if enabled and self.isSOC0 and self.isElite and not self.ecu_block_list[2].disabled:
-                    if len(self.widgets['ecu-config'][2]['startup']) == 0:
-                        enabled=False
-                    else:
-                        for entry in self.widgets['ecu-config'][2]['startup']:
-                            if not entry[2].text() or len(entry[2].text()) == 0:
-                                enabled = False
-                                break
-                if enabled and self.isSOC1 and self.isElite and not self.ecu_block_list[3].disabled:
-                    if len(self.widgets['ecu-config'][3]['startup']) == 0:
-                        enabled=False
-                    else:
-                        for entry in self.widgets['ecu-config'][3]['startup']:
-                            if not entry[2].text() or len(entry[2].text()) == 0:
-                                enabled = False
-                                break
-        if enabled and self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
+        vcb = self.widgets['Startup Order Judgement']
+        if vcb.isChecked():
+            if self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
+                if len(self.widgets['ecu-config'][0]['startup']) == 0:
+                    enabled=False
+                    ecu_error_list[0] = True
+                else:
+                    for entry in self.widgets['ecu-config'][0]['startup']:
+                        if not entry[2].text() or len(entry[2].text()) == 0:
+                            enabled = False
+                            ecu_error_list[0] = True
+                            break
+            if self.isRCAR and self.isElite and not self.ecu_block_list[1].disabled:
+                if len(self.widgets['ecu-config'][1]['startup']) == 0:
+                    enabled=False
+                    ecu_error_list[1] = True
+                else:
+                    for entry in self.widgets['ecu-config'][1]['startup']:
+                        if not entry[2].text() or len(entry[2].text()) == 0:
+                            enabled = False
+                            ecu_error_list[1] = True
+                            break
+            if self.isSOC0 and self.isElite and not self.ecu_block_list[2].disabled:
+                if len(self.widgets['ecu-config'][2]['startup']) == 0:
+                    enabled=False
+                    ecu_error_list[2] = True
+                else:
+                    for entry in self.widgets['ecu-config'][2]['startup']:
+                        if not entry[2].text() or len(entry[2].text()) == 0:
+                            enabled = False
+                            ecu_error_list[2] = True
+                            break
+            if self.isSOC1 and self.isElite and not self.ecu_block_list[3].disabled:
+                if len(self.widgets['ecu-config'][3]['startup']) == 0:
+                    enabled=False
+                    ecu_error_list[3] = True
+                else:
+                    for entry in self.widgets['ecu-config'][3]['startup']:
+                        if not entry[2].text() or len(entry[2].text()) == 0:
+                            enabled = False
+                            ecu_error_list[3] = True
+                            break
+        if self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
             # Check threshold entries for RCAR-PADAS
             for entry in self.widgets['ecu-config'][0]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
+                    ecu_error_list[0] = True
                     break
-        if enabled and self.isRCAR and self.isElite and not self.ecu_block_list[1].disabled:
+        if self.isRCAR and self.isElite and not self.ecu_block_list[1].disabled:
             # Check threshold entries for RCAR
             for entry in self.widgets['ecu-config'][1]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
+                    ecu_error_list[1] = True
                     break
-        if enabled and self.isSOC0 and self.isElite and not self.ecu_block_list[2].disabled:
+        if self.isSOC0 and self.isElite and not self.ecu_block_list[2].disabled:
             # Check threshold entries for SoC0
             for entry in self.widgets['ecu-config'][2]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
+                    ecu_error_list[2] = True
                     break
-        if enabled and self.isSOC1 and self.isElite and not self.ecu_block_list[3].disabled:
+        if self.isSOC1 and self.isElite and not self.ecu_block_list[3].disabled:
             # Check threshold entries for SoC1
             for entry in self.widgets['ecu-config'][3]['threshold']:
                 if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
                     enabled = False
+                    ecu_error_list[3] = True
                     break
+        for i in range(4):
+            self.update_ecu_block_styles(self.ecu_block_list[i], ecu_error_list[i])
 
         self.ok_btn.setEnabled(enabled)
         
+    def update_ecu_block_styles(self, ecu_gb, has_error):
+        """Update the styles of the ECU block based on error state."""
+        # Define condition mappings for each ECU type
+        ecu_conditions = {
+            'PADAS': self.isPadas and self.isRCAR,
+            'RCAR': self.isRCAR and self.isElite,
+            'SoC0': self.isSOC0 and self.isElite,
+            'SoC1': self.isSOC1 and self.isElite
+        }
+        
+        # Determine if border should be red
+        should_have_red_border = (
+            has_error or 
+            (self.is_any_ecu_selected_flag and not ecu_conditions.get(ecu_gb.title, True))
+        )
+        
+        # Apply appropriate border style
+        border_style = '1px solid red' if should_have_red_border else '0px'
+        ecu_gb.setStyleSheet(f"{ecu_gb.styleSheet()}CollapsibleGroupBox{{border: {border_style};}}")
+
     def _notify_content_changed(self, ecu_idx):
         """Notify the corresponding ECU block that content has changed."""
         if ecu_idx < len(self.ecu_block_list):
@@ -773,6 +812,7 @@ class StartupTimeConfig(QDialog):
                     ec_item['threshold-config'].append({'Applications': apps.text(), 'Threshold': int(thresh.text())})
             ec.append(ec_item)
         data['ecu-config'] = ec
+        data['ECU_setting'] = self.ecu_selection
         try:
             with open(self.config_path, 'w') as f:
                 json.dump(data, f, indent=4)

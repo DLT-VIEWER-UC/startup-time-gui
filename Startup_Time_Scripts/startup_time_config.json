@@ -14,16 +14,6 @@
   },
   "ecu-config": [
     {
-      "ecu-type": "PADAS",
-      "startup-order": [
-        {
-          "Order Type": "Sequential",
-          "Applications": ""
-        }
-      ],
-      "threshold-config": []
-    },
-    {
       "ecu-type": "RCAR",
       "startup-order": [
         {
@@ -71,16 +61,6 @@
         {
           "Order Type": "Sequential",
           "Applications": "Test_App_23_M500,Test_App_22_M500,Test_App_11_C5,Test_App_21_M500,Test_App_6_C12,Test_App_20_M500,Test_App_5_C12,Test_App_2_C12,Test_App_19_M500,Test_App_18_M500,Test_App_17_M500,Test_App_16_M500,ucm_subordinate,h-diag-app-soc0"
-        }
-      ],
-      "threshold-config": []
-    },
-    {
-      "ecu-type": "SoC1",
-      "startup-order": [
-        {
-          "Order Type": "Sequential",
-          "Applications": "App1"
         }
       ],
       "threshold-config": []
