@@ -1082,17 +1082,6 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     
                     sheet.append(data_row)
                     fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
-        # Update the last three cells of the row at startup_order_count_idx with the current counts and highlight in yellow
-        yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-        counts = [
-            application_startup_order_status_iteration[OrderFailureType.ORDER_MISMATCH.name],
-            application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name],
-            application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name]
-        ]
-        for offset, count in enumerate(counts, start=10):
-            cell = sheet.cell(row=startup_order_count_idx, column=offset)
-            cell.value = count
-            cell.fill = yellow_fill
             cell.border = border_style
                 
     for process, process_data in process_timing_info.items():
@@ -1122,6 +1111,18 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
             sheet.append(data_row)
             fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
+    if validate_startup_order:
+        # Update the last three cells of the row at startup_order_count_idx with the current counts and highlight in yellow
+        yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+        counts = [
+            application_startup_order_status_iteration[OrderFailureType.ORDER_MISMATCH.name],
+            application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name],
+            application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name]
+        ]
+        for offset, count in enumerate(counts, start=10):
+            cell = sheet.cell(row=startup_order_count_idx, column=offset)
+            cell.value = count
+            cell.fill = yellow_fill
     
     # Merge cells from column 1 to 9 in the current row with the above row
     for col in range(1, 10 if validate_startup_order else 8):
