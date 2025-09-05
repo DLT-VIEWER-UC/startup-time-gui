@@ -1082,7 +1082,6 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     
                     sheet.append(data_row)
                     fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
-            cell.border = border_style
                 
     for process, process_data in process_timing_info.items():
         if process_data['terminated_signal'] or process_data['terminated_cause']:
@@ -1123,6 +1122,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             cell = sheet.cell(row=startup_order_count_idx, column=offset)
             cell.value = count
             cell.fill = yellow_fill
+            cell.border = border_style
     
     # Merge cells from column 1 to 9 in the current row with the above row
     for col in range(1, 10 if validate_startup_order else 8):
@@ -1891,7 +1891,7 @@ def calculate_differences(dltstart_timestamps, welcome_timestamp, logger):
     return differences
 
 
-def extract_process_timestamps(lines):
+def extract_process_timestamps(lines, setup_type):
     """
     Extracts application initialization timing information from DLT log file lines.
    
@@ -1982,7 +1982,7 @@ def extract_process_timestamps(lines):
                             process_Start_End_timestamps[process_name] = {}
                         process_Start_End_timestamps[process_name]['terminated_signal'] = signal_number
             elif 'terminated cause:' in line:
-                line_parts = line.split('EM: Process ')
+                line_parts = line.split('EM: Process ' + ('termination based on request: ' if setup_type == ECUType.PADAS.value else ''))
                 if len(line_parts) > 1:
                     app_terminated_cause_info = line_parts[1]
                     app_terminated_cause_info_parts = app_terminated_cause_info.split(' terminated cause: ')
@@ -3064,8 +3064,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             'terminated_signal_count': 0,
             'terminated_cause_count': 0
         }
-       
-        process_Start_End_timestamps = extract_process_timestamps(lines)
+
+        process_Start_End_timestamps = extract_process_timestamps(lines, setup_type)
         print ("process_Start_End_timestamp:"+str(process_Start_End_timestamps))
         if not process_Start_End_timestamps or not any('init_time' in process_Start_End_timestamps[key] for key in process_Start_End_timestamps):
             logger.error("Error: Unable to extract process timestamps.")
