@@ -739,6 +739,8 @@ class StartupTimeConfig(QDialog):
                     enabled = False
         
         for i in range(4):
+            if self.ecu_block_list[i].disabled:
+                continue
             for entry in self.widgets['ecu-config'][i]['startup']:
                 if self.widgets['Startup Order Judgement'].isChecked() and (not entry[2].text() or len(entry[2].text()) == 0 or entry[2].text().startswith(' ') or entry[2].text().endswith(' ')):
                     entry[2].setStyleSheet('border: 1px solid red;')
