@@ -1,4 +1,9 @@
 from collapsible_groupbox import CollapsibleGroupBox
+import os
+import subprocess
+import platform
+from pathlib import Path
+from PyQt5.QtCore import QFileSystemWatcher
 from imports_utils import *
 
 
@@ -82,6 +87,10 @@ class StartupTimeConfig(QDialog):
                 else:
                     self.isSOC1 = False
 
+        # Initialize file system watcher for logs folder
+        self.logs_path = Path(__file__).parent.joinpath('Startup_Time_Scripts/Pre-Generated_Logs/Logs')
+        self.setup_file_watcher()
+
         self.init_ui()
    
     def set_window_properties(self):
@@ -118,6 +127,123 @@ class StartupTimeConfig(QDialog):
         except Exception as e:
             return dict(self.DEFAULT_CONFIG)
 
+    def setup_file_watcher(self):
+        """Setup file system watcher for the logs folder and its subdirectories"""
+        self.file_watcher = QFileSystemWatcher()
+        
+        # Create directories if they don't exist and add them to watcher
+        directories_to_watch = [
+            self.logs_path,
+            self.logs_path / 'RCAR',
+            self.logs_path / 'SoC0', 
+            self.logs_path / 'SoC1'
+        ]
+        
+        for directory in directories_to_watch:
+            if not directory.exists():
+                try:
+                    directory.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    print(f"Error creating directory {directory}: {e}")
+                    continue
+            
+            # Add directory to watcher
+            self.file_watcher.addPath(str(directory))
+        
+        # Connect the watcher signals to update method
+        self.file_watcher.directoryChanged.connect(self.update_logs_tooltip)
+        self.file_watcher.fileChanged.connect(self.update_logs_tooltip)
+
+    def check_log_files(self):
+        """Check for .log files in the specified directories and return status"""
+        status = {
+            'main': False,
+            'rcar': False, 
+            'soc0': False,
+            'soc1': False
+        }
+        
+        try:
+            # Check main Logs folder
+            if self.logs_path.exists():
+                status['main'] = any(self.logs_path.glob('*.log'))
+            
+            # Check RCAR subfolder
+            rcar_path = self.logs_path / 'RCAR'
+            if rcar_path.exists():
+                status['rcar'] = any(rcar_path.glob('*.log'))
+            
+            # Check SoC0 subfolder  
+            soc0_path = self.logs_path / 'SoC0'
+            if soc0_path.exists():
+                status['soc0'] = any(soc0_path.glob('*.log'))
+            
+            # Check SoC1 subfolder
+            soc1_path = self.logs_path / 'SoC1'
+            if soc1_path.exists():
+                status['soc1'] = any(soc1_path.glob('*.log'))
+                
+        except Exception as e:
+            print(f"Error checking log files: {e}")
+        
+        return status
+
+    def update_logs_tooltip(self):
+        """Update the tooltip based on the presence of log files"""
+        if not hasattr(self, 'open_logs_btn'):
+            return
+            
+        status = self.check_log_files()
+        active_status = list()
+        
+        # Create tooltip text based on status
+        tooltip_lines = ["Pre-Generated Logs Folder Status:"]
+        
+        # Main folder
+        main_status = "✓" if status['main'] else "✗"
+        if self.isPadas and self.isRCAR:
+            active_status.append(status['main'])
+            tooltip_lines.append(f"{main_status} Main Logs folder (PADAS): {'Has .log files' if status['main'] else 'No .log files'}")
+        
+        # RCAR folder
+        rcar_status = "✓" if status['rcar'] else "✗"
+        if self.isElite and self.isRCAR:
+            active_status.append(status['rcar'])
+            tooltip_lines.append(f"{rcar_status} RCAR folder (Elite): {'Has .log files' if status['rcar'] else 'No .log files'}")
+        
+        # SoC0 folder
+        soc0_status = "✓" if status['soc0'] else "✗"
+        if self.isElite and self.isSOC0:
+            active_status.append(status['soc0'])
+            tooltip_lines.append(f"{soc0_status} SoC0 folder (Elite): {'Has .log files' if status['soc0'] else 'No .log files'}")
+
+        # SoC1 folder
+        soc1_status = "✓" if status['soc1'] else "✗"
+        if self.isElite and self.isSOC1:
+            active_status.append(status['soc1'])
+            tooltip_lines.append(f"{soc1_status} SoC1 folder (Elite): {'Has .log files' if status['soc1'] else 'No .log files'}")
+
+        # Set the tooltip
+        tooltip_text = '\n'.join(tooltip_lines)
+        self.open_logs_btn.setToolTip(tooltip_text)
+        
+        # Update stylesheet with proper state handling
+        border_color = 'green' if all(active_status) else 'red'
+        self.open_logs_btn.setStyleSheet(f"""
+            QPushButton:enabled {{
+                background-color: white;
+                color: black;
+                border: 1px solid {border_color};
+                border-radius: 5px;
+            }}
+            QPushButton:disabled {{
+                background-color: #f0f0f0;
+                color: #808080;
+                border: 1px solid #d0d0d0;
+                border-radius: 5px;
+            }}
+        """)
+
     def init_ui(self):
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
@@ -133,7 +259,7 @@ class StartupTimeConfig(QDialog):
 
         # General Settings
         general_group = QGroupBox('General Settings')
-        general_group.setFixedHeight(220)
+        general_group.setFixedHeight(250)
         general_layout = QFormLayout()
         for key, validator in [
             ('DLT-Viewer Log Capture Time', CustomIntValidator(1, 500)),
@@ -212,7 +338,37 @@ class StartupTimeConfig(QDialog):
         general_layout.addRow(judgement_hlayout)
         
         self.pre_gen_logs_cb = QCheckBox(); self.pre_gen_logs_cb.setChecked(self.config_data.get('Pre-Generated Logs', False))
-        general_layout.addRow(QLabel('Pre-Generated Logs'), self.pre_gen_logs_cb)
+        
+        # Create horizontal layout for Pre-Generated Logs with button
+        pre_gen_layout = QHBoxLayout()
+        pre_gen_layout.addWidget(self.pre_gen_logs_cb)
+        
+        # Add button to open File Explorer
+        self.open_logs_btn = QPushButton()
+        self.open_logs_btn.setFixedSize(30, 24)  # Make it square and slightly larger for the icon
+        self.open_logs_btn.setText("📁")  # Use folder emoji as icon
+        self.open_logs_btn.clicked.connect(self.open_logs_folder)
+        self.open_logs_btn.setEnabled(self.pre_gen_logs_cb.isChecked())  # Initially set based on checkbox state
+        
+        # Set style for disabled state to make it grey for better readability
+        self.open_logs_btn.setStyleSheet("""
+            QPushButton:enabled {
+                background-color: white;
+                color: black;
+            }
+            QPushButton:disabled {
+                background-color: #f0f0f0;
+                color: #808080;
+                border: 1px solid #d0d0d0;
+            }
+        """)
+        
+        # Set initial tooltip
+        self.update_logs_tooltip()
+        pre_gen_layout.addWidget(self.open_logs_btn)
+        pre_gen_layout.addStretch()  # Push everything to the left
+        
+        general_layout.addRow(QLabel('Pre-Generated Logs'), pre_gen_layout)
         self.widgets['Pre-Generated Logs'] = self.pre_gen_logs_cb
         
         general_group.setLayout(general_layout)
@@ -316,7 +472,8 @@ class StartupTimeConfig(QDialog):
         vcb.toggled.connect(toggle_startup_order_dependent_controls)
         self.pre_gen_logs_cb.toggled.connect(lambda checked: [
             self.on_change_update_ok_btn_state(),
-            win_group.setDisabled(checked)] + [
+            win_group.setDisabled(checked),
+            self.open_logs_btn.setEnabled(checked)] + [  # Enable/disable the logs folder button
             w.setDisabled(checked) for w in self.widgets['DLT-Viewer Log Capture Time'] + self.widgets['Power ON-OFF Delay']
         ] + [
             self.update_border('DLT-Viewer Log Capture Time'),
@@ -774,6 +931,35 @@ class StartupTimeConfig(QDialog):
         path = QFileDialog.getExistingDirectory(self, 'Select Log Folder')
         if path:
             line_edit.setText(path)
+
+    def open_logs_folder(self):
+        """Open the Pre-Generated Logs folder in File Explorer"""
+        
+        # Use the instance variable logs_path
+        logs_path = self.logs_path
+
+        # Check if the directory exists
+        if not logs_path.exists():
+            # Create the directory if it doesn't exist
+            try:
+                logs_path.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                print(f"Error creating logs directory: {e}")
+                return
+        
+        # Open the folder in the default file manager
+        try:
+            if platform.system() == "Windows":
+                os.startfile(logs_path)
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.run(["open", logs_path])
+            else:  # Linux and other Unix-like systems
+                subprocess.run(["xdg-open", logs_path])
+        except Exception as e:
+            print(f"Error opening logs folder: {e}")
+            
+        # Update tooltip after opening (in case folder structure changed)
+        self.update_logs_tooltip()
 
     def save_config(self):
         data = {}
