@@ -1500,9 +1500,9 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
             data.append(data_row)
 
     # Append the sorted data to the Excel sheet
-    for data_row in data:
+    for index, data_row in enumerate(data):
         sheet.append([
-            data_row['index'], 
+            data_row['index'] if data_row['index'] == '-' else index + 1, 
             data_row['process'], 
             data_row['min_time'], 
             data_row['max_time'], 
@@ -1569,9 +1569,9 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
             individual_list.append(data_row)
        
       # Append the sorted data to the Excel sheet
-    for data_row in individual_list:
-        sheet.append([data_row['index'], data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], data_row['count']])
-        
+    for index, data_row in enumerate(individual_list):
+        sheet.append([data_row['index'] if data_row['index'] == '-' else index + 1, data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], data_row['count']])
+
         # Apply color formatting to the count cell (last column)
         count_cell = sheet.cell(row=sheet.max_row, column=6)  # Column 6 is the count column
         if data_row['count'] != '-':
