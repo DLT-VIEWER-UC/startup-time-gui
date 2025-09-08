@@ -1057,7 +1057,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 overall_IG_ON_cur_iteration['configured_applications'].add(app)
                 if app not in dltstart_timestamps:
                     encountered_apps.add(app)
-                    data_row = ['-', app, '-', '-', '-', '-', '-']
+                    data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type][app] if app in threshold_map[ecu_type] else '-', 'FAIL' if app in threshold_map[ecu_type] else '-']
 
                     if app_registration:
                         if application_startup_order_status_iteration['startup_order_status']:
@@ -1087,7 +1087,8 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         if process_data['terminated_signal'] or process_data['terminated_cause']:
             overall_IG_ON_cur_iteration['terminated_applications'].add(process)
         if process not in encountered_apps:
-            data_row = ['-', process, '-', '-', '-', '-', '-']
+            encountered_apps.add(process)
+            data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else '-', 'FAIL' if process in threshold_map[ecu_type] else '-']
             if validate_startup_order:
                 if app_registration:
                     if application_startup_order_status_iteration['startup_order_status']:
@@ -1108,6 +1109,23 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 if terminated_cause:
                     application_startup_order_status_iteration['terminated_cause_count'] += 1
             data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
+            sheet.append(data_row)
+            fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
+    for app in threshold_map[ecu_type]:
+        if app not in encountered_apps:
+            data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type][app], 'FAIL']
+            if validate_startup_order:
+                if app_registration:
+                    if application_startup_order_status_iteration['startup_order_status']:
+                        application_startup_order_status_iteration['startup_order_status'] = not not_configured_judgement
+                    status = '-'
+                    if any((order_mismatch_judgement, not_found_judgement, not_configured_judgement)):
+                        status = 'FAIL' if not_configured_judgement else 'PASS'
+                    data_row.extend(['-', status, '', '', '⬤'])
+                    application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name] += 1
+                else:
+                    data_row.extend(['-', '-', '-', '-', '-'])
+            data_row.extend(['', '-', '-'])
             sheet.append(data_row)
             fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
     if validate_startup_order:
