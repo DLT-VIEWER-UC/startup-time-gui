@@ -35,11 +35,11 @@ plot_lock = threading.Lock()
 def round_decimal_half_up(number, decimals=0):
     """
     Rounds a number using traditional rounding (0.5 always rounds up).
-    
+   
     Args:
         number (float): Number to round
         decimals (int): Number of decimal places
-        
+       
     Returns:
         float: Properly rounded number
     """
@@ -57,15 +57,15 @@ table_headers = None
 def setup_logging():
     """
     Configures and initializes the logging system with colored output formatting.
-    
+   
     This function sets up a comprehensive logging configuration that includes:
     - Colored log messages for better visual distinction
     - Timestamp, log level, function name, and line number information
     - Console output handler with custom formatting
-    
+   
     Returns:
         logging.Logger: Configured logger instance for the current module
-        
+       
     Note:
         The root logger level is set to INFO, meaning DEBUG messages won't be displayed
         unless explicitly changed. The color formatting helps distinguish between
@@ -1079,10 +1079,10 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                         if terminated_cause:
                             application_startup_order_status_iteration['terminated_cause_count'] += 1
                     data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
-                    
+                   
                     sheet.append(data_row)
                     fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
-                
+               
     for process, process_data in process_timing_info.items():
         if process_data['terminated_signal'] or process_data['terminated_cause']:
             overall_IG_ON_cur_iteration['terminated_applications'].add(process)
@@ -1141,7 +1141,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             cell.value = count
             cell.fill = yellow_fill
             cell.border = border_style
-    
+   
     # Merge cells from column 1 to 9 in the current row with the above row
     for col in range(1, 10 if validate_startup_order else 8):
         sheet.merge_cells(
@@ -1150,7 +1150,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         end_row=startup_order_count_idx,
         end_column=col
         )
-    
+   
     sheet.merge_cells(
         start_row=startup_order_count_idx - 1,
         start_column=13 if validate_startup_order else 8,
@@ -1165,10 +1165,10 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     for col in range(13 if validate_startup_order else 8, 16 if validate_startup_order else 11):
         cell = sheet.cell(row=startup_order_count_idx - 1, column=col)
         cell.border = border_style
-    
+   
     terminated_count_cell = sheet.cell(row=startup_order_count_idx, column=13 if validate_startup_order else 8)
     terminated_count_cell.value = f'Applicable ({application_startup_order_status_iteration["terminated_applications_count"]})'
-    
+   
 
     other_header_columns.extend([terminated_count_cell.value, 'Signal', 'Cause'])
 
@@ -1381,7 +1381,7 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
 
 
     format_excel_cells(summary_sheet, start_row)
-    
+   
 
 def get_ind_app_terminated_count(app, overall_IG_ON_iteration):
     app_terminated_count = 0
@@ -1502,14 +1502,14 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
     # Append the sorted data to the Excel sheet
     for index, data_row in enumerate(data):
         sheet.append([
-            data_row['index'] if data_row['index'] == '-' else index + 1, 
-            data_row['process'], 
-            data_row['min_time'], 
-            data_row['max_time'], 
-            data_row['avg_time'], 
-            float(data_row['avg_time']) + OFFSET_TIME if data_row['avg_time'] != '-' else '-', 
-            threshold_map[ecu_type][data_row['process']] if data_row['process'] in threshold_map[ecu_type] else '-', 
-            data_row['count'], 
+            data_row['index'] if data_row['index'] == '-' else index + 1,
+            data_row['process'],
+            data_row['min_time'],
+            data_row['max_time'],
+            data_row['avg_time'],
+            float(data_row['avg_time']) + OFFSET_TIME if data_row['avg_time'] != '-' else '-',
+            threshold_map[ecu_type][data_row['process']] if data_row['process'] in threshold_map[ecu_type] else '-',
+            data_row['count'],
             data_row['terminated_count']
         ])
 
@@ -1825,10 +1825,10 @@ def extract_and_sort_process_timestamps(process_Start_End_timestamps, logger):
     process_timing_info = {}
     for process, time in process_Start_End_timestamps.items():  
         # Check if both start and end times are available
-        # if 'start' in time and 'end' in time:       
+        # if 'start' in time and 'end' in time:      
         if 'init_time' not in time:
             logger.warning(f"Process: {process}, Init: Not Available")
-        
+       
         # logger.info(f"Process: {process}, Start Time: {time['start']}, End Time: {time['end']}, Time Difference: {start_time_ms} ms")
 
         process_timing_info[process] = {
@@ -1840,7 +1840,7 @@ def extract_and_sort_process_timestamps(process_Start_End_timestamps, logger):
      
     # Sort the dictionary by start_time_ms values and convert to OrderedDict to maintain order
     process_timing_info = OrderedDict(
-        sorted(process_timing_info.items(), 
+        sorted(process_timing_info.items(),
                key=lambda x: x[1]['start_time_ms'] if x[1].get('start_time_ms') is not None else float('inf'))
     )
     return process_timing_info
@@ -2000,7 +2000,7 @@ def extract_process_timestamps(lines, setup_type):
                             process_Start_End_timestamps[process_name] = {}
                         process_Start_End_timestamps[process_name]['terminated_signal'] = signal_number
             elif 'terminated cause:' in line:
-                line_parts = line.split('EM: Process ' + ('termination based on request: ' if setup_type == ECUType.PADAS.value else ''))
+                line_parts = line.split('EM: Process ' + ('termination based on request: ' if setup_type == ECUType.PADAS.value else 'termination based on request: '))
                 if len(line_parts) > 1:
                     app_terminated_cause_info = line_parts[1]
                     app_terminated_cause_info_parts = app_terminated_cause_info.split(' terminated cause: ')
@@ -3519,6 +3519,3 @@ def start_startup_time_measurement(logger):
         logger.info(f"Total script execution time: {(script_end_time-script_start_time):.3f} seconds")
     print("Final response :: ", isSuccess)
     return isSuccess
-
-if __name__ == "__main__":
-    print("Final Result:", start_startup_time_measurement(setup_logging()))
