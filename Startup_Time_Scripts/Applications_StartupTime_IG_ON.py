@@ -1438,7 +1438,7 @@ def create_header(sheet, ecu_type, validate_startup_order, app_columns):
     return start_row
 
 
-def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status):
+def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=False):
     """
     Creates a summary table showing test results for each iteration with hyperlinks to detailed data.
    
@@ -1494,7 +1494,7 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
                     test_status = 'PASS'
             else:
                 test_status = 'FAIL'
-            data_row = [f'=HYPERLINK("#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
+            data_row = [f'=HYPERLINK("{'./'+os.path.basename(report_file) if isSummaryReport else ''}#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
             if config['Startup Order Judgement'] and i in application_startup_order_status:
                 if app_registration:
                     startup_order_status = '-'
@@ -2664,6 +2664,8 @@ def create_workBook(ecu_type, setup_type, iterations, config, logger):
     try:
         # Create the report file name based on the ECU type and current timestamp
         reportName = f"Startup_Time_Report_{setup_type}_{ecu_type}_N{iterations}_{current_timestamp}.xlsx"
+        if ecu_type == 'ECU_Summary':
+            reportName = f"Startup_Time_{ecu_type}_Report_{setup_type}_N{iterations}_{current_timestamp}.xlsx"
        
         # Define the directory where the report will be saved
         report_dir = local_save_path
@@ -2694,20 +2696,21 @@ def create_workBook(ecu_type, setup_type, iterations, config, logger):
         summary_sheet = workbook.active
 
         # Set the title of the sheet
-        summary_sheet.title = 'Summary'
+        summary_sheet.title = 'Summary' if ecu_type != 'ECU_Summary' else ecu_type
 
         # Create a list to store the sheets
         sheets = []
+        
+        if ecu_type != 'ECU_Summary':
+            # Create each sheet and add it to the list
+            for i in range(1, iterations + 1):
+                sheet_title = f"GEN3_StartupTime_{i:02d}"
+                sheet = workbook.create_sheet(title=sheet_title)
+                sheets.append(sheet)
 
-        # Create each sheet and add it to the list
-        for i in range(1, iterations + 1):
-            sheet_title = f"GEN3_StartupTime_{i:02d}"
-            sheet = workbook.create_sheet(title=sheet_title)
-            sheets.append(sheet)
 
-
-        # Create sheet for Appendix
-        add_appendix_sheet(workbook, ecu_type, config)
+            # Create sheet for Appendix
+            add_appendix_sheet(workbook, ecu_type, config)
  
         # Remove gridlines from all the sheets in the workbook
         for sheet_exl in sheets:
@@ -3425,8 +3428,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         raise e
         return False
     return True
-   
-def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_iteration, process_times, process_start_times, application_startup_order_status, config, workbook, report_file, logger):
+
+def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_iteration, process_times, process_start_times, application_startup_order_status, config, workbook, report_file, ecu_summary_workbook_items, logger):
     """
     Finalizes Excel workbook with summary analysis and saves the complete test report.
    
@@ -3499,7 +3502,11 @@ def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_it
         logger.error("Error: Unable to create workbook.")
         return False
 
-    each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status)
+    each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=False)
+    
+    es_report_file, es_workbook, es_sheets, es_summary_sheet = ecu_summary_workbook_items
+    if es_summary_sheet:
+        each_iteration_test_status(ecu_type, report_file, es_summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=True)
 
     # Export the average data to the Excel sheet
     export_and_plot_average_data_to_excel(summary_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
@@ -3684,6 +3691,7 @@ def start_startup_time_measurement(logger):
             return False
 
         ecu_config_list = [ecu for ecu in config['ecu-config'] if ecu['ecu-type'] in enabled_ecu_list]
+        workbook_map['ECU_Summary'] = tuple(create_workBook('ECU_Summary', setup_type, iterations, config, logger))
         for ecu in ecu_config_list:
             if ecu['ecu-type'] == ECUType.PADAS.value:
                 ecu['ecu-type'] = ECUType.RCAR.value
@@ -3749,6 +3757,8 @@ def start_startup_time_measurement(logger):
            
             threads = []
             for ecu_type, (report_file, workbook, sheets, summary_sheet) in workbook_map.items():
+                if ecu_type == 'ECU_Summary':
+                    continue
                 print("Thread: ", ecu_type, ": Started")
                
                 filename_list = {}
@@ -3823,7 +3833,10 @@ def start_startup_time_measurement(logger):
             return False
 
         # Save workbooks and generate reports for each ECU type
+        ecu_summary_workbook_items = workbook_map['ECU_Summary']
         for ecu_type, (report_file, workbook, sheets, summary_sheet) in workbook_map.items():
+            if ecu_type == 'ECU_Summary':
+                continue
             if len(overall_IG_ON_iteration_map[ecu_type]) > 0:
                 # Check stop flag before each report generation
                 if check_stop_flag_periodically():
@@ -3840,14 +3853,22 @@ def start_startup_time_measurement(logger):
                     config,
                     workbook,
                     report_file,
+                    ecu_summary_workbook_items,
                     logger):
                     isSuccess = False
+        if len(ecu_summary_workbook_items)==4 and all(ecu_summary_workbook_items[:2]+ecu_summary_workbook_items[3:]):
+            # Format the Excel cells
+            format_excel_cells(ecu_summary_workbook_items[3], 1)
+            # Adjust the column width of the Excel sheet
+            adjust_column_width(ecu_summary_workbook_items[3], 'ECU_Summary', logger)
+            ecu_summary_workbook_items[1].save(ecu_summary_workbook_items[0])
+        else:
+            logger.error("Error: Unable to create ECU Summary workbook.")
 
     except KeyError as e:
         logger.error(f"Error: Missing expected key in ECU input fields: {e}")
         isSuccess = False
     except Exception as e:
-        raise e
         logger.error(f"An error occurred: {e}")
         isSuccess = False
     finally:

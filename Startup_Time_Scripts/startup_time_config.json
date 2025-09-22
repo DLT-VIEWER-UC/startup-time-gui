@@ -80,12 +80,12 @@
     "Qualcomm_SoC0_IPAddress": "192.168.1.3",
     "Qualcomm_SoC1_IPAddress": "192.168.1.58",
     "PADAS": {
-      "RCAR": false
+      "RCAR": true
     },
     "Elite": {
       "RCAR": false,
       "SoC0": false,
-      "SoC1": true
+      "SoC1": false
     }
   }
 }
