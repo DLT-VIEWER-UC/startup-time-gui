@@ -1167,6 +1167,8 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 if app not in dltstart_timestamps:
                     encountered_apps.add(app)
                     data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type][app] if app in threshold_map[ecu_type] else '-', 'FAIL' if app in threshold_map[ecu_type] else '-']
+                    if app in threshold_map[ecu_type]:
+                        overall_IG_ON_cur_iteration['status'] = False
 
                     if app_registration:
                         if application_startup_order_status_iteration['startup_order_status']:
@@ -1198,6 +1200,8 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         if process not in encountered_apps:
             encountered_apps.add(process)
             data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else '-', 'FAIL' if process in threshold_map[ecu_type] else '-']
+            if process in threshold_map[ecu_type]:
+                overall_IG_ON_cur_iteration['status'] = False
             if validate_startup_order:
                 if app_registration:
                     if application_startup_order_status_iteration['startup_order_status']:
@@ -1223,6 +1227,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     for app in threshold_map[ecu_type]:
         if app not in encountered_apps:
             data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type][app], 'FAIL']
+            overall_IG_ON_cur_iteration['status'] = False
             if validate_startup_order:
                 if app_registration:
                     if application_startup_order_status_iteration['startup_order_status']:
