@@ -214,7 +214,7 @@ application_startup_time_min_max_avg_columns = ['No.', 'Services/Applications', 
 application_info_columns = ['No.', 'Services/Applications', 'Init(Up) Time (us)', 'Init(Up) Time (ms)']
 
 application_start_end_time_min_max_avg_columns = ['No.', 'Services/Applications', 'Minimum (ms)', 'Maximum (ms)',
-                                                  'Average (ms)', 'Number of\n measurements']
+                                                  'Average (ms)']
 
 applications_overall_status_columns = ['No. of Iterations', 'Total Time\n to Startup\n Last Application\n from IG ON (sec)',
                                         'Startup time\n judgement', 'Result of the\n enabled judgement\n item', 'Order\n Mismatch\n Count', 'Not\n Found\n Count', 'Not\n Configured\n Count', 'Missing\n Application\n Judgement', 'Terminated\n Count']
@@ -1509,6 +1509,7 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
                 else:
                     data_row.extend(['-', '-', '-', '-'])
             # Check if the process names match in dltstart_timestamps and process_timing_info
+            # TODO: Modify Missing Application Judgement logic.
             data_row.append('PASS' if set(overall_IG_ON_iteration[i]['dltstart_timestamps'].keys()) == set(process for process, item in overall_IG_ON_iteration[i]['process_timing_info'].items() if item['start_time_ms']) else 'FAIL')
             if i in application_startup_order_status:
                 data_row.append(application_startup_order_status[i]['terminated_applications_count'])
@@ -1695,8 +1696,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
             'process': process,
             'min_time': round_decimal_half_up(min_time, 4),
             'max_time': round_decimal_half_up(max_time, 4),
-            'avg_time': round_decimal_half_up(avg_time, 4),
-            'count': len(start_times)
+            'avg_time': round_decimal_half_up(avg_time, 4)
         }
        
         # Append the data row to the list
@@ -1711,22 +1711,13 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
                 'process': process,
                 'min_time': '-',
                 'max_time': '-',
-                'avg_time': '-',
-                'count': '-'
+                'avg_time': '-'
             }
             individual_list.append(data_row)
        
       # Append the sorted data to the Excel sheet
     for index, data_row in enumerate(individual_list):
-        sheet.append([data_row['index'] if data_row['index'] == '-' else index + 1, data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time'], data_row['count']])
-
-        # Apply color formatting to the count cell (last column)
-        count_cell = sheet.cell(row=sheet.max_row, column=6)  # Column 6 is the count column
-        if data_row['count'] != '-':
-            if data_row['count'] == config['Iterations']:
-                count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
-            else:
-                count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+        sheet.append([data_row['index'] if data_row['index'] == '-' else index + 1, data_row['process'], data_row['min_time'], data_row['max_time'], data_row['avg_time']])
 
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':

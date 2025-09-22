@@ -1,6 +1,6 @@
 {
   "DLT-Viewer Log Capture Time": 1,
-  "Iterations": 1,
+  "Iterations": 2,
   "Power ON-OFF Delay": 1,
   "Startup Order Judgement": true,
   "Application Registration": false,
@@ -55,6 +55,11 @@
       ]
     },
     {
+      "ecu-type": "SoC1",
+      "startup-order": [],
+      "threshold-config": []
+    },
+    {
       "ecu-type": "PADAS",
       "startup-order": [
         {
@@ -78,8 +83,8 @@
       "RCAR": false
     },
     "Elite": {
-      "RCAR": true,
-      "SoC0": true,
+      "RCAR": false,
+      "SoC0": false,
       "SoC1": true
     }
   }
