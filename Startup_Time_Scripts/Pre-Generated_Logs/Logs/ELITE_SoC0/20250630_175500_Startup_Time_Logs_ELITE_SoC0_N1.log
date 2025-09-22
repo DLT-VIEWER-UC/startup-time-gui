@@ -500,6 +500,7 @@
 499 2025/06/30 17:55:35.499735 8.4220 0 ECU1 DA1 DC1 0 control response non-verbose 0 [connection_info ok] 01 00 00 00 00
 500 2025/06/30 17:55:35.500600 8.4220 32 ECU1 DLTD INTM 1691724 log info verbose 1 Client connection #19 closed. Total Clients : 1
 501 2025/06/30 17:55:35.513653 8.4330 188 ECU1 EMFC EMAP 1589306 log warn verbose 7 EXM_2006: CheckAppState 403 : EM: Process termination based on request: functiongroupmanager.0 terminated cause: 0
+501 2025/06/30 17:55:35.513653 8.4330 188 ECU1 EMFC EMAP 1589306 log warn verbose 7 EXM_2006: CheckAppState 403 : EM: Process termination based on request: functiongroupmanager1.0 terminated cause: 0
 502 2025/06/30 17:55:35.715446 8.6310 1 ECU1 PHMD WDIF 1765389 log info verbose 4 AliveNotification 47 : AliveNotification
 503 2025/06/30 17:55:39.699720 12.6390 0 ECU1 HDAG HCON 2310267 log error verbose 1 handles empty and proxy is not assigned :
 504 2025/06/30 17:55:39.923887 12.8400 2 ECU1 UCM IMPL 2310266 log info verbose 4 ReadClaimedFgJson : 3107 Reading claimedfg json file

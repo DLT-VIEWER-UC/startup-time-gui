@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import ipaddress
 matplotlib.use('Agg')
 import numpy as np
+import shutil
 from openpyxl.drawing.image import Image
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter
@@ -157,6 +158,7 @@ def round_decimal_half_up(number, decimals=0):
 
 cur_dt_time_obj = None
 local_save_path = None
+pre_gen_logs_folder_path = None
 workbook_map = None
 threshold_map = None
 current_timestamp = None
@@ -846,7 +848,7 @@ def get_log_file_path(ecu_type, setup_type, index):
     dltfile = basename+'.dlt'
 
     # Define the directory for storing logs
-    logs_dir = local_save_path / "Logs"
+    logs_dir = local_save_path / "Logs" / f"{setup_type}_{ecu_type}"
 
     # Define the full path to the log file
     filename = logs_dir / logfile
@@ -869,26 +871,51 @@ def find_log_files_with_keywords(folder_path, keywords, logger):
     log_files = glob.glob(os.path.join(folder_path, "*.log"))
     filtered_files = [
         f for f in log_files
-        if all(keyword.lower() in os.path.basename(f).lower() for keyword in keywords)
+        if all(keyword.lower() in os.path.basename(f).lower() for keyword in keywords[:-1]) 
+        and (
+            os.path.basename(f).lower().endswith(keywords[-1].lower()+'.log') or 
+            f"_{keywords[-1].lower()}_" in os.path.basename(f).lower()
+        )
     ]
     return filtered_files
 
 def extract_log_file_paths(index, ecu_type, setup_type, logger):
-    parent_dir = local_save_path / "Logs"
+    parent_dir = pre_gen_logs_folder_path / "Logs"
     keywords = [ecu_type, setup_type, f'N{index + 1}']
-    if setup_type == ECUType.ELITE.value:
-        filtered_files = find_log_files_with_keywords(parent_dir / ecu_type, keywords, logger)
-    elif setup_type == ECUType.PADAS.value:
-        filtered_files = find_log_files_with_keywords(parent_dir, keywords, logger)
+    filtered_files = find_log_files_with_keywords(parent_dir / f"{setup_type}_{ecu_type}", keywords, logger)
     if not filtered_files or len(filtered_files) == 0:
         logger.warning(f"No log files found for {ecu_type} with setup type {setup_type} and index {index + 1}.")
-        if setup_type == ECUType.ELITE.value:
-            return tuple((parent_dir / ecu_type / f'{ecu_type}_{setup_type}_N{index + 1}.log', None, None))
-        else:
-            return tuple((parent_dir / f'{ecu_type}_{setup_type}_N{index + 1}.log', None, None))
+        return tuple((parent_dir / f"{setup_type}_{ecu_type}" / f'{ecu_type}_{setup_type}_N{index + 1}.log', None, None))
     else:
         log_file_path = filtered_files.pop()
-        return tuple((log_file_path, os.path.basename(log_file_path), None))
+        
+        # Copy log file to local save path with proper directory structure
+        try:
+            # Create target directory structure: Logs/{SETUP_TYPE}_{ECU_TYPE}/
+            # if setup_type == ECUType.ELITE.value:
+            #     target_logs_dir = local_save_path / "Logs" / f"{setup_type}_{ecu_type}"
+            # else:  # PADAS
+            #     target_logs_dir = local_save_path / "Logs"
+            target_logs_dir = local_save_path / "Logs" / f"{setup_type}_{ecu_type}"
+            
+            # Create directory if it doesn't exist
+            target_logs_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Generate target file path with consistent naming
+            target_filename = os.path.basename(log_file_path)
+            target_file_path = target_logs_dir / target_filename
+            
+            # Copy the file to the target location
+            shutil.copy2(log_file_path, target_file_path)
+            logger.info(f"Copied log file from {log_file_path} to {target_file_path}")
+            
+            # Return the copied file path instead of the original
+            return tuple((target_file_path, target_filename, None))
+            
+        except Exception as e:
+            logger.error(f"Error copying log file {log_file_path}: {e}")
+            # Fall back to original file path if copy fails
+            return tuple((log_file_path, os.path.basename(log_file_path), None))
 
 def get_log_file_paths_for_elite(index, ecu_config_list, setup_type):    
     """
@@ -938,7 +965,7 @@ def get_log_file_paths_for_elite(index, ecu_config_list, setup_type):
     """
     parent_dir = local_save_path / "Logs"
     ecu_type_list = [ecu['ecu-type'] for ecu in ecu_config_list]
-    logs_dir_list = [parent_dir/ecu_type for ecu_type in ecu_type_list]
+    logs_dir_list = [parent_dir/f"{setup_type}_{ecu_type}" for ecu_type in ecu_type_list]
     filename_list = {}
    
     for logs_dir, ecu_type in zip(logs_dir_list, ecu_type_list):
@@ -1751,10 +1778,7 @@ def add_logfile_hyperlink(report_path, log_path, sheet, ecu_type, setup_type):
     sheet.cell(row=row_no, column=1).value = "Log File:"  
  
     # Use Excel's =HYPERLINK() formula with the relative path
-    if setup_type == ECUType.ELITE.value:
-        hyperlink_formula = f'=HYPERLINK(".\Logs\{ecu_type}\{log_path}", "{log_path}")'
-    else:
-        hyperlink_formula = f'=HYPERLINK(".\Logs\{log_path}", "{log_path}")'
+    hyperlink_formula = f'=HYPERLINK(".\Logs\{setup_type}_{ecu_type}\{log_path}", "{log_path}")'
     # Insert the hyperlink formula
     sheet.cell(row=row_no + 1, column=1).value = hyperlink_formula
    
@@ -2641,7 +2665,7 @@ def create_workBook(ecu_type, setup_type, iterations, config, logger):
     """
     try:
         # Create the report file name based on the ECU type and current timestamp
-        reportName = f"Application_Startup_Time_{setup_type}_{ecu_type}_N{iterations}_{current_timestamp}.xlsx"
+        reportName = f"Startup_Time_Report_{setup_type}_{ecu_type}_N{iterations}_{current_timestamp}.xlsx"
        
         # Define the directory where the report will be saved
         report_dir = local_save_path
@@ -3566,6 +3590,7 @@ def start_startup_time_measurement(logger):
     global table_headers
     table_headers = list()
     global local_save_path
+    global pre_gen_logs_folder_path
     global workbook_map
     workbook_map = {}
     global threshold_map
@@ -3597,15 +3622,16 @@ def start_startup_time_measurement(logger):
        
         is_pre_gen_logs = config.get('Pre-Generated Logs', False)
         if is_pre_gen_logs:
-            logs_folder_path = config.get('logs-folder-path', Path(__file__).parents[0].joinpath("Pre-Generated_Logs"))
-            logger.info(f"logs_folder_path: {logs_folder_path}")
-            if not logs_folder_path or not os.path.exists(str(logs_folder_path)):
+            pre_gen_logs_folder_path = config.get('logs-folder-path', Path(__file__).parents[0].joinpath("Pre-Generated_Logs"))
+            logger.info(f"pre_gen_logs_folder_path: {pre_gen_logs_folder_path}")
+            if not pre_gen_logs_folder_path or not os.path.exists(str(pre_gen_logs_folder_path)):
                 logger.error("Error: 'logs-folder-path' is not configured in the configuration file.")
                 return False
-            local_save_path = Path(logs_folder_path)
-        else:
-            local_save_path = Path(__file__).parents[1].joinpath("Reports", "03_Startup_Time", cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S"))
-            local_save_path.mkdir(parents=True, exist_ok=True)
+            print(f"Using pre-generated logs from: {pre_gen_logs_folder_path}")
+        #     local_save_path = Path(pre_gen_logs_folder_path)
+        # else:
+        local_save_path = Path(__file__).parents[1].joinpath("Reports", "03_Startup_Time", cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S"))
+        local_save_path.mkdir(parents=True, exist_ok=True)
        
         if not is_pre_gen_logs and config['windows']['DLT-Viewer Installed Path'] and not os.path.isfile(config['windows']['DLT-Viewer Installed Path']):
             logger.error("Configured dlt-viewer path is not valid.")
@@ -3823,6 +3849,7 @@ def start_startup_time_measurement(logger):
         logger.error(f"Error: Missing expected key in ECU input fields: {e}")
         isSuccess = False
     except Exception as e:
+        raise e
         logger.error(f"An error occurred: {e}")
         isSuccess = False
     finally:
@@ -3835,3 +3862,7 @@ def start_startup_time_measurement(logger):
         logger.info(f"Total script execution time: {(script_end_time-script_start_time):.3f} seconds")
     print("Final response :: ", isSuccess)
     return isSuccess
+
+if __name__ == "__main__":
+    logger = setup_logging()
+    start_startup_time_measurement(logger)

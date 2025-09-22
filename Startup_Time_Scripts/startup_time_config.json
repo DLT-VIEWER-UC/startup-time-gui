@@ -44,26 +44,30 @@
       "startup-order": [
         {
           "Order Type": "Sequential",
-          "Applications": "Test_App_4_C12,Test_App_3_C12,Test_App_1_C12,Test_App_29_M500,Test_App_30_M500"
-        },
-        {
-          "Order Type": "Parallel",
-          "Applications": "Test_App_28_M500,Test_App_27_M500,Test_App_26_M500,Test_App_25_M500,Test_App_24_M500"
-        },
-        {
-          "Order Type": "Sequential",
-          "Applications": "dltdaemon,healthmanager,ipcd,access_manager"
-        },
-        {
-          "Order Type": "Parallel",
-          "Applications": "someipd,statemanager,functiongroupmanager,crypto_keystorage_manager"
-        },
-        {
-          "Order Type": "Sequential",
-          "Applications": "Test_App_23_M500,Test_App_22_M500,Test_App_11_C5,Test_App_21_M500,Test_App_6_C12,Test_App_20_M500,Test_App_5_C12,Test_App_2_C12,Test_App_19_M500,Test_App_18_M500,Test_App_17_M500,Test_App_16_M500,ucm_subordinate,h-diag-app-soc0"
+          "Applications": "functiongroupmanager1"
         }
       ],
-      "threshold-config": []
+      "threshold-config": [
+        {
+          "Threshold": 3,
+          "Applications": "functiongroupmanager1"
+        }
+      ]
+    },
+    {
+      "ecu-type": "PADAS",
+      "startup-order": [
+        {
+          "Order Type": "Sequential",
+          "Applications": "functiongroupmanager1"
+        }
+      ],
+      "threshold-config": [
+        {
+          "Threshold": 3,
+          "Applications": "functiongroupmanager1"
+        }
+      ]
     }
   ],
   "ECU_setting": {
