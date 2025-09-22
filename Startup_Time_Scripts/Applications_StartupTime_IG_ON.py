@@ -1517,6 +1517,10 @@ def each_iteration_test_status(ecu_type, summary_sheet, overall_IG_ON_iteration,
             # Apply hyperlink formatting to the first cell in the last row
             cell = summary_sheet.cell(row=summary_sheet.max_row, column=1)
             cell.font = Font(bold=True, underline='single', color='0000FF')
+            # Apply red fill to terminated count if greater than 0
+            terminated_count_cell = summary_sheet.cell(row=summary_sheet.max_row, column=len(data_row))  # Column 9 is the terminated count column
+            if data_row[-1] > 0:
+                terminated_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
             # Apply grey fill to disabled cells
             fill_disabled_cell_with_grey(5, 6, 7, summary_sheet, config)
 
@@ -1661,7 +1665,10 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
                 count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
             else:
                 count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
-
+        # Apply color formatting to the terminated count cell (last column)
+        terminated_count_cell = sheet.cell(row=sheet.max_row, column=9)  # Column 9 is the terminated count column
+        if data_row['terminated_count'] > 0:
+            terminated_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             differences[data_row['process']] = float(data_row['avg_time'])
