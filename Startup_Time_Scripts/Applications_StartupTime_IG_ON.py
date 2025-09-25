@@ -856,7 +856,7 @@ def get_log_file_path(ecu_type, setup_type, index):
     # Check if the logs directory exists, and create it if it doesn't
     if not logs_dir.exists():
         # Create the logs directory
-        logs_dir.mkdir()
+        logs_dir.mkdir(parents=True, exist_ok=True)
 
     # Return the log file path and name
     return filename, logfile, dltfile
@@ -1480,6 +1480,7 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
         This summary table is typically the first thing stakeholders review
         to get an overall assessment of system performance across test iterations.
     """
+    is_summary_sheet = 'summary' in summary_sheet.title.lower() 
     app_registration = config.get('Application Registration', False)
     order_mismatch_judgement = config.get('Order Mismatch Judgement', False)
     not_found_judgement = config.get('Not Found Judgement', False)
@@ -1494,7 +1495,7 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
                     test_status = 'PASS'
             else:
                 test_status = 'FAIL'
-            data_row = [f'=HYPERLINK("{'./'+os.path.basename(report_file) if isSummaryReport else ''}#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
+            data_row = [f'=HYPERLINK("{'./'+os.path.basename(report_file) if isSummaryReport else ''}#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")' if is_summary_sheet else f'{i+1}', overall_value, test_status]
             if config['Startup Order Judgement'] and i in application_startup_order_status:
                 if app_registration:
                     startup_order_status = '-'
@@ -1516,8 +1517,9 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
             summary_sheet.append(data_row)
            
             # Apply hyperlink formatting to the first cell in the last row
-            cell = summary_sheet.cell(row=summary_sheet.max_row, column=1)
-            cell.font = Font(bold=True, underline='single', color='0000FF')
+            if is_summary_sheet:
+                cell = summary_sheet.cell(row=summary_sheet.max_row, column=1)
+                cell.font = Font(bold=True, underline='single', color='0000FF')
             # Apply red fill to terminated count if greater than 0
             terminated_count_cell = summary_sheet.cell(row=summary_sheet.max_row, column=len(data_row))  # Column 9 is the terminated count column
             if data_row[-1] > 0:
@@ -2603,10 +2605,9 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, lo
         logger.error(f"Failed to open serial port: {e}")
         return False
     return True
-    return True
 
 
-def create_workBook(ecu_type, setup_type, iterations, config, logger):
+def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, logger):
     """
     Creates a comprehensive Excel workbook for startup time analysis reporting.
    
@@ -2705,6 +2706,13 @@ def create_workBook(ecu_type, setup_type, iterations, config, logger):
             # Create each sheet and add it to the list
             for i in range(1, iterations + 1):
                 sheet_title = f"GEN3_StartupTime_{i:02d}"
+                sheet = workbook.create_sheet(title=sheet_title)
+                sheets.append(sheet)
+        else:
+            for enabled_ecu in enabled_ecu_list:
+                if enabled_ecu == ECUType.PADAS.value:
+                    enabled_ecu = 'RCAR'
+                sheet_title = f"{setup_type}_{enabled_ecu}"
                 sheet = workbook.create_sheet(title=sheet_title)
                 sheets.append(sheet)
 
@@ -3425,11 +3433,10 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
 
     except Exception as e:
         logger.error(f"Exception :: {e}")
-        raise e
         return False
     return True
 
-def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_iteration, process_times, process_start_times, application_startup_order_status, config, workbook, report_file, ecu_summary_workbook_items, logger):
+def save_workbook_and_generate_reports(ecu_type, setup_type, summary_sheet, overall_IG_ON_iteration, process_times, process_start_times, application_startup_order_status, config, workbook, report_file, ecu_summary_workbook_items, logger):
     """
     Finalizes Excel workbook with summary analysis and saves the complete test report.
    
@@ -3510,6 +3517,13 @@ def save_workbook_and_generate_reports(ecu_type, summary_sheet, overall_IG_ON_it
 
     # Export the average data to the Excel sheet
     export_and_plot_average_data_to_excel(summary_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
+    
+    # Copy summary to ECU_Summary workbook
+    for es_sheet in es_sheets:
+        if es_sheet.title == f"{setup_type}_{ecu_type}":
+            each_iteration_test_status(ecu_type, report_file, es_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=False)
+            export_and_plot_average_data_to_excel(es_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
+            break
 
     # Save the Excel workbook
     workbook.save(report_file)
@@ -3691,7 +3705,7 @@ def start_startup_time_measurement(logger):
             return False
 
         ecu_config_list = [ecu for ecu in config['ecu-config'] if ecu['ecu-type'] in enabled_ecu_list]
-        workbook_map['ECU_Summary'] = tuple(create_workBook('ECU_Summary', setup_type, iterations, config, logger))
+        workbook_map['ECU_Summary'] = tuple(create_workBook('ECU_Summary', setup_type, enabled_ecu_list, iterations, config, logger))
         for ecu in ecu_config_list:
             if ecu['ecu-type'] == ECUType.PADAS.value:
                 ecu['ecu-type'] = ECUType.RCAR.value
@@ -3702,7 +3716,7 @@ def start_startup_time_measurement(logger):
                     ecu['ip-address'] = config['ECU_setting']['Qualcomm_SoC0_IPAddress']
                 elif ecu['ecu-type'] == ECUType.SoC1.value:
                     ecu['ip-address'] = config['ECU_setting']['Qualcomm_SoC1_IPAddress']
-            workbook_map[ecu['ecu-type']] = tuple(create_workBook(ecu['ecu-type'], setup_type, iterations, config, logger))
+            workbook_map[ecu['ecu-type']] = tuple(create_workBook(ecu['ecu-type'], setup_type, enabled_ecu_list, iterations, config, logger))
            
             # Check if the workbook creation was successful
             if workbook_map[ecu['ecu-type']][2] is None:
@@ -3845,6 +3859,7 @@ def start_startup_time_measurement(logger):
                     
                 if not save_workbook_and_generate_reports(
                     ecu_type,
+                    setup_type,
                     summary_sheet,
                     overall_IG_ON_iteration_map[ecu_type],
                     process_times_map[ecu_type],
@@ -3856,7 +3871,7 @@ def start_startup_time_measurement(logger):
                     ecu_summary_workbook_items,
                     logger):
                     isSuccess = False
-        if len(ecu_summary_workbook_items)==4 and all(ecu_summary_workbook_items[:2]+ecu_summary_workbook_items[3:]):
+        if any(anySheet) and len(ecu_summary_workbook_items)==4 and all(ecu_summary_workbook_items):
             # Format the Excel cells
             format_excel_cells(ecu_summary_workbook_items[3], 1)
             # Adjust the column width of the Excel sheet
