@@ -154,9 +154,9 @@ class StartupTimeConfig(QDialog):
             # Add directory to watcher
             self.file_watcher.addPath(str(directory))
         
-        # Add the current directory to watch for ApplicationInputList.xlsx
+        # Add the current directory to watch for Application_Input_List_for_Startup_Time.xlsx
         current_dir = Path(__file__).parent
-        self.app_input_file_path = current_dir / 'ApplicationInputList.xlsx'
+        self.app_input_file_path = current_dir / 'Application_Input_List_for_Startup_Time.xlsx'
         self.file_watcher.addPath(str(current_dir))
         
         # Connect the watcher signals to update methods
@@ -990,12 +990,12 @@ class StartupTimeConfig(QDialog):
         self.update_logs_tooltip()
 
     def open_application_input_list(self):
-        """Open the ApplicationInputList.xlsx file"""
+        """Open the Application_Input_List_for_Startup_Time.xlsx file"""
         app_input_path = self.app_input_file_path
         
         # Check if the file exists
         if not app_input_path.exists():
-            print(f"ApplicationInputList.xlsx not found at: {app_input_path}")
+            print(f"Application_Input_List_for_Startup_Time.xlsx not found at: {app_input_path}")
             return
         
         # Open the Excel file with the default application
@@ -1007,10 +1007,10 @@ class StartupTimeConfig(QDialog):
             else:  # Linux and other Unix-like systems
                 subprocess.run(["xdg-open", app_input_path])
         except Exception as e:
-            print(f"Error opening ApplicationInputList.xlsx: {e}")
+            print(f"Error opening Application_Input_List_for_Startup_Time.xlsx: {e}")
     
     def check_app_input_file(self):
-        """Check if ApplicationInputList.xlsx exists"""
+        """Check if Application_Input_List_for_Startup_Time.xlsx exists"""
         return self.app_input_file_path.exists()
     
     def update_app_input_button(self):
@@ -1022,7 +1022,7 @@ class StartupTimeConfig(QDialog):
         
         # Create tooltip text
         if file_exists:
-            tooltip_lines = ["ApplicationInputList.xlsx found - Click to open", ""]
+            tooltip_lines = ["Application_Input_List_for_Startup_Time.xlsx found - Click to open", ""]
             
             # Add application counts if available
             if hasattr(self, 'application_list') and self.application_list:
@@ -1037,7 +1037,7 @@ class StartupTimeConfig(QDialog):
             tooltip_text = "\n".join(tooltip_lines)
             border_color = 'green'
         else:
-            tooltip_text = "ApplicationInputList.xlsx not found in current directory"
+            tooltip_text = "Application_Input_List_for_Startup_Time.xlsx not found in current directory"
             border_color = 'red'
         
         self.app_input_btn.setToolTip(tooltip_text)
@@ -1056,9 +1056,9 @@ class StartupTimeConfig(QDialog):
         """)
 
     def parse_application_input_list(self):
-        """Parse the ApplicationInputList.xlsx file and extract applications by ECU type"""
+        """Parse the Application_Input_List_for_Startup_Time.xlsx file and extract applications by ECU type"""
         if not self.check_app_input_file():
-            print("ApplicationInputList.xlsx not found, cannot parse applications")
+            print("Application_Input_List_for_Startup_Time.xlsx not found, cannot parse applications")
             return None
         
         try:
@@ -1130,7 +1130,7 @@ class StartupTimeConfig(QDialog):
             return applications
             
         except Exception as e:
-            print(f"Error parsing ApplicationInputList.xlsx: {e}")
+            print(f"Error parsing Application_Input_List_for_Startup_Time.xlsx: {e}")
             return None
     
     def get_applications_for_ecu(self, ecu_family, ecu_type):
