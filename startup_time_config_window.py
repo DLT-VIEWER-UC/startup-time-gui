@@ -649,8 +649,8 @@ class StartupTimeConfig(QDialog):
         threshold_vbox.addWidget(add_threshold_btn, alignment=Qt.AlignLeft)
         self.threshold_group.setLayout(threshold_vbox)
 
-        vbox.addWidget(startup_group)
         vbox.addWidget(self.threshold_group)
+        vbox.addWidget(startup_group)
         
         # Set the content layout for the collapsible group box
         gb.setContentLayout(vbox)
@@ -1070,8 +1070,8 @@ class StartupTimeConfig(QDialog):
             applications = {
                 'ELITE': {
                     'RCAR': [],
-                    'SoC0': [],
-                    'SoC1': []
+                    'SOC0': [],
+                    'SOC1': []
                 },
                 'PADAS': {
                     'RCAR': []
@@ -1082,8 +1082,8 @@ class StartupTimeConfig(QDialog):
             # Column B = ELITE RCAR, Column C = ELITE SoC0, Column D = ELITE SoC1, Column E = PADAS RCAR
             column_mapping = {
                 'B': ('ELITE', 'RCAR'),
-                'C': ('ELITE', 'SoC0'), 
-                'D': ('ELITE', 'SoC1'),
+                'C': ('ELITE', 'SOC0'), 
+                'D': ('ELITE', 'SOC1'),
                 'E': ('PADAS', 'RCAR')
             }
             
