@@ -91,6 +91,10 @@ class StartupTimeConfig(QDialog):
         self.logs_path = Path(__file__).parent.joinpath('Startup_Time_Scripts/Pre-Generated_Logs/Logs')
         self.setup_file_watcher()
 
+        # Initialize application list from Excel file
+        self.application_list = None
+        self.parse_application_input_list()
+
         self.init_ui()
    
     def set_window_properties(self):
@@ -159,6 +163,7 @@ class StartupTimeConfig(QDialog):
         self.file_watcher.directoryChanged.connect(self.update_logs_tooltip)
         self.file_watcher.fileChanged.connect(self.update_logs_tooltip)
         self.file_watcher.directoryChanged.connect(self.update_app_input_button)
+        self.file_watcher.directoryChanged.connect(self.refresh_application_list)
 
     def check_log_files(self):
         """Check for .log files in the specified directories and return status"""
@@ -1017,7 +1022,19 @@ class StartupTimeConfig(QDialog):
         
         # Create tooltip text
         if file_exists:
-            tooltip_text = "ApplicationInputList.xlsx found - Click to open"
+            tooltip_lines = ["ApplicationInputList.xlsx found - Click to open", ""]
+            
+            # Add application counts if available
+            if hasattr(self, 'application_list') and self.application_list:
+                tooltip_lines.append("Loaded Applications:")
+                for ecu_family, ecu_types in self.application_list.items():
+                    for ecu_type, apps in ecu_types.items():
+                        if apps:
+                            tooltip_lines.append(f"  {ecu_family}({ecu_type}): {len(apps)} apps")
+            else:
+                tooltip_lines.append("No applications loaded yet")
+            
+            tooltip_text = "\n".join(tooltip_lines)
             border_color = 'green'
         else:
             tooltip_text = "ApplicationInputList.xlsx not found in current directory"
@@ -1037,6 +1054,100 @@ class StartupTimeConfig(QDialog):
                 background-color: #f0f0f0;
             }}
         """)
+
+    def parse_application_input_list(self):
+        """Parse the ApplicationInputList.xlsx file and extract applications by ECU type"""
+        if not self.check_app_input_file():
+            print("ApplicationInputList.xlsx not found, cannot parse applications")
+            return None
+        
+        try:
+            # Load the Excel workbook
+            workbook = openpyxl.load_workbook(self.app_input_file_path)
+            worksheet = workbook.active
+            
+            # Initialize the applications dictionary
+            applications = {
+                'ELITE': {
+                    'RCAR': [],
+                    'SoC0': [],
+                    'SoC1': []
+                },
+                'PADAS': {
+                    'RCAR': []
+                }
+            }
+            
+            # Column mapping according to the Excel structure
+            # Column B = ELITE RCAR, Column C = ELITE SoC0, Column D = ELITE SoC1, Column E = PADAS RCAR
+            column_mapping = {
+                'B': ('ELITE', 'RCAR'),
+                'C': ('ELITE', 'SoC0'), 
+                'D': ('ELITE', 'SoC1'),
+                'E': ('PADAS', 'RCAR')
+            }
+            
+            # Start reading from row 3 (row 1 has title, row 2 has column headers)
+            # We'll read up to row 100 or until we find 10 consecutive empty rows
+            max_row = min(worksheet.max_row, 100)
+            empty_row_count = 0
+            
+            for row_num in range(3, max_row + 1):
+                row_has_data = False
+                
+                for col_letter, (ecu_family, ecu_type) in column_mapping.items():
+                    cell_value = worksheet[f'{col_letter}{row_num}'].value
+                    
+                    if cell_value and str(cell_value).strip():
+                        app_name = str(cell_value).strip()
+                        
+                        # Skip header-like values
+                        if app_name.upper() not in ['ELITE', 'PADAS', 'RCAR', 'SOC0', 'SOC1', 'NO.']:
+                            applications[ecu_family.upper()][ecu_type.upper()].append(app_name)
+                            row_has_data = True
+                
+                if row_has_data:
+                    empty_row_count = 0
+                else:
+                    empty_row_count += 1
+                    
+                # Stop if we encounter 10 consecutive empty rows
+                if empty_row_count >= 10:
+                    break
+            
+            workbook.close()
+            
+            # Store the parsed applications for later use
+            self.application_list = applications
+            
+            # Print parsed data for debugging
+            print("Parsed Application Input List:")
+            for ecu_family, ecu_types in applications.items():
+                for ecu_type, apps in ecu_types.items():
+                    if apps:
+                        print(f"  {ecu_family} {ecu_type}: {apps}")
+            
+            return applications
+            
+        except Exception as e:
+            print(f"Error parsing ApplicationInputList.xlsx: {e}")
+            return None
+    
+    def get_applications_for_ecu(self, ecu_family, ecu_type):
+        """Get the list of applications for a specific ECU type"""
+        ecu_family = ecu_family.upper()
+        ecu_type = ecu_type.upper()
+        if not hasattr(self, 'application_list') or not self.application_list:
+            self.parse_application_input_list()
+        
+        if self.application_list and ecu_family in self.application_list:
+            return self.application_list[ecu_family].get(ecu_type, [])
+        return []
+    
+    def refresh_application_list(self):
+        """Refresh the application list by re-parsing the Excel file"""
+        print("Refreshing Application Input List...")
+        self.parse_application_input_list()
 
     def save_config(self):
         data = {}
