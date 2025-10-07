@@ -150,9 +150,15 @@ class StartupTimeConfig(QDialog):
             # Add directory to watcher
             self.file_watcher.addPath(str(directory))
         
-        # Connect the watcher signals to update method
+        # Add the current directory to watch for ApplicationInputList.xlsx
+        current_dir = Path(__file__).parent
+        self.app_input_file_path = current_dir / 'ApplicationInputList.xlsx'
+        self.file_watcher.addPath(str(current_dir))
+        
+        # Connect the watcher signals to update methods
         self.file_watcher.directoryChanged.connect(self.update_logs_tooltip)
         self.file_watcher.fileChanged.connect(self.update_logs_tooltip)
+        self.file_watcher.directoryChanged.connect(self.update_app_input_button)
 
     def check_log_files(self):
         """Check for .log files in the specified directories and return status"""
@@ -260,7 +266,7 @@ class StartupTimeConfig(QDialog):
 
         # General Settings
         general_group = QGroupBox('General Settings')
-        general_group.setFixedHeight(250)
+        general_group.setFixedHeight(280)
         general_layout = QFormLayout()
         for key, validator in [
             ('DLT-Viewer Log Capture Time', CustomIntValidator(1, 500)),
@@ -289,6 +295,17 @@ class StartupTimeConfig(QDialog):
             widgets_lst.append(key_lbl)
             general_layout.addRow(key_lbl, row_layout)
             self.widgets[key] = widgets_lst
+        
+        # Application Input List row
+        app_input_layout = QHBoxLayout()
+        self.app_input_btn = QPushButton()
+        self.app_input_btn.setFixedSize(30, 24)  # Make it square and slightly larger for the icon
+        self.app_input_btn.setText("📋")  # Use clipboard/Excel emoji as icon
+        self.app_input_btn.clicked.connect(self.open_application_input_list)
+        app_input_layout.addWidget(self.app_input_btn)
+        app_input_layout.addStretch()  # Push everything to the left
+        general_layout.addRow(QLabel('Application Input List'), app_input_layout)
+        
         vcb = QCheckBox(); vcb.setChecked(self.config_data.get('Startup Order Judgement', False))
         general_layout.addRow(QLabel('Startup Order Judgement'), vcb)
         self.widgets['Startup Order Judgement'] = vcb
@@ -517,6 +534,9 @@ class StartupTimeConfig(QDialog):
                 elif ecu_type not in ecu_types:
                     # ECU is not selected and not in config, remove it
                     block.remove_button.click()
+        
+        # Set initial state for Application Input List button
+        self.update_app_input_button()
         
         self.on_change_update_ok_btn_state()
 
@@ -963,6 +983,60 @@ class StartupTimeConfig(QDialog):
             
         # Update tooltip after opening (in case folder structure changed)
         self.update_logs_tooltip()
+
+    def open_application_input_list(self):
+        """Open the ApplicationInputList.xlsx file"""
+        app_input_path = self.app_input_file_path
+        
+        # Check if the file exists
+        if not app_input_path.exists():
+            print(f"ApplicationInputList.xlsx not found at: {app_input_path}")
+            return
+        
+        # Open the Excel file with the default application
+        try:
+            if platform.system() == "Windows":
+                os.startfile(app_input_path)
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.run(["open", app_input_path])
+            else:  # Linux and other Unix-like systems
+                subprocess.run(["xdg-open", app_input_path])
+        except Exception as e:
+            print(f"Error opening ApplicationInputList.xlsx: {e}")
+    
+    def check_app_input_file(self):
+        """Check if ApplicationInputList.xlsx exists"""
+        return self.app_input_file_path.exists()
+    
+    def update_app_input_button(self):
+        """Update the Application Input List button appearance based on file presence"""
+        if not hasattr(self, 'app_input_btn'):
+            return
+            
+        file_exists = self.check_app_input_file()
+        
+        # Create tooltip text
+        if file_exists:
+            tooltip_text = "ApplicationInputList.xlsx found - Click to open"
+            border_color = 'green'
+        else:
+            tooltip_text = "ApplicationInputList.xlsx not found in current directory"
+            border_color = 'red'
+        
+        self.app_input_btn.setToolTip(tooltip_text)
+        
+        # Update button style with border color
+        self.app_input_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: white;
+                color: black;
+                border: 1px solid {border_color};
+                border-radius: 5px;
+            }}
+            QPushButton:hover {{
+                background-color: #f0f0f0;
+            }}
+        """)
 
     def save_config(self):
         data = {}
