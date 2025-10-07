@@ -133,10 +133,10 @@ class StartupTimeConfig(QDialog):
         
         # Create directories if they don't exist and add them to watcher
         directories_to_watch = [
-            self.logs_path,
-            self.logs_path / 'RCAR',
-            self.logs_path / 'SoC0', 
-            self.logs_path / 'SoC1'
+            self.logs_path / 'PADAS_RCAR',
+            self.logs_path / 'ELITE_RCAR',
+            self.logs_path / 'ELITE_SoC0', 
+            self.logs_path / 'ELITE_SoC1'
         ]
         
         for directory in directories_to_watch:
@@ -165,21 +165,22 @@ class StartupTimeConfig(QDialog):
         
         try:
             # Check main Logs folder
-            if self.logs_path.exists():
-                status['main'] = any(self.logs_path.glob('*.log'))
-            
+            padas_path = self.logs_path / 'PADAS_RCAR'
+            if padas_path.exists():
+                status['main'] = any(padas_path.glob('*.log'))
+
             # Check RCAR subfolder
-            rcar_path = self.logs_path / 'RCAR'
+            rcar_path = self.logs_path / 'ELITE_RCAR'
             if rcar_path.exists():
                 status['rcar'] = any(rcar_path.glob('*.log'))
             
             # Check SoC0 subfolder  
-            soc0_path = self.logs_path / 'SoC0'
+            soc0_path = self.logs_path / 'ELITE_SoC0'
             if soc0_path.exists():
                 status['soc0'] = any(soc0_path.glob('*.log'))
             
             # Check SoC1 subfolder
-            soc1_path = self.logs_path / 'SoC1'
+            soc1_path = self.logs_path / 'ELITE_SoC1'
             if soc1_path.exists():
                 status['soc1'] = any(soc1_path.glob('*.log'))
                 
@@ -203,7 +204,7 @@ class StartupTimeConfig(QDialog):
         main_status = "✓" if status['main'] else "✗"
         if self.isPadas and self.isRCAR:
             active_status.append(status['main'])
-            tooltip_lines.append(f"{main_status} Main Logs folder (PADAS): {'Has .log files' if status['main'] else 'No .log files'}")
+            tooltip_lines.append(f"{main_status} RCAR Logs folder (PADAS): {'Has .log files' if status['main'] else 'No .log files'}")
         
         # RCAR folder
         rcar_status = "✓" if status['rcar'] else "✗"
