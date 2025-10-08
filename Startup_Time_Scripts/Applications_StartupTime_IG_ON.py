@@ -1128,15 +1128,15 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     for position, (process, dltstart_line) in enumerate(dltstart_timestamps.items()):
         # Check if the process names match
         result = '-'
-        if process in threshold_map[ecu_type]:
-            if float(dltstart_line + OFFSET_TIME) < threshold_map[ecu_type][process]:
+        if process in threshold_map[ecu_type] or 'Non-Configured Applications' in threshold_map[ecu_type]:
+            if float(dltstart_line + OFFSET_TIME) < threshold_map[ecu_type].get(process, threshold_map[ecu_type]['Non-Configured Applications']):
                 result = 'PASS'
                 overall_IG_ON_cur_iteration['passed_count'] += 1
             else:
                 result = 'FAIL'
                 overall_IG_ON_cur_iteration['status'] = False
 
-        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else '-', result]
+        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type].get(process, threshold_map[ecu_type]['Non-Configured Applications']) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', result]
 
         if validate_startup_order:
             # Create a data row for the process
@@ -1193,7 +1193,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 overall_IG_ON_cur_iteration['configured_applications'].add(app)
                 if app not in dltstart_timestamps:
                     encountered_apps.add(app)
-                    data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type][app] if app in threshold_map[ecu_type] else '-', 'FAIL' if app in threshold_map[ecu_type] else '-']
+                    data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type]['Non-Configured Applications']) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if app in threshold_map[ecu_type] else '-']
                     if app in threshold_map[ecu_type]:
                         overall_IG_ON_cur_iteration['status'] = False
 
@@ -1226,7 +1226,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             overall_IG_ON_cur_iteration['terminated_applications'].add(process)
         if process not in encountered_apps:
             encountered_apps.add(process)
-            data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type][process] if process in threshold_map[ecu_type] else '-', 'FAIL' if process in threshold_map[ecu_type] else '-']
+            data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type].get(process, threshold_map[ecu_type]['Non-Configured Applications']) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if process in threshold_map[ecu_type] else '-']
             if process in threshold_map[ecu_type]:
                 overall_IG_ON_cur_iteration['status'] = False
             if validate_startup_order:
@@ -1656,7 +1656,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
             data_row['max_time'],
             data_row['avg_time'],
             float(data_row['avg_time']) + OFFSET_TIME if data_row['avg_time'] != '-' else '-',
-            threshold_map[ecu_type][data_row['process']] if data_row['process'] in threshold_map[ecu_type] else '-',
+            threshold_map[ecu_type].get(data_row['process'], threshold_map[ecu_type]['Non-Configured Applications']) if ((data_row['process'] in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-',
             data_row['count'],
             data_row['terminated_count']
         ])
@@ -3728,17 +3728,26 @@ def start_startup_time_measurement(logger):
             application_startup_order_status_map[ecu['ecu-type']] = {}
             application_startup_order = []
             for block in ecu['startup-order']:
+                if not block.get('enabled', True):
+                    continue
                 application_startup_order.append(tuple([block['Order Type'], [app.strip() for app in block['Applications'].split(',') if len(app.strip()) > 0]]))
             application_startup_order_map[ecu['ecu-type']] = list(application_startup_order)
            
             threshold_map[ecu['ecu-type']] = {}
-            for i, threshold_config_grp in enumerate(ecu.get('threshold-config', [])):
+            for i, threshold_config_grp in enumerate(ecu.get('threshold-config', {})):
+                if not threshold_config_grp.get('enabled', True):
+                    continue
                 if threshold_config_grp.get('Threshold', -1) < 0 or threshold_config_grp.get('Threshold', -1) > 100:
                     logger.error(f"Configured 'Threshold' is not valid. Configure its value in range[0, 100] for {i}th group in {ecu['ecu-type']}.")
                     return False
                 for app in threshold_config_grp.get('Applications', '').split(','):
                     if len(app.strip()) > 0:
                         threshold_map[ecu['ecu-type']][app.strip()] = threshold_config_grp.get('Threshold')
+            if ecu.get('non-configured-settings', {}).get('enabled', False):
+                if ecu['non-configured-settings'].get('Threshold', -1) < 0 or ecu['non-configured-settings'].get('Threshold', -1) > 100:
+                    logger.error(f"Configured 'Threshold' is not valid. Configure its value in range[0, 100] for Non-Configured Applications in {ecu['ecu-type']}.")
+                    return False
+                threshold_map[ecu['ecu-type']]['Non-Configured Applications'] = ecu['non-configured-settings'].get('Threshold')
              
         logger.info(f"Threshold Map: {threshold_map}")
 
