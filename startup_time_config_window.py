@@ -1113,9 +1113,10 @@ class StartupTimeConfig(QDialog):
         startup_fl = QFormLayout()
         startup_entries = []
         for order in data.get('startup-order', []):
-            row, tp, apps, rem = self._create_startup_row(data.get('ecu-type'), order.get('Order Type', ''), order.get('Applications', ''), idx)
+            enabled = order.get('enabled', True)
+            row, tp, apps, rem, enable_cb = self._create_startup_row(data.get('ecu-type'), order.get('Order Type', ''), order.get('Applications', ''), idx, enabled)
             startup_fl.addRow(row)
-            startup_entries.append((row, tp, apps, rem))
+            startup_entries.append((row, tp, apps, rem, enable_cb))
         add_startup_btn = QPushButton('Add Startup Order')
         add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(data.get('ecu-type'), i), self.on_change_update_ok_btn_state(), gb.content_changed()])
         startup_vbox.addLayout(startup_fl)
@@ -1206,9 +1207,10 @@ class StartupTimeConfig(QDialog):
         threshold_fl = QFormLayout()
         threshold_entries = []
         for threshold in data.get('threshold-config', []):
-            row, apps, thresh = self._create_threshold_row(data.get('ecu-type'), threshold.get('Applications', ''), threshold.get('Threshold', ''), idx)
+            enabled = threshold.get('enabled', True)
+            row, apps, thresh, enable_cb = self._create_threshold_row(data.get('ecu-type'), threshold.get('Applications', ''), threshold.get('Threshold', ''), idx, enabled)
             threshold_fl.addRow(row)
-            threshold_entries.append((row, apps, thresh))
+            threshold_entries.append((row, apps, thresh, enable_cb))
         add_threshold_btn = QPushButton('Add Threshold Config')
         add_threshold_btn.clicked.connect(lambda _, i=idx: [self.add_threshold_row(data.get('ecu-type'), i), self.on_change_update_ok_btn_state(), gb.content_changed()])
         threshold_vbox.addLayout(threshold_fl)
@@ -1265,9 +1267,13 @@ class StartupTimeConfig(QDialog):
         else:
             widget.setStyleSheet(style)
 
-    def _create_startup_row(self, ecu_type, type_val, apps_val, ecu_idx):
+    def _create_startup_row(self, ecu_type, type_val, apps_val, ecu_idx, enabled=True):
         row = QWidget()
         main_layout = QHBoxLayout(); row.setLayout(main_layout)
+        
+        # Enable/Disable checkbox at the start
+        enable_cb = QCheckBox()
+        enable_cb.setChecked(enabled)
         
         # Left side - form layout for type and apps
         left_widget = QWidget()
@@ -1328,14 +1334,25 @@ class StartupTimeConfig(QDialog):
         rem = QPushButton('Remove')
         rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_startup_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
         
+        main_layout.addWidget(enable_cb, alignment=Qt.AlignVCenter)
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
         
-        return row, dd, apps, rem
+        enable_cb.clicked.connect(lambda: [self.on_change_update_ok_btn_state(), left_widget.setEnabled(enable_cb.isChecked())])
+        
+        # Set initial enabled state
+        left_widget.setEnabled(enabled)
+        
+        return row, dd, apps, rem, enable_cb
 
-    def _create_threshold_row(self, ecu_type, apps_val, threshold_val, ecu_idx):
+    def _create_threshold_row(self, ecu_type, apps_val, threshold_val, ecu_idx, enabled=True):
         row = QWidget()
         main_layout = QHBoxLayout(); row.setLayout(main_layout)
+        
+        # Enable/Disable checkbox at the start
+        enable_cb = QCheckBox()
+        enable_cb.setChecked(enabled)
+        enable_cb.clicked.connect(lambda: self.on_change_update_ok_btn_state())
         
         # Left side - form layout for apps and threshold
         left_widget = QWidget()
@@ -1399,10 +1416,16 @@ class StartupTimeConfig(QDialog):
         rem = QPushButton('Remove')
         rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_threshold_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
         
+        main_layout.addWidget(enable_cb, alignment=Qt.AlignVCenter)
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
         
-        return row, apps, thresh
+        enable_cb.clicked.connect(lambda: [self.on_change_update_ok_btn_state(), left_widget.setEnabled(enable_cb.isChecked())])
+        
+        # Set initial enabled state
+        left_widget.setEnabled(enabled)
+        
+        return row, apps, thresh, enable_cb
 
     def on_change_update_ok_btn_state(self):
         enabled = True
@@ -1427,7 +1450,7 @@ class StartupTimeConfig(QDialog):
                 continue
             for entry in self.widgets['ecu-config'][i]['startup']:
                 text = self._get_widget_text(entry[2])
-                if self.widgets['Startup Order Judgement'].isChecked() and (not text or len(text) == 0 or text.startswith(' ') or text.endswith(' ')):
+                if entry[4].isChecked() and self.widgets['Startup Order Judgement'].isChecked() and (not text or len(text) == 0 or text.startswith(' ') or text.endswith(' ')):
                     self._set_widget_style(entry[2], 'border: 1px solid red;')
                     enabled = False
                     ecu_error_list[i] = True
@@ -1435,14 +1458,14 @@ class StartupTimeConfig(QDialog):
                     self._set_widget_style(entry[2], 'border: 0px;')
             for entry in self.widgets['ecu-config'][i]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
-                if (not apps_text or len(apps_text) == 0 or apps_text.startswith(' ') or apps_text.endswith(' ')):
+                if entry[3].isChecked() and (not apps_text or len(apps_text) == 0 or apps_text.startswith(' ') or apps_text.endswith(' ')):
                     self._set_widget_style(entry[1], 'border: 1px solid red;')
                     enabled = False
                     ecu_error_list[i] = True
                 else:
                     self._set_widget_style(entry[1], 'border: 0px;')
                 threshold_text = self._get_widget_text(entry[2])
-                if (not threshold_text or len(threshold_text) == 0 or not threshold_text.isdigit() or not (1 <= int(threshold_text) <= 100)):
+                if entry[3].isChecked() and (not threshold_text or len(threshold_text) == 0 or not threshold_text.isdigit() or not (1 <= int(threshold_text) <= 100)):
                     self._set_widget_style(entry[2], 'border: 1px solid red;')
                 else:
                     self._set_widget_style(entry[2], 'border: 0px;')
@@ -1476,7 +1499,7 @@ class StartupTimeConfig(QDialog):
                 else:
                     for entry in self.widgets['ecu-config'][0]['startup']:
                         text = self._get_widget_text(entry[2])
-                        if not text or len(text) == 0:
+                        if (not text or len(text) == 0) and entry[4].isChecked():
                             enabled = False
                             ecu_error_list[0] = True
                             break
@@ -1487,7 +1510,7 @@ class StartupTimeConfig(QDialog):
                 else:
                     for entry in self.widgets['ecu-config'][1]['startup']:
                         text = self._get_widget_text(entry[2])
-                        if not text or len(text) == 0:
+                        if (not text or len(text) == 0) and entry[4].isChecked():
                             enabled = False
                             ecu_error_list[1] = True
                             break
@@ -1498,7 +1521,7 @@ class StartupTimeConfig(QDialog):
                 else:
                     for entry in self.widgets['ecu-config'][2]['startup']:
                         text = self._get_widget_text(entry[2])
-                        if not text or len(text) == 0:
+                        if (not text or len(text) == 0) and entry[4].isChecked():
                             enabled = False
                             ecu_error_list[2] = True
                             break
@@ -1509,7 +1532,7 @@ class StartupTimeConfig(QDialog):
                 else:
                     for entry in self.widgets['ecu-config'][3]['startup']:
                         text = self._get_widget_text(entry[2])
-                        if not text or len(text) == 0:
+                        if (not text or len(text) == 0) and entry[4].isChecked():
                             enabled = False
                             ecu_error_list[3] = True
                             break
@@ -1518,7 +1541,7 @@ class StartupTimeConfig(QDialog):
             for entry in self.widgets['ecu-config'][0]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
                 threshold_text = self._get_widget_text(entry[2])
-                if not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0:
+                if (not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0) and entry[3].isChecked():
                     enabled = False
                     ecu_error_list[0] = True
                     break
@@ -1527,7 +1550,7 @@ class StartupTimeConfig(QDialog):
             for entry in self.widgets['ecu-config'][1]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
                 threshold_text = self._get_widget_text(entry[2])
-                if not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0:
+                if (not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0) and entry[3].isChecked():
                     enabled = False
                     ecu_error_list[1] = True
                     break
@@ -1536,7 +1559,7 @@ class StartupTimeConfig(QDialog):
             for entry in self.widgets['ecu-config'][2]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
                 threshold_text = self._get_widget_text(entry[2])
-                if not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0:
+                if (not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0) and entry[3].isChecked():
                     enabled = False
                     ecu_error_list[2] = True
                     break
@@ -1545,7 +1568,7 @@ class StartupTimeConfig(QDialog):
             for entry in self.widgets['ecu-config'][3]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
                 threshold_text = self._get_widget_text(entry[2])
-                if not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0:
+                if (not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0) and entry[3].isChecked():
                     enabled = False
                     ecu_error_list[3] = True
                     break
@@ -1582,9 +1605,9 @@ class StartupTimeConfig(QDialog):
     def add_startup_row(self, ecu_type, idx):
         # self.ok_btn.setDisabled(False)
         entry = self.widgets['ecu-config'][idx]
-        row, dd, apps, rem = self._create_startup_row(ecu_type, '', '', idx)
+        row, dd, apps, rem, enable_cb = self._create_startup_row(ecu_type, '', '', idx)
         entry['startup_layout'].addRow(row)
-        entry['startup'].append((row, dd, apps, rem))
+        entry['startup'].append((row, dd, apps, rem, enable_cb))
         if len(entry['startup']) == 1:
             rem.setDisabled(True)
         else:
@@ -1608,9 +1631,9 @@ class StartupTimeConfig(QDialog):
 
     def add_threshold_row(self, ecu_type, idx):
         entry = self.widgets['ecu-config'][idx]
-        row, apps, thresh = self._create_threshold_row(ecu_type, '', '', idx)
+        row, apps, thresh, enable_cb = self._create_threshold_row(ecu_type, '', '', idx)
         entry['threshold_layout'].addRow(row)
-        entry['threshold'].append((row, apps, thresh))
+        entry['threshold'].append((row, apps, thresh, enable_cb))
         self._notify_content_changed(idx)
 
     def remove_threshold_row(self, idx, row):
@@ -1862,15 +1885,23 @@ class StartupTimeConfig(QDialog):
                (title == 'SoC1' and not (self.isSOC1 and self.isElite))):
                 continue
             for entry in item['startup']:
-                # entry is (row, dd, apps, count_lbl, rem)
-                _, dd, apps, _ = entry
-                ec_item['startup-order'].append({'Order Type': dd.currentText(), 'Applications': self._get_widget_text(apps)})
+                # entry is (row, dd, apps, rem, enable_cb)
+                _, dd, apps, _, enable_cb = entry
+                ec_item['startup-order'].append({
+                    'Order Type': dd.currentText(), 
+                    'Applications': self._get_widget_text(apps),
+                    'enabled': enable_cb.isChecked()
+                })
             for entry in item['threshold']:
-                # entry is (row, apps, thresh)
-                _, apps, thresh = entry
+                # entry is (row, apps, thresh, enable_cb)
+                _, apps, thresh, enable_cb = entry
                 threshold_text = self._get_widget_text(thresh)
                 if threshold_text:  # Only save if threshold value is provided
-                    ec_item['threshold-config'].append({'Applications': self._get_widget_text(apps), 'Threshold': int(threshold_text)})
+                    ec_item['threshold-config'].append({
+                        'Applications': self._get_widget_text(apps), 
+                        'Threshold': int(threshold_text),
+                        'enabled': enable_cb.isChecked()
+                    })
             
             # Save non-configured application settings
             apply_radio = item['apply_radio_btn']
