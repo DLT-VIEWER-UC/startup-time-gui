@@ -1187,13 +1187,6 @@ class StartupTimeConfig(QDialog):
         left_form = QFormLayout(left_widget)
         left_form.setContentsMargins(0, 0, 0, 0)
         
-        # Type row
-        dd = QComboBox(); dd.addItems(["Sequential", "Parallel"])
-        dd.setFixedWidth(150)  # Set fixed width to 150 pixels
-        idx = dd.findText(type_val)
-        dd.setCurrentIndex(idx if idx != -1 else 0)
-        # dd.currentIndexChanged.connect(lambda idx: self.ok_btn.setEnabled(True))
-        
         # Apps row - using custom application selector widget
         ecu_family, ecu_type = self._get_ecu_family_and_type(ecu_type)
         apps = ApplicationSelectorWidget(
@@ -1203,15 +1196,46 @@ class StartupTimeConfig(QDialog):
             ecu_idx=ecu_idx,
             placeholder_text='App1, App2'
         )
+        
+        # Create application count label
+        def count_applications(text):
+            """Count non-empty comma-separated values"""
+            if not text or not text.strip():
+                return 0
+            apps_list = [app.strip() for app in text.split(',') if app.strip()]
+            return len(apps_list)
+        
+        count_label = QLabel(f"Configured Application Count: {count_applications(apps_val)}")
+        count_label.setStyleSheet("color: #666666; font-size: 11px;")
+        
+        # Update count when text changes
+        def update_count_and_validation(text):
+            count = count_applications(text)
+            count_label.setText(f"Configured Application Count: {count}")
+            self.on_change_update_ok_btn_state()
+            
         apps.set_text(apps_val)
-        apps.text_field.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
+        apps.text_field.textChanged.connect(update_count_and_validation)
+
+        # Type row with count label at the end
+        dd = QComboBox(); dd.addItems(["Sequential", "Parallel"])
+        dd.setFixedWidth(150)  # Set fixed width to 150 pixels
+        idx = dd.findText(type_val)
+        dd.setCurrentIndex(idx if idx != -1 else 0)
+        
+        type_row = QWidget()
+        type_hl = QHBoxLayout(type_row)
+        type_hl.setContentsMargins(0, 0, 0, 0)
+        type_hl.addWidget(dd)
+        type_hl.addStretch()  # Push count label to the right
+        type_hl.addWidget(count_label)
 
         apps_row = QWidget()
         apps_hl = QHBoxLayout(apps_row)
         apps_hl.setContentsMargins(0, 0, 0, 0)
         apps_hl.addWidget(apps)
         
-        left_form.addRow(QLabel('Order Type'), dd)
+        left_form.addRow(QLabel('Order Type'), type_row)
         left_form.addRow(QLabel('Applications'), apps_row)
 
         rem = QPushButton('Remove')
@@ -1240,15 +1264,33 @@ class StartupTimeConfig(QDialog):
             ecu_idx=ecu_idx,
             placeholder_text='App1, App2, App3'
         )
+        
+        # Create application count label
+        def count_applications(text):
+            """Count non-empty comma-separated values"""
+            if not text or not text.strip():
+                return 0
+            apps_list = [app.strip() for app in text.split(',') if app.strip()]
+            return len(apps_list)
+        
+        count_label = QLabel(f"Configured Application Count: {count_applications(apps_val)}")
+        count_label.setStyleSheet("color: #666666; font-size: 11px;")
+        
+        # Update count when text changes
+        def update_count_and_validation(text):
+            count = count_applications(text)
+            count_label.setText(f"Configured Application Count: {count}")
+            self.on_change_update_ok_btn_state()
+            
         apps.set_text(apps_val)
-        apps.text_field.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
+        apps.text_field.textChanged.connect(update_count_and_validation)
 
         apps_row = QWidget()
         apps_hl = QHBoxLayout(apps_row)
         apps_hl.setContentsMargins(0, 0, 0, 0)
         apps_hl.addWidget(apps)
         
-        # Threshold row
+        # Threshold row with count label at the end
         thresh = QLineEdit(str(threshold_val))
         thresh.setPlaceholderText('5')
         thresh.setValidator(CustomIntValidator(1, 100))
@@ -1260,7 +1302,8 @@ class StartupTimeConfig(QDialog):
         thresh_hl.setContentsMargins(0, 0, 0, 0)
         thresh_hl.addWidget(thresh)
         thresh_hl.addWidget(QLabel('[Int: 1 - 100 sec]'))
-        thresh_hl.addStretch()  # Push everything to the left
+        thresh_hl.addStretch()  # Push count label to the right
+        thresh_hl.addWidget(count_label)
 
         left_form.addRow(QLabel('Applications'), apps_row)
         left_form.addRow(QLabel('Threshold'), thresh_row)
