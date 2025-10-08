@@ -1034,6 +1034,9 @@ class StartupTimeConfig(QDialog):
         self.update_app_input_button()
         
         self.on_change_update_ok_btn_state()
+        for ecu_widgets in self.widgets['ecu-config']:
+            apply_checkbox = ecu_widgets['apply_checkbox']
+            apply_checkbox.toggled.connect(self.on_change_update_ok_btn_state)
 
     def update_border(self, key):
         
@@ -1133,37 +1136,16 @@ class StartupTimeConfig(QDialog):
         non_config_group = QGroupBox('Non-Configured Application Settings for Startup Time Threshold')
         non_config_layout = QHBoxLayout()
         
-        # First column - Radio buttons
-        radio_column = QVBoxLayout()
-        
         # Get settings from config data
         non_config_settings = data.get('non-configured-settings', {})
         apply_threshold = non_config_settings.get('apply', False)
         threshold_value = non_config_settings.get('threshold', 5)
         
-        # Radio button group
-        radio_group = QButtonGroup()
-        apply_radio = QRadioButton('Apply')
-        do_not_apply_radio = QRadioButton('Do Not Apply')
+        # Apply checkbox
+        apply_checkbox = QCheckBox('Apply')
+        apply_checkbox.setChecked(apply_threshold)
         
-        # Set initial state
-        if apply_threshold:
-            apply_radio.setChecked(True)
-        else:
-            do_not_apply_radio.setChecked(True)
-            
-        radio_group.addButton(apply_radio, 1)
-        radio_group.addButton(do_not_apply_radio, 0)
-        
-        radio_column.addWidget(apply_radio)
-        radio_column.addWidget(do_not_apply_radio)
-        
-        # Second column - Threshold input
-        threshold_column = QVBoxLayout()
-        threshold_row_widget = QWidget()
-        threshold_row_layout = QHBoxLayout(threshold_row_widget)
-        threshold_row_layout.setContentsMargins(0, 0, 0, 0)
-        
+        # Threshold input section
         threshold_label = QLabel('Threshold')
         threshold_input = QLineEdit(str(threshold_value))
         threshold_input.setValidator(CustomIntValidator(1, 100))
@@ -1171,30 +1153,25 @@ class StartupTimeConfig(QDialog):
         threshold_input.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
         sec_label = QLabel('sec')
         
-        threshold_row_layout.addWidget(threshold_label)
-        threshold_row_layout.addWidget(threshold_input)
-        threshold_row_layout.addWidget(sec_label)
-        threshold_row_layout.addStretch()
-        
-        threshold_column.addWidget(threshold_row_widget)
-        
-        # Enable/disable threshold row based on radio selection
+        # Enable/disable threshold row based on checkbox selection
         def toggle_threshold_row():
-            enabled = apply_radio.isChecked()  # Apply radio is checked
+            enabled = apply_checkbox.isChecked()
             threshold_label.setEnabled(enabled)
             threshold_input.setEnabled(enabled)
             sec_label.setEnabled(enabled)
             
-        # Connect both radio buttons to the toggle function
-        apply_radio.toggled.connect(toggle_threshold_row)
-        do_not_apply_radio.toggled.connect(toggle_threshold_row)
+        # Connect checkbox to the toggle function
+        apply_checkbox.toggled.connect(toggle_threshold_row)
         
         # Set initial enabled state
         toggle_threshold_row()
         
-        non_config_layout.addLayout(radio_column)
-        non_config_layout.addSpacing(30)  # Add padding between columns
-        non_config_layout.addLayout(threshold_column)
+        # Layout arrangement: checkbox, then threshold controls
+        non_config_layout.addWidget(apply_checkbox)
+        non_config_layout.addSpacing(20)  # Add padding between checkbox and threshold controls
+        non_config_layout.addWidget(threshold_label)
+        non_config_layout.addWidget(threshold_input)
+        non_config_layout.addWidget(sec_label)
         non_config_layout.addStretch()
         non_config_group.setLayout(non_config_layout)
         non_config_group.setFixedWidth(400)
@@ -1235,8 +1212,7 @@ class StartupTimeConfig(QDialog):
             'threshold': threshold_entries, 
             'add_startup_btn': add_startup_btn, 
             'add_threshold_btn': add_threshold_btn,
-            'apply_radio_btn': apply_radio,
-            'do_not_apply_radio_btn': do_not_apply_radio,
+            'apply_checkbox': apply_checkbox,
             'nc_threshold_input': threshold_input
         })
         return gb
@@ -1448,6 +1424,14 @@ class StartupTimeConfig(QDialog):
         for i in range(4):
             if self.ecu_block_list[i].disabled:
                 continue
+            enable_checkbox=self.widgets['ecu-config'][i]['apply_checkbox']
+            threshold_input=self.widgets['ecu-config'][i]['nc_threshold_input']
+            if enable_checkbox.isChecked() and (not threshold_input.text() or len(threshold_input.text()) == 0 or not threshold_input.text().isdigit() or not (1 <= int(threshold_input.text()) <= 100)):
+                self._set_widget_style(threshold_input, 'border: 1px solid red;')
+                enabled = False
+                ecu_error_list[i] = True
+            else:
+                self._set_widget_style(threshold_input, 'border: 0px;')
             for entry in self.widgets['ecu-config'][i]['startup']:
                 text = self._get_widget_text(entry[2])
                 if entry[4].isChecked() and self.widgets['Startup Order Judgement'].isChecked() and (not text or len(text) == 0 or text.startswith(' ') or text.endswith(' ')):
@@ -1904,12 +1888,12 @@ class StartupTimeConfig(QDialog):
                     })
             
             # Save non-configured application settings
-            apply_radio = item['apply_radio_btn']
+            apply_checkbox = item['apply_checkbox']
             threshold_input = item['nc_threshold_input']
 
-            if apply_radio and threshold_input:
+            if apply_checkbox and threshold_input:
                 non_config_settings = {
-                    'apply': apply_radio.isChecked(),
+                    'apply': apply_checkbox.isChecked(),
                     'threshold': int(threshold_input.text()) if threshold_input.text() else 5
                 }
                 ec_item['non-configured-settings'] = non_config_settings
