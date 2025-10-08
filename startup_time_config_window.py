@@ -1305,8 +1305,8 @@ class StartupTimeConfig(QDialog):
         thresh_hl.addStretch()  # Push count label to the right
         thresh_hl.addWidget(count_label)
 
-        left_form.addRow(QLabel('Applications'), apps_row)
         left_form.addRow(QLabel('Threshold'), thresh_row)
+        left_form.addRow(QLabel('Applications'), apps_row)
 
         # Right side - Remove button (centered vertically)
         rem = QPushButton('Remove')
