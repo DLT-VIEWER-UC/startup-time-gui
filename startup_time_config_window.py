@@ -1127,6 +1127,82 @@ class StartupTimeConfig(QDialog):
         # Threshold Config Section
         self.threshold_group = QGroupBox('Threshold Configuration')
         threshold_vbox = QVBoxLayout()
+        
+        # Non-Configured Application Settings
+        non_config_group = QGroupBox('Non-Configured Application Settings for Startup Time Threshold')
+        non_config_layout = QHBoxLayout()
+        
+        # First column - Radio buttons
+        radio_column = QVBoxLayout()
+        
+        # Get settings from config data
+        non_config_settings = data.get('non-configured-settings', {})
+        apply_threshold = non_config_settings.get('apply', False)
+        threshold_value = non_config_settings.get('threshold', 5)
+        
+        # Radio button group
+        radio_group = QButtonGroup()
+        apply_radio = QRadioButton('Apply')
+        do_not_apply_radio = QRadioButton('Do Not Apply')
+        
+        # Set initial state
+        if apply_threshold:
+            apply_radio.setChecked(True)
+        else:
+            do_not_apply_radio.setChecked(True)
+            
+        radio_group.addButton(apply_radio, 1)
+        radio_group.addButton(do_not_apply_radio, 0)
+        
+        radio_column.addWidget(apply_radio)
+        radio_column.addWidget(do_not_apply_radio)
+        
+        # Second column - Threshold input
+        threshold_column = QVBoxLayout()
+        threshold_row_widget = QWidget()
+        threshold_row_layout = QHBoxLayout(threshold_row_widget)
+        threshold_row_layout.setContentsMargins(0, 0, 0, 0)
+        
+        threshold_label = QLabel('Threshold')
+        threshold_input = QLineEdit(str(threshold_value))
+        threshold_input.setValidator(CustomIntValidator(1, 100))
+        threshold_input.setFixedWidth(80)
+        threshold_input.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
+        sec_label = QLabel('sec')
+        
+        threshold_row_layout.addWidget(threshold_label)
+        threshold_row_layout.addWidget(threshold_input)
+        threshold_row_layout.addWidget(sec_label)
+        threshold_row_layout.addStretch()
+        
+        threshold_column.addWidget(threshold_row_widget)
+        
+        # Enable/disable threshold row based on radio selection
+        def toggle_threshold_row():
+            enabled = apply_radio.isChecked()  # Apply radio is checked
+            threshold_label.setEnabled(enabled)
+            threshold_input.setEnabled(enabled)
+            sec_label.setEnabled(enabled)
+            
+        # Connect both radio buttons to the toggle function
+        apply_radio.toggled.connect(toggle_threshold_row)
+        do_not_apply_radio.toggled.connect(toggle_threshold_row)
+        
+        # Set initial enabled state
+        toggle_threshold_row()
+        
+        non_config_layout.addLayout(radio_column)
+        non_config_layout.addSpacing(30)  # Add padding between columns
+        non_config_layout.addLayout(threshold_column)
+        non_config_layout.addStretch()
+        non_config_group.setLayout(non_config_layout)
+        non_config_group.setFixedWidth(400)
+        
+        
+        # Add to threshold section
+        threshold_vbox.addWidget(non_config_group)
+        
+        # Regular threshold configuration
         threshold_fl = QFormLayout()
         threshold_entries = []
         for threshold in data.get('threshold-config', []):
@@ -1149,7 +1225,18 @@ class StartupTimeConfig(QDialog):
         gb.removed.connect(self.handle_group_removed)
         
         self.startup_group_list.append(startup_group)
-        self.widgets['ecu-config'].append({'ecu_type': data.get('ecu-type'), 'startup_layout': startup_fl, 'startup': startup_entries, 'threshold_layout': threshold_fl, 'threshold': threshold_entries, 'add_startup_btn': add_startup_btn, 'add_threshold_btn': add_threshold_btn})
+        self.widgets['ecu-config'].append({
+            'ecu_type': data.get('ecu-type'), 
+            'startup_layout': startup_fl, 
+            'startup': startup_entries, 
+            'threshold_layout': threshold_fl, 
+            'threshold': threshold_entries, 
+            'add_startup_btn': add_startup_btn, 
+            'add_threshold_btn': add_threshold_btn,
+            'apply_radio_btn': apply_radio,
+            'do_not_apply_radio_btn': do_not_apply_radio,
+            'nc_threshold_input': threshold_input
+        })
         return gb
 
     def _get_ecu_family_and_type(self, ecu_type):
@@ -1784,6 +1871,18 @@ class StartupTimeConfig(QDialog):
                 threshold_text = self._get_widget_text(thresh)
                 if threshold_text:  # Only save if threshold value is provided
                     ec_item['threshold-config'].append({'Applications': self._get_widget_text(apps), 'Threshold': int(threshold_text)})
+            
+            # Save non-configured application settings
+            apply_radio = item['apply_radio_btn']
+            threshold_input = item['nc_threshold_input']
+
+            if apply_radio and threshold_input:
+                non_config_settings = {
+                    'apply': apply_radio.isChecked(),
+                    'threshold': int(threshold_input.text()) if threshold_input.text() else 5
+                }
+                ec_item['non-configured-settings'] = non_config_settings
+            
             ec.append(ec_item)
         data['ecu-config'] = ec
         data['ECU_setting'] = self.ecu_selection
