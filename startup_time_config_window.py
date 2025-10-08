@@ -28,8 +28,498 @@ class CustomIntValidator(QIntValidator):
                 return (QIntValidator.Invalid, input_str, pos)
         else:
             return (QIntValidator.Invalid, input_str, pos)
-       
-           
+
+
+class ApplicationSelectorWidget(QWidget):
+    """Custom widget for selecting applications with dropdown checkboxes and editable text field"""
+    
+    def __init__(self, parent=None, ecu_family=None, ecu_type=None, ecu_idx=None, placeholder_text="App1, App2"):
+        super().__init__(parent)
+        self.parent_dialog = parent
+        self.ecu_family = ecu_family.upper() if ecu_family else None
+        self.ecu_type = ecu_type.upper() if ecu_type else None
+        self.ecu_idx = ecu_idx
+        self.application_checkboxes = {}
+        self.select_all_checkbox = None
+        self.updating_from_text = False
+        self.updating_from_checkboxes = False
+        
+        self.setup_ui(placeholder_text)
+        self.load_applications()
+        
+    def setup_ui(self, placeholder_text):
+        """Setup the UI components"""
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)  # Remove spacing between text field and button
+        
+        # Text field for editing applications
+        self.text_field = QLineEdit()
+        self.text_field.setPlaceholderText(placeholder_text)
+        self.text_field.textChanged.connect(self.on_text_changed)
+        
+        # Dropdown button
+        self.dropdown_btn = QPushButton("▼")
+        self.dropdown_btn.setFixedSize(25, 24)
+        self.dropdown_btn.clicked.connect(self.toggle_dropdown)
+        self.dropdown_btn.setStyleSheet("""
+            QPushButton {
+                border: 1px solid #cccccc;
+                border-left: none;
+                background-color: #f0f0f0;
+                border-radius: 0px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+            QPushButton:pressed {
+                background-color: #d0d0d0;
+            }
+        """)
+        
+        # Dropdown menu (initially hidden)
+        self.dropdown_menu = QWidget()
+        self.dropdown_menu.setWindowFlags(Qt.Popup)
+        self.dropdown_menu.setStyleSheet("""
+            QWidget {
+                background-color: white;
+                border: 1px solid #cccccc;
+                border-radius: 3px;
+            }
+            QCheckBox {
+                padding: 6px 8px;
+                margin: 0px;
+                border: none;
+                background-color: transparent;
+            }
+            QCheckBox:hover {
+                background-color: #e6f3ff;
+            }
+            QCheckBox:disabled {
+                color: #999999;
+                background-color: #f5f5f5;
+            }
+            QScrollArea {
+                border: none;
+                background-color: white;
+            }
+            QScrollBar:vertical {
+                background-color: #f0f0f0;
+                width: 12px;
+                border-radius: 6px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #c0c0c0;
+                min-height: 20px;
+                border-radius: 6px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #a0a0a0;
+            }
+            QScrollBar::add-line:vertical,
+            QScrollBar::sub-line:vertical {
+                height: 0px;
+                width: 0px;
+            }
+            QScrollBar::add-page:vertical,
+            QScrollBar::sub-page:vertical {
+                background: none;
+            }
+        """)
+        
+        dropdown_layout = QVBoxLayout(self.dropdown_menu)
+        dropdown_layout.setContentsMargins(0, 0, 0, 0)
+        dropdown_layout.setSpacing(0)
+        
+        # Scroll area for applications
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setMaximumHeight(200)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        self.apps_widget = QWidget()
+        self.apps_layout = QVBoxLayout(self.apps_widget)
+        self.apps_layout.setContentsMargins(0, 0, 0, 0)
+        self.apps_layout.setSpacing(0)
+        
+        self.scroll_area.setWidget(self.apps_widget)
+        dropdown_layout.addWidget(self.scroll_area)
+        
+        layout.addWidget(self.text_field)
+        layout.addWidget(self.dropdown_btn)
+        
+    def load_applications(self):
+        """Load applications from the parent dialog's application list"""
+        self.clear_checkboxes()
+        
+        if not self.parent_dialog or not hasattr(self.parent_dialog, 'application_list'):
+            return
+            
+        if not self.parent_dialog.application_list:
+            return
+            
+        # Get applications for this ECU type
+        apps = []
+        if self.ecu_family and self.ecu_type:
+            apps = self.parent_dialog.application_list.get(self.ecu_family, {}).get(self.ecu_type, [])
+        
+        if not apps:
+            return
+            
+        # Add "Select All" checkbox
+        self.select_all_checkbox = QCheckBox("Select All")
+        # Use clicked signal to avoid recursive calls and ensure it's always responsive
+        self.select_all_checkbox.clicked.connect(self.on_select_all_clicked)
+        self.select_all_checkbox.setStyleSheet("font-weight: bold; padding: 8px;")
+        self.apps_layout.addWidget(self.select_all_checkbox)
+        
+        # Add separator
+        separator = QWidget()
+        separator.setFixedHeight(1)
+        separator.setStyleSheet("background-color: #cccccc; margin: 2px 0px;")
+        self.apps_layout.addWidget(separator)
+        
+        # Add application checkboxes
+        for app in apps:
+            checkbox = QCheckBox(app)
+            # Use clicked signal instead of stateChanged to avoid recursive calls
+            checkbox.clicked.connect(self.on_application_checkbox_changed)
+            self.application_checkboxes[app] = checkbox
+            self.apps_layout.addWidget(checkbox)
+            
+        # Pre-render disabled states (but defer if parent widgets aren't ready)
+        try:
+            self.update_disabled_states()
+        except (IndexError, AttributeError):
+            # If parent widget structure isn't ready yet, skip for now
+            # This will be called again later when needed
+            pass
+        
+        # Update dropdown size to match text field width
+        self.update_dropdown_size()
+        
+    def clear_checkboxes(self):
+        """Clear all checkboxes from the dropdown"""
+        # Remove all widgets from layout
+        while self.apps_layout.count():
+            child = self.apps_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+                
+        self.application_checkboxes.clear()
+        self.select_all_checkbox = None
+        
+    def update_dropdown_size(self):
+        """Update dropdown size to match text field width"""
+        if hasattr(self, 'dropdown_menu') and hasattr(self, 'text_field'):
+            # Get the combined width of text field and button
+            total_width = self.text_field.width() + self.dropdown_btn.width()
+            self.dropdown_menu.setFixedWidth(total_width)
+            
+    def update_disabled_states(self):
+        """Update disabled states for all checkboxes based on cross-group selections within same group type"""
+        if not self.parent_dialog or self.ecu_idx is None or self.updating_from_checkboxes:
+            return
+            
+        # Safety check - ensure parent widget structure is ready
+        if not hasattr(self.parent_dialog, 'widgets') or 'ecu-config' not in self.parent_dialog.widgets:
+            return
+            
+        # Skip during checkbox updates to avoid interference
+        if hasattr(self, 'updating_from_text') and self.updating_from_text:
+            return
+            
+        # Determine if this widget is in startup or threshold group
+        is_startup_widget = self.is_startup_widget()
+        
+        # Get all selected applications from same group type for this ECU
+        selected_apps_in_group = set()
+        if hasattr(self.parent_dialog, 'widgets') and 'ecu-config' in self.parent_dialog.widgets:
+            # Add bounds checking to prevent IndexError
+            ecu_configs = self.parent_dialog.widgets['ecu-config']
+            if self.ecu_idx >= len(ecu_configs):
+                return  # Exit early if index is out of range
+                
+            ecu_config = ecu_configs[self.ecu_idx]
+            
+            # Collect widgets of the same type (startup or threshold)
+            same_type_widgets = []
+            if is_startup_widget:
+                for entry in ecu_config['startup']:
+                    if len(entry) >= 3 and hasattr(entry[2], 'application_checkboxes'):
+                        same_type_widgets.append(entry[2])
+            else:
+                for entry in ecu_config['threshold']:
+                    if len(entry) >= 2 and hasattr(entry[1], 'application_checkboxes'):
+                        same_type_widgets.append(entry[1])
+            
+            # Collect all currently selected applications from same group type
+            for widget in same_type_widgets:
+                if widget != self:  # Don't include this widget's selections yet
+                    for app, checkbox in widget.application_checkboxes.items():
+                        if checkbox.isChecked():
+                            selected_apps_in_group.add(app)
+            
+            # Update only this widget's checkboxes based on other widgets' selections
+            for app, checkbox in self.application_checkboxes.items():
+                # Enable checkbox if app is not selected in other widgets of same type
+                is_selected_elsewhere = app in selected_apps_in_group
+                checkbox.setEnabled(not is_selected_elsewhere or checkbox.isChecked())
+                    
+        # Update Select All checkbox state
+        self.update_select_all_state()
+        
+    def is_startup_widget(self):
+        """Determine if this widget is in a startup group by checking parent hierarchy"""
+        if not self.parent_dialog or self.ecu_idx is None:
+            return True  # Default to startup
+            
+        if hasattr(self.parent_dialog, 'widgets') and 'ecu-config' in self.parent_dialog.widgets:
+            # Add bounds checking to prevent IndexError
+            ecu_configs = self.parent_dialog.widgets['ecu-config']
+            if self.ecu_idx >= len(ecu_configs):
+                return True  # Default to startup if index is out of range
+                
+            ecu_config = ecu_configs[self.ecu_idx]
+            
+            # Check if this widget is in startup entries
+            for entry in ecu_config['startup']:
+                if len(entry) >= 3 and entry[2] is self:
+                    return True
+                    
+            # Check if this widget is in threshold entries  
+            for entry in ecu_config['threshold']:
+                if len(entry) >= 2 and entry[1] is self:
+                    return False
+                    
+        return True  # Default to startup if not found
+        
+    def update_select_all_state(self):
+        """Update the Select All checkbox state based on enabled applications"""
+        if not self.select_all_checkbox or self.updating_from_checkboxes:
+            return
+            
+        self.update_select_all_visual_state()
+        
+    def update_select_all_visual_state(self):
+        """Update the visual state of Select All checkbox without triggering events"""
+        if not self.select_all_checkbox:
+            return
+            
+        # Temporarily disconnect signal to avoid recursive calls
+        self.select_all_checkbox.clicked.disconnect()
+        
+        enabled_checkboxes = [cb for cb in self.application_checkboxes.values() if cb.isEnabled()]
+        
+        # Always keep Select All enabled so users can interact with it
+        self.select_all_checkbox.setEnabled(True)
+        
+        if not enabled_checkboxes:
+            # If no enabled checkboxes, set to unchecked but keep clickable
+            self.select_all_checkbox.setCheckState(Qt.Unchecked)
+        else:
+            checked_enabled = [cb for cb in enabled_checkboxes if cb.isChecked()]
+            
+            if len(checked_enabled) == 0:
+                self.select_all_checkbox.setCheckState(Qt.Unchecked)
+            elif len(checked_enabled) == len(enabled_checkboxes):
+                self.select_all_checkbox.setCheckState(Qt.Checked)
+            else:
+                self.select_all_checkbox.setCheckState(Qt.PartiallyChecked)
+        
+        # Reconnect the signal
+        self.select_all_checkbox.clicked.connect(self.on_select_all_clicked)
+        
+    def merge_checkbox_and_manual_apps(self):
+        """Merge checkbox selections with manually entered applications, preserving manual entries"""
+        # Get current text and parse all applications
+        current_text = self.text_field.text()
+        all_current_apps = [app.strip() for app in current_text.split(',') if app.strip()]
+        
+        # Get applications from checkboxes
+        checkbox_apps = [app for app, checkbox in self.application_checkboxes.items() 
+                        if checkbox.isChecked()]
+        
+        # Get manually entered applications (those not in dropdown)
+        manual_apps = [app for app in all_current_apps 
+                      if app not in self.application_checkboxes]
+        
+        # Combine checkbox selections with manual entries
+        combined_apps = checkbox_apps + manual_apps
+        
+        # Remove duplicates while preserving order
+        final_apps = []
+        seen = set()
+        for app in combined_apps:
+            if app not in seen:
+                final_apps.append(app)
+                seen.add(app)
+        
+        return final_apps
+            
+    def update_all_cross_group_disabling(self):
+        """Update cross-group disabling for all widgets in the same ECU and same group type"""
+        if self.parent_dialog and hasattr(self.parent_dialog, 'widgets') and 'ecu-config' in self.parent_dialog.widgets:
+            # Add bounds checking to prevent IndexError
+            ecu_configs = self.parent_dialog.widgets['ecu-config']
+            if self.ecu_idx >= len(ecu_configs):
+                return  # Exit early if index is out of range
+                
+            ecu_config = ecu_configs[self.ecu_idx]
+            
+            # Determine if this is a startup or threshold widget
+            is_startup = self.is_startup_widget()
+            
+            # Update only widgets of the same type
+            if is_startup:
+                # Update all startup widgets for this ECU
+                for entry in ecu_config['startup']:
+                    if len(entry) >= 3 and hasattr(entry[2], 'update_disabled_states'):
+                        entry[2].update_disabled_states()
+            else:
+                # Update all threshold widgets for this ECU
+                for entry in ecu_config['threshold']:
+                    if len(entry) >= 2 and hasattr(entry[1], 'update_disabled_states'):
+                        entry[1].update_disabled_states()
+        
+    def toggle_dropdown(self):
+        """Toggle the dropdown visibility"""
+        if self.dropdown_menu.isVisible():
+            self.dropdown_menu.hide()
+        else:
+            # Update dropdown size and disabled states before showing
+            self.update_dropdown_size()
+            self.update_disabled_states()
+            
+            # Position dropdown below the widget with some spacing
+            pos = self.mapToGlobal(self.text_field.geometry().bottomLeft())
+            pos.setY(pos.y() + 5)  # Add 5 pixels spacing below the button
+            self.dropdown_menu.move(pos)
+            self.dropdown_menu.show()
+            self.dropdown_menu.raise_()
+            
+    def on_text_changed(self):
+        """Handle text field changes"""
+        if self.updating_from_checkboxes:
+            return
+            
+        self.updating_from_text = True
+        
+        # Parse applications from text
+        text = self.text_field.text()
+        selected_apps = [app.strip() for app in text.split(',') if app.strip()]
+        
+        # Temporarily disconnect checkbox signals to avoid recursive calls
+        for app, checkbox in self.application_checkboxes.items():
+            checkbox.clicked.disconnect()
+            checkbox.setChecked(app in selected_apps)
+            checkbox.clicked.connect(self.on_application_checkbox_changed)
+        
+        # Update Select All state
+        self.update_select_all_visual_state()
+                
+        # Update cross-group disabling for all widgets (after a small delay)
+        if hasattr(self.parent_dialog, 'update_all_disabled_states_delayed'):
+            self.parent_dialog.update_all_disabled_states_delayed()
+        
+        self.updating_from_text = False
+        
+    def on_application_checkbox_changed(self):
+        """Handle individual application checkbox changes"""
+        if self.updating_from_text:
+            return
+            
+        self.updating_from_checkboxes = True
+        
+        # Merge checkbox selections with manually entered applications
+        final_apps = self.merge_checkbox_and_manual_apps()
+        
+        # Update text field with combined applications
+        self.text_field.setText(', '.join(final_apps))
+        
+        # Update Select All visual state
+        self.update_select_all_visual_state()
+                
+        # Trigger validation update on parent dialog
+        if hasattr(self.parent_dialog, 'on_change_update_ok_btn_state'):
+            self.parent_dialog.on_change_update_ok_btn_state()
+        
+        self.updating_from_checkboxes = False
+        
+        # Update cross-group disabling after the current operation is complete
+        if hasattr(self.parent_dialog, 'update_all_disabled_states_delayed'):
+            self.parent_dialog.update_all_disabled_states_delayed()
+        
+    def on_select_all_clicked(self):
+        """Handle select all checkbox clicks - only affects this dropdown's applications"""
+        if self.updating_from_text or not self.select_all_checkbox:
+            return
+            
+        self.updating_from_checkboxes = True
+        
+        # Get all enabled checkboxes
+        enabled_checkboxes = [(app, cb) for app, cb in self.application_checkboxes.items() if cb.isEnabled()]
+        
+        if not enabled_checkboxes:
+            self.updating_from_checkboxes = False
+            return
+        
+        # Count currently selected enabled applications
+        selected_enabled = [cb for app, cb in enabled_checkboxes if cb.isChecked()]
+        
+        # Determine action based on current selection state:
+        # - If all enabled apps are selected -> uncheck all
+        # - If no apps or some apps are selected -> check all enabled apps
+        if len(selected_enabled) == len(enabled_checkboxes):
+            # All enabled apps are selected, so uncheck all
+            check_all = False
+        else:
+            # No apps or some apps selected, so check all enabled apps
+            check_all = True
+        
+        # Update only the enabled checkboxes in this dropdown
+        for app, checkbox in enabled_checkboxes:
+            checkbox.setChecked(check_all)
+        
+        # Merge checkbox selections with manually entered applications
+        final_apps = self.merge_checkbox_and_manual_apps()
+        
+        # Update text field with combined applications
+        self.text_field.setText(', '.join(final_apps))
+        
+        # Update Select All visual state
+        self.update_select_all_visual_state()
+            
+        # Update cross-group disabling for all widgets in same group type
+        self.update_all_cross_group_disabling()
+        
+        # Trigger validation update on parent dialog
+        if hasattr(self.parent_dialog, 'on_change_update_ok_btn_state'):
+            self.parent_dialog.on_change_update_ok_btn_state()
+        
+        self.updating_from_checkboxes = False
+        
+
+                                
+    def get_text(self):
+        """Get the current text value"""
+        return self.text_field.text()
+        
+    def set_text(self, text):
+        """Set the text value"""
+        self.text_field.setText(text)
+        self.on_text_changed()  # Trigger update
+        
+    def refresh_applications(self):
+        """Refresh the application list from the parent dialog"""
+        current_text = self.text_field.text()
+        self.load_applications()
+        self.set_text(current_text)  # Restore current selections
+
+
 class StartupTimeConfig(QDialog):
     DEFAULT_CONFIG = {
         # 'DLT-Viewer Log Capture Time': 0,
@@ -521,7 +1011,7 @@ class StartupTimeConfig(QDialog):
         self.pre_gen_logs_cb.toggled.emit(self.pre_gen_logs_cb.isChecked())
         for i, ecu_config in enumerate(self.widgets['ecu-config']):
             if len(ecu_config['startup']) == 0:
-                self.add_startup_row(i)
+                self.add_startup_row(ecu_config['ecu_type'], i)
         
         for idx, ecu_type in enumerate(['PADAS', 'RCAR', 'SoC0', 'SoC1']):
             block = self.ecu_block_list[idx]
@@ -623,11 +1113,11 @@ class StartupTimeConfig(QDialog):
         startup_fl = QFormLayout()
         startup_entries = []
         for order in data.get('startup-order', []):
-            row, tp, apps, rem = self._create_startup_row(order.get('Order Type', ''), order.get('Applications', ''), idx)
+            row, tp, apps, rem = self._create_startup_row(data.get('ecu-type'), order.get('Order Type', ''), order.get('Applications', ''), idx)
             startup_fl.addRow(row)
             startup_entries.append((row, tp, apps, rem))
         add_startup_btn = QPushButton('Add Startup Order')
-        add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(i), self.on_change_update_ok_btn_state(), gb.content_changed()])
+        add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(data.get('ecu-type'), i), self.on_change_update_ok_btn_state(), gb.content_changed()])
         startup_vbox.addLayout(startup_fl)
         startup_vbox.addWidget(add_startup_btn, alignment=Qt.AlignLeft)
         startup_group.setLayout(startup_vbox)
@@ -640,11 +1130,11 @@ class StartupTimeConfig(QDialog):
         threshold_fl = QFormLayout()
         threshold_entries = []
         for threshold in data.get('threshold-config', []):
-            row, apps, thresh = self._create_threshold_row(threshold.get('Applications', ''), threshold.get('Threshold', ''), idx)
+            row, apps, thresh = self._create_threshold_row(data.get('ecu-type'), threshold.get('Applications', ''), threshold.get('Threshold', ''), idx)
             threshold_fl.addRow(row)
             threshold_entries.append((row, apps, thresh))
         add_threshold_btn = QPushButton('Add Threshold Config')
-        add_threshold_btn.clicked.connect(lambda _, i=idx: [self.add_threshold_row(i), self.on_change_update_ok_btn_state(), gb.content_changed()])
+        add_threshold_btn.clicked.connect(lambda _, i=idx: [self.add_threshold_row(data.get('ecu-type'), i), self.on_change_update_ok_btn_state(), gb.content_changed()])
         threshold_vbox.addLayout(threshold_fl)
         threshold_vbox.addWidget(add_threshold_btn, alignment=Qt.AlignLeft)
         self.threshold_group.setLayout(threshold_vbox)
@@ -659,10 +1149,36 @@ class StartupTimeConfig(QDialog):
         gb.removed.connect(self.handle_group_removed)
         
         self.startup_group_list.append(startup_group)
-        self.widgets['ecu-config'].append({'startup_layout': startup_fl, 'startup': startup_entries, 'threshold_layout': threshold_fl, 'threshold': threshold_entries, 'add_startup_btn': add_startup_btn, 'add_threshold_btn': add_threshold_btn})
+        self.widgets['ecu-config'].append({'ecu_type': data.get('ecu-type'), 'startup_layout': startup_fl, 'startup': startup_entries, 'threshold_layout': threshold_fl, 'threshold': threshold_entries, 'add_startup_btn': add_startup_btn, 'add_threshold_btn': add_threshold_btn})
         return gb
 
-    def _create_startup_row(self, type_val, apps_val, ecu_idx):
+    def _get_ecu_family_and_type(self, ecu_type):
+        """Map ECU index to family and type for application selection"""
+        ecu_mapping = {
+            'PADAS': ('PADAS', 'RCAR'),  # PADAS-RCAR
+            'RCAR': ('ELITE', 'RCAR'),  # ELITE-RCAR  
+            'SoC0': ('ELITE', 'SoC0'),  # ELITE-SoC0
+            'SoC1': ('ELITE', 'SoC1')   # ELITE-SoC1
+        }
+        return ecu_mapping.get(ecu_type, (None, None))
+    
+    def _get_widget_text(self, widget):
+        """Get text from either QLineEdit or ApplicationSelectorWidget"""
+        if hasattr(widget, 'get_text'):
+            return widget.get_text()
+        elif hasattr(widget, 'text'):
+            return widget.text()
+        else:
+            return ''
+    
+    def _set_widget_style(self, widget, style):
+        """Set style for either QLineEdit or ApplicationSelectorWidget"""
+        if hasattr(widget, 'text_field'):
+            widget.text_field.setStyleSheet(style)
+        else:
+            widget.setStyleSheet(style)
+
+    def _create_startup_row(self, ecu_type, type_val, apps_val, ecu_idx):
         row = QWidget()
         main_layout = QHBoxLayout(); row.setLayout(main_layout)
         
@@ -678,11 +1194,17 @@ class StartupTimeConfig(QDialog):
         dd.setCurrentIndex(idx if idx != -1 else 0)
         # dd.currentIndexChanged.connect(lambda idx: self.ok_btn.setEnabled(True))
         
-        # Apps row
-        apps = QLineEdit(apps_val)
-        apps.setPlaceholderText('App1, App2')
-        # apps.setMaxLength(250)
-        apps.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
+        # Apps row - using custom application selector widget
+        ecu_family, ecu_type = self._get_ecu_family_and_type(ecu_type)
+        apps = ApplicationSelectorWidget(
+            parent=self, 
+            ecu_family=ecu_family, 
+            ecu_type=ecu_type, 
+            ecu_idx=ecu_idx,
+            placeholder_text='App1, App2'
+        )
+        apps.set_text(apps_val)
+        apps.text_field.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
 
         apps_row = QWidget()
         apps_hl = QHBoxLayout(apps_row)
@@ -700,7 +1222,7 @@ class StartupTimeConfig(QDialog):
         
         return row, dd, apps, rem
 
-    def _create_threshold_row(self, apps_val, threshold_val, ecu_idx):
+    def _create_threshold_row(self, ecu_type, apps_val, threshold_val, ecu_idx):
         row = QWidget()
         main_layout = QHBoxLayout(); row.setLayout(main_layout)
         
@@ -709,11 +1231,17 @@ class StartupTimeConfig(QDialog):
         left_form = QFormLayout(left_widget)
         left_form.setContentsMargins(0, 0, 0, 0)
         
-        # Applications row
-        apps = QLineEdit(apps_val)
-        apps.setPlaceholderText('App1, App2, App3')
-        # apps.setMaxLength(250)
-        apps.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
+        # Applications row - using custom application selector widget
+        ecu_family, ecu_type = self._get_ecu_family_and_type(ecu_type)
+        apps = ApplicationSelectorWidget(
+            parent=self, 
+            ecu_family=ecu_family, 
+            ecu_type=ecu_type, 
+            ecu_idx=ecu_idx,
+            placeholder_text='App1, App2, App3'
+        )
+        apps.set_text(apps_val)
+        apps.text_field.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
 
         apps_row = QWidget()
         apps_hl = QHBoxLayout(apps_row)
@@ -768,23 +1296,26 @@ class StartupTimeConfig(QDialog):
             if self.ecu_block_list[i].disabled:
                 continue
             for entry in self.widgets['ecu-config'][i]['startup']:
-                if self.widgets['Startup Order Judgement'].isChecked() and (not entry[2].text() or len(entry[2].text()) == 0 or entry[2].text().startswith(' ') or entry[2].text().endswith(' ')):
-                    entry[2].setStyleSheet('border: 1px solid red;')
+                text = self._get_widget_text(entry[2])
+                if self.widgets['Startup Order Judgement'].isChecked() and (not text or len(text) == 0 or text.startswith(' ') or text.endswith(' ')):
+                    self._set_widget_style(entry[2], 'border: 1px solid red;')
                     enabled = False
                     ecu_error_list[i] = True
                 else:
-                    entry[2].setStyleSheet('border: 0px;')
+                    self._set_widget_style(entry[2], 'border: 0px;')
             for entry in self.widgets['ecu-config'][i]['threshold']:
-                if (not entry[1].text() or len(entry[1].text()) == 0 or entry[1].text().startswith(' ') or entry[1].text().endswith(' ')):
-                    entry[1].setStyleSheet('border: 1px solid red;')
+                apps_text = self._get_widget_text(entry[1])
+                if (not apps_text or len(apps_text) == 0 or apps_text.startswith(' ') or apps_text.endswith(' ')):
+                    self._set_widget_style(entry[1], 'border: 1px solid red;')
                     enabled = False
                     ecu_error_list[i] = True
                 else:
-                    entry[1].setStyleSheet('border: 0px;')
-                if (not entry[2].text() or len(entry[2].text()) == 0 or not entry[2].text().isdigit() or not (1 <= int(entry[2].text()) <= 100)):
-                    entry[2].setStyleSheet('border: 1px solid red;')
+                    self._set_widget_style(entry[1], 'border: 0px;')
+                threshold_text = self._get_widget_text(entry[2])
+                if (not threshold_text or len(threshold_text) == 0 or not threshold_text.isdigit() or not (1 <= int(threshold_text) <= 100)):
+                    self._set_widget_style(entry[2], 'border: 1px solid red;')
                 else:
-                    entry[2].setStyleSheet('border: 0px;')
+                    self._set_widget_style(entry[2], 'border: 0px;')
         for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Power ON-OFF Delay']:
             if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay'] and self.widgets['Pre-Generated Logs'].isChecked():
                 continue
@@ -814,7 +1345,8 @@ class StartupTimeConfig(QDialog):
                     ecu_error_list[0] = True
                 else:
                     for entry in self.widgets['ecu-config'][0]['startup']:
-                        if not entry[2].text() or len(entry[2].text()) == 0:
+                        text = self._get_widget_text(entry[2])
+                        if not text or len(text) == 0:
                             enabled = False
                             ecu_error_list[0] = True
                             break
@@ -824,7 +1356,8 @@ class StartupTimeConfig(QDialog):
                     ecu_error_list[1] = True
                 else:
                     for entry in self.widgets['ecu-config'][1]['startup']:
-                        if not entry[2].text() or len(entry[2].text()) == 0:
+                        text = self._get_widget_text(entry[2])
+                        if not text or len(text) == 0:
                             enabled = False
                             ecu_error_list[1] = True
                             break
@@ -834,7 +1367,8 @@ class StartupTimeConfig(QDialog):
                     ecu_error_list[2] = True
                 else:
                     for entry in self.widgets['ecu-config'][2]['startup']:
-                        if not entry[2].text() or len(entry[2].text()) == 0:
+                        text = self._get_widget_text(entry[2])
+                        if not text or len(text) == 0:
                             enabled = False
                             ecu_error_list[2] = True
                             break
@@ -844,35 +1378,44 @@ class StartupTimeConfig(QDialog):
                     ecu_error_list[3] = True
                 else:
                     for entry in self.widgets['ecu-config'][3]['startup']:
-                        if not entry[2].text() or len(entry[2].text()) == 0:
+                        text = self._get_widget_text(entry[2])
+                        if not text or len(text) == 0:
                             enabled = False
                             ecu_error_list[3] = True
                             break
         if self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
             # Check threshold entries for RCAR-PADAS
             for entry in self.widgets['ecu-config'][0]['threshold']:
-                if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                apps_text = self._get_widget_text(entry[1])
+                threshold_text = self._get_widget_text(entry[2])
+                if not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0:
                     enabled = False
                     ecu_error_list[0] = True
                     break
         if self.isRCAR and self.isElite and not self.ecu_block_list[1].disabled:
             # Check threshold entries for RCAR
             for entry in self.widgets['ecu-config'][1]['threshold']:
-                if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                apps_text = self._get_widget_text(entry[1])
+                threshold_text = self._get_widget_text(entry[2])
+                if not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0:
                     enabled = False
                     ecu_error_list[1] = True
                     break
         if self.isSOC0 and self.isElite and not self.ecu_block_list[2].disabled:
             # Check threshold entries for SoC0
             for entry in self.widgets['ecu-config'][2]['threshold']:
-                if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                apps_text = self._get_widget_text(entry[1])
+                threshold_text = self._get_widget_text(entry[2])
+                if not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0:
                     enabled = False
                     ecu_error_list[2] = True
                     break
         if self.isSOC1 and self.isElite and not self.ecu_block_list[3].disabled:
             # Check threshold entries for SoC1
             for entry in self.widgets['ecu-config'][3]['threshold']:
-                if not entry[1].text() or len(entry[1].text()) == 0 or not entry[2].text() or len(entry[2].text()) == 0:
+                apps_text = self._get_widget_text(entry[1])
+                threshold_text = self._get_widget_text(entry[2])
+                if not apps_text or len(apps_text) == 0 or not threshold_text or len(threshold_text) == 0:
                     enabled = False
                     ecu_error_list[3] = True
                     break
@@ -905,11 +1448,11 @@ class StartupTimeConfig(QDialog):
         """Notify the corresponding ECU block that content has changed."""
         if ecu_idx < len(self.ecu_block_list):
             self.ecu_block_list[ecu_idx].content_changed()
-           
-    def add_startup_row(self, idx):
+
+    def add_startup_row(self, ecu_type, idx):
         # self.ok_btn.setDisabled(False)
         entry = self.widgets['ecu-config'][idx]
-        row, dd, apps, rem = self._create_startup_row('', '', idx)
+        row, dd, apps, rem = self._create_startup_row(ecu_type, '', '', idx)
         entry['startup_layout'].addRow(row)
         entry['startup'].append((row, dd, apps, rem))
         if len(entry['startup']) == 1:
@@ -933,9 +1476,9 @@ class StartupTimeConfig(QDialog):
             # If only one row left, disable the remove button
             entry['startup'][0][3].setDisabled(True)
 
-    def add_threshold_row(self, idx):
+    def add_threshold_row(self, ecu_type, idx):
         entry = self.widgets['ecu-config'][idx]
-        row, apps, thresh = self._create_threshold_row('', '', idx)
+        row, apps, thresh = self._create_threshold_row(ecu_type, '', '', idx)
         entry['threshold_layout'].addRow(row)
         entry['threshold'].append((row, apps, thresh))
         self._notify_content_changed(idx)
@@ -1148,6 +1691,19 @@ class StartupTimeConfig(QDialog):
         """Refresh the application list by re-parsing the Excel file"""
         print("Refreshing Application Input List...")
         self.parse_application_input_list()
+        
+        # Refresh all ApplicationSelectorWidget instances
+        if hasattr(self, 'widgets') and 'ecu-config' in self.widgets:
+            for ecu_config in self.widgets['ecu-config']:
+                # Refresh startup entries
+                for entry in ecu_config['startup']:
+                    if len(entry) >= 3 and hasattr(entry[2], 'refresh_applications'):
+                        entry[2].refresh_applications()
+                
+                # Refresh threshold entries  
+                for entry in ecu_config['threshold']:
+                    if len(entry) >= 2 and hasattr(entry[1], 'refresh_applications'):
+                        entry[1].refresh_applications()
 
     def save_config(self):
         data = {}
@@ -1178,12 +1734,13 @@ class StartupTimeConfig(QDialog):
             for entry in item['startup']:
                 # entry is (row, dd, apps, count_lbl, rem)
                 _, dd, apps, _ = entry
-                ec_item['startup-order'].append({'Order Type': dd.currentText(), 'Applications': apps.text()})
+                ec_item['startup-order'].append({'Order Type': dd.currentText(), 'Applications': self._get_widget_text(apps)})
             for entry in item['threshold']:
                 # entry is (row, apps, thresh)
                 _, apps, thresh = entry
-                if thresh.text():  # Only save if threshold value is provided
-                    ec_item['threshold-config'].append({'Applications': apps.text(), 'Threshold': int(thresh.text())})
+                threshold_text = self._get_widget_text(thresh)
+                if threshold_text:  # Only save if threshold value is provided
+                    ec_item['threshold-config'].append({'Applications': self._get_widget_text(apps), 'Threshold': int(threshold_text)})
             ec.append(ec_item)
         data['ecu-config'] = ec
         data['ECU_setting'] = self.ecu_selection
