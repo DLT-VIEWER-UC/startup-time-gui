@@ -1480,7 +1480,6 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
         This summary table is typically the first thing stakeholders review
         to get an overall assessment of system performance across test iterations.
     """
-    is_summary_sheet = 'summary' in summary_sheet.title.lower() 
     app_registration = config.get('Application Registration', False)
     order_mismatch_judgement = config.get('Order Mismatch Judgement', False)
     not_found_judgement = config.get('Not Found Judgement', False)
@@ -1495,7 +1494,7 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
                     test_status = 'PASS'
             else:
                 test_status = 'FAIL'
-            data_row = [f'=HYPERLINK("{'./'+os.path.basename(report_file) if isSummaryReport else ''}#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")' if is_summary_sheet else f'{i+1}', overall_value, test_status]
+            data_row = [f'=HYPERLINK("{'./'+os.path.basename(report_file) if isSummaryReport else ''}#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
             if config['Startup Order Judgement'] and i in application_startup_order_status:
                 if app_registration:
                     startup_order_status = '-'
@@ -1517,9 +1516,8 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
             summary_sheet.append(data_row)
            
             # Apply hyperlink formatting to the first cell in the last row
-            if is_summary_sheet:
-                cell = summary_sheet.cell(row=summary_sheet.max_row, column=1)
-                cell.font = Font(bold=True, underline='single', color='0000FF')
+            cell = summary_sheet.cell(row=summary_sheet.max_row, column=1)
+            cell.font = Font(bold=True, underline='single', color='0000FF')
             # Apply red fill to terminated count if greater than 0
             terminated_count_cell = summary_sheet.cell(row=summary_sheet.max_row, column=len(data_row))  # Column 9 is the terminated count column
             if data_row[-1] > 0:
@@ -3521,7 +3519,7 @@ def save_workbook_and_generate_reports(ecu_type, setup_type, summary_sheet, over
     # Copy summary to ECU_Summary workbook
     for es_sheet in es_sheets:
         if es_sheet.title == f"{setup_type}_{ecu_type}":
-            each_iteration_test_status(ecu_type, report_file, es_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=False)
+            each_iteration_test_status(ecu_type, report_file, es_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=True)
             export_and_plot_average_data_to_excel(es_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
             break
 
