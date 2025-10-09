@@ -10,8 +10,13 @@ class CollapsibleGroupBox(QFrame):
     
     def __init__(self, title="", parent=None):
         super().__init__(parent)
-        
-        self.title = title  # Store title for restoration
+        self.title_map = {
+            "PADAS": "PADAS_RCAR",
+            "RCAR": "ELITE_RCAR",
+            "SoC0": "ELITE_SoC0",
+            "SoC1": "ELITE_SoC1"
+        }
+        self.title = self.title_map.get(title, title)  # Store title for restoration
         self.parent_layout = None  # Will store reference to parent layout
         self.layout_index = -1  # Will store position in parent layout
         self.disabled = False  # Flag to indicate if the group box is disabled
@@ -34,7 +39,7 @@ class CollapsibleGroupBox(QFrame):
         self.main_layout.setSpacing(0)
         
         # Create header
-        self.create_header(title)
+        self.create_header(self.title)
         
         # Create content area
         self.content_area = QFrame()
@@ -79,7 +84,7 @@ class CollapsibleGroupBox(QFrame):
         # Title
         self.title_label = QLabel(title)
         font = QFont()
-        font.setBold(True)
+        # font.setBold(True)
         font.setPointSize(8)
         self.title_label.setFont(font)
         self.title_label.setStyleSheet("color: #2c3e50; background: transparent;")

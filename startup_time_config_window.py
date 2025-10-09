@@ -1074,13 +1074,13 @@ class StartupTimeConfig(QDialog):
         if self.is_any_ecu_selected_flag:
             # Check if this ECU type is selected in the main window
             ecu_type = removed_group.title
-            if ecu_type == 'PADAS' and  not (self.isPadas and self.isRCAR):
+            if ecu_type == 'PADAS_RCAR' and  not (self.isPadas and self.isRCAR):
                 should_add_restore = False
-            elif ecu_type == 'RCAR' and not (self.isElite and self.isRCAR):
+            elif ecu_type == 'ELITE_RCAR' and not (self.isElite and self.isRCAR):
                 should_add_restore = False
-            elif ecu_type == 'SoC0' and not (self.isElite and self.isSOC0):
+            elif ecu_type == 'ELITE_SoC0' and not (self.isElite and self.isSOC0):
                 should_add_restore = False
-            elif ecu_type == 'SoC1' and not (self.isElite and self.isSOC1):
+            elif ecu_type == 'ELITE_SoC1' and not (self.isElite and self.isSOC1):
                 should_add_restore = False
         
         if should_add_restore:
