@@ -3688,15 +3688,15 @@ def start_startup_time_measurement(logger):
         application_startup_order_status_map = {}
         application_startup_order_map = {}
         setup_type = None
-        enabled_ecu_list = set()
+        enabled_ecu_list = []
                
         if config.get('ECU_setting', {}).get('PADAS', {}).get('RCAR', False):
-            enabled_ecu_list.add('PADAS')
+            enabled_ecu_list.append('PADAS')
             setup_type = 'PADAS'
         else:
             for board_type, enabled in config.get('ECU_setting', {}).get('Elite', {}).items():
                 if enabled:
-                    enabled_ecu_list.add(board_type)
+                    enabled_ecu_list.append(board_type)
                     setup_type = 'ELITE'
        
         print(setup_type, enabled_ecu_list)
