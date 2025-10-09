@@ -60,6 +60,7 @@ class ApplicationSelectorWidget(QWidget):
         
         # Dropdown button
         self.dropdown_btn = QPushButton("▼")
+        self.dropdown_btn.setFocusPolicy(Qt.NoFocus)
         self.dropdown_btn.setFixedSize(25, 24)
         self.dropdown_btn.clicked.connect(self.toggle_dropdown)
         self.dropdown_btn.setStyleSheet("""
@@ -794,6 +795,7 @@ class StartupTimeConfig(QDialog):
         # Application Input List row
         app_input_layout = QHBoxLayout()
         self.app_input_btn = QPushButton()
+        self.app_input_btn.setFocusPolicy(Qt.NoFocus)
         self.app_input_btn.setFixedSize(30, 24)  # Make it square and slightly larger for the icon
         self.app_input_btn.setText("📋")  # Use clipboard/Excel emoji as icon
         self.app_input_btn.clicked.connect(self.open_application_input_list)
@@ -858,6 +860,7 @@ class StartupTimeConfig(QDialog):
         
         # Add button to open File Explorer
         self.open_logs_btn = QPushButton()
+        self.open_logs_btn.setFocusPolicy(Qt.NoFocus)
         self.open_logs_btn.setFixedSize(30, 24)  # Make it square and slightly larger for the icon
         self.open_logs_btn.setText("📁")  # Use folder emoji as icon
         self.open_logs_btn.clicked.connect(self.open_logs_folder)
@@ -903,6 +906,7 @@ class StartupTimeConfig(QDialog):
         count_lbl = QLabel(f"{len(path_le.text())} / {path_le.maxLength()}")
         path_le.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {path_le.maxLength()}"), self.update_border('windows.DLT-Viewer Installed Path')])
         browse_btn = QPushButton('Browse')
+        browse_btn.setFocusPolicy(Qt.NoFocus)
         browse_btn.clicked.connect(lambda: self.browse_path(path_le))
         hl = QHBoxLayout()
         hl.addWidget(path_le)
@@ -999,7 +1003,9 @@ class StartupTimeConfig(QDialog):
         btn_h = QHBoxLayout()
         btn_h.addStretch()
         self.ok_btn = QPushButton('OK'); self.ok_btn.clicked.connect(self.ok_clicked)
+        self.ok_btn.setFocusPolicy(Qt.NoFocus)
         cancel_btn = QPushButton('Cancel'); cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setFocusPolicy(Qt.NoFocus)
         btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn)
         layout.addLayout(btn_h)
 
@@ -1121,6 +1127,7 @@ class StartupTimeConfig(QDialog):
             startup_fl.addRow(row)
             startup_entries.append((row, tp, apps, rem, enable_cb))
         add_startup_btn = QPushButton('Add Startup Order')
+        add_startup_btn.setFocusPolicy(Qt.NoFocus)
         add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(data.get('ecu-type'), i), self.on_change_update_ok_btn_state(), gb.content_changed()])
         startup_vbox.addLayout(startup_fl)
         startup_vbox.addWidget(add_startup_btn, alignment=Qt.AlignLeft)
@@ -1189,6 +1196,7 @@ class StartupTimeConfig(QDialog):
             threshold_fl.addRow(row)
             threshold_entries.append((row, apps, thresh, enable_cb))
         add_threshold_btn = QPushButton('Add Threshold Config')
+        add_threshold_btn.setFocusPolicy(Qt.NoFocus)
         add_threshold_btn.clicked.connect(lambda _, i=idx: [self.add_threshold_row(data.get('ecu-type'), i), self.on_change_update_ok_btn_state(), gb.content_changed()])
         threshold_vbox.addLayout(threshold_fl)
         threshold_vbox.addWidget(add_threshold_btn, alignment=Qt.AlignLeft)
@@ -1308,6 +1316,7 @@ class StartupTimeConfig(QDialog):
         left_form.addRow(QLabel('Applications'), apps_row)
 
         rem = QPushButton('Remove')
+        rem.setFocusPolicy(Qt.NoFocus)
         rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_startup_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
         
         main_layout.addWidget(enable_cb, alignment=Qt.AlignVCenter)
@@ -1390,6 +1399,7 @@ class StartupTimeConfig(QDialog):
 
         # Right side - Remove button (centered vertically)
         rem = QPushButton('Remove')
+        rem.setFocusPolicy(Qt.NoFocus)
         rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_threshold_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
         
         main_layout.addWidget(enable_cb, alignment=Qt.AlignVCenter)
