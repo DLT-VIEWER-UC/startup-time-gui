@@ -91,6 +91,7 @@ class CollapsibleGroupBox(QFrame):
         
         # Toggle button
         self.toggle_button = QToolButton()
+        self.toggle_button.setFocusPolicy(Qt.NoFocus)
         self.toggle_button.setText("+")  # Plus sign when collapsed
         self.toggle_button.setCheckable(True)
         self.toggle_button.setChecked(False)  # Start collapsed
@@ -116,6 +117,7 @@ class CollapsibleGroupBox(QFrame):
         
         # Remove button  
         self.remove_button = QPushButton("×")
+        self.remove_button.setFocusPolicy(Qt.NoFocus)
         self.remove_button.setFixedSize(20, 20)
         self.remove_button.setStyleSheet("""
             QPushButton {
@@ -249,6 +251,7 @@ class CollapsibleGroupBox(QFrame):
     def create_restore_button(self):
         """Create a restore button that can bring back this group box."""
         restore_btn = QPushButton(f"Add {self.title} Configuration")
+        restore_btn.setFocusPolicy(Qt.NoFocus)
         restore_btn.setFixedHeight(36)  # Same height as group box header
         restore_btn.setStyleSheet("""
             QPushButton {
