@@ -842,7 +842,7 @@ def get_log_file_path(ecu_type, setup_type, index):
         - Supports both .log and .dlt file formats for different logging needs
     """
     # Construct the log file name based on the ECU type and timestamp
-    basename = f'{current_timestamp}_Startup_Time_Logs_{setup_type}_{ecu_type}_N{index}'
+    basename = f'{current_timestamp}_Startup_Time_Logs_{setup_type}_{ecu_type}_N{index+1}'
     # basename = f'20250626_125003_Startup_Time_Logs_{setup_type}_{ecu_type}_N{index}'
     logfile = basename+'.log'
     dltfile = basename+'.dlt'
@@ -881,11 +881,11 @@ def find_log_files_with_keywords(folder_path, keywords, logger):
 
 def extract_log_file_paths(index, ecu_type, setup_type, logger):
     parent_dir = pre_gen_logs_folder_path / "Logs"
-    keywords = [ecu_type, setup_type, f'N{index}']
+    keywords = [ecu_type, setup_type, f'N{index+1}']
     filtered_files = find_log_files_with_keywords(parent_dir / f"{setup_type}_{ecu_type}", keywords, logger)
     if not filtered_files or len(filtered_files) == 0:
-        logger.warning(f"No log files found for {ecu_type} with setup type {setup_type} and index {index}.")
-        return tuple((parent_dir / f"{setup_type}_{ecu_type}" / f'{ecu_type}_{setup_type}_N{index}.log', None, None))
+        logger.warning(f"No log files found for {ecu_type} with setup type {setup_type} and index {index+1}.")
+        return tuple((parent_dir / f"{setup_type}_{ecu_type}" / f'{ecu_type}_{setup_type}_N{index+1}.log', None, None))
     else:
         log_file_path = filtered_files.pop()
         
@@ -969,7 +969,7 @@ def get_log_file_paths_for_elite(index, ecu_config_list, setup_type):
     filename_list = {}
    
     for logs_dir, ecu_type in zip(logs_dir_list, ecu_type_list):
-        basename = f'{current_timestamp}_Startup_Time_Logs_{setup_type}_{ecu_type}_N{index}'
+        basename = f'{current_timestamp}_Startup_Time_Logs_{setup_type}_{ecu_type}_N{index+1}'
         # basename = f'20250626_125003_Startup_Time_Logs_{setup_type}_{ecu_type}_N{index}'
         logfile = basename+'.log'
         dltfile = basename+'.dlt'
@@ -3905,7 +3905,3 @@ def start_startup_time_measurement(logger):
         logger.info(f"Total script execution time: {(script_end_time-script_start_time):.3f} seconds")
     print("Final response :: ", isSuccess)
     return isSuccess
-
-if __name__ == "__main__":
-    logger = setup_logging()
-    start_startup_time_measurement(logger)
