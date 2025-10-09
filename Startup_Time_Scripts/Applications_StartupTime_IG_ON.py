@@ -1537,9 +1537,11 @@ def get_ind_app_terminated_count(app, overall_IG_ON_iteration):
                 app_terminated_count += 1
     return app_terminated_count
 
-def get_app_configured_and_terminated_list(overall_IG_ON_iteration):
+def get_app_configured_and_terminated_list(ecu_type, overall_IG_ON_iteration):
     configured_apps = set()
     terminated_apps = set()
+    threshold_apps = set(threshold_map[ecu_type].keys())
+    configured_apps.update(threshold_apps)
     for index, summary_info in overall_IG_ON_iteration.items():
         configured_apps.update(summary_info['configured_applications'])
         terminated_apps.update(summary_info['terminated_applications'])
@@ -1606,7 +1608,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
     # Initialize an empty list to store the data
     data = []
     individual_list = []
-    app_configured_and_terminated_list = get_app_configured_and_terminated_list(overall_IG_ON_iteration)
+    app_configured_and_terminated_list = get_app_configured_and_terminated_list(ecu_type, overall_IG_ON_iteration)
 
     # Iterate over each process and its times
     for index, (process, times) in enumerate(process_times.items()):
