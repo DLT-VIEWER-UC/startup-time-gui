@@ -1438,7 +1438,7 @@ def create_header(sheet, ecu_type, validate_startup_order, app_columns):
     return start_row
 
 
-def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=False):
+def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False):
     """
     Creates a summary table showing test results for each iteration with hyperlinks to detailed data.
    
@@ -1510,7 +1510,7 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
                     data_row.extend(['-', '-', '-', '-'])
             # Check if the process names match in dltstart_timestamps and process_timing_info
             # TODO: Modify Missing Application Judgement logic.
-            data_row.append('PASS' if set(overall_IG_ON_iteration[i]['dltstart_timestamps'].keys()) == set(process for process, item in overall_IG_ON_iteration[i]['process_timing_info'].items() if item['start_time_ms']) else 'FAIL')
+            data_row.append('PASS' if len(set(process_times.keys()).difference(set(overall_IG_ON_iteration[i]['dltstart_timestamps'].keys()))) == 0 else 'FAIL')
             if i in application_startup_order_status:
                 data_row.append(application_startup_order_status[i]['terminated_applications_count'])
             summary_sheet.append(data_row)
@@ -3509,11 +3509,11 @@ def save_workbook_and_generate_reports(ecu_type, setup_type, summary_sheet, over
         logger.error("Error: Unable to create workbook.")
         return False
 
-    each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=False)
+    each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False)
     
     es_report_file, es_workbook, es_sheets, es_summary_sheet = ecu_summary_workbook_items
     if es_summary_sheet:
-        each_iteration_test_status(ecu_type, report_file, es_summary_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=True)
+        each_iteration_test_status(ecu_type, report_file, es_summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True)
 
     # Export the average data to the Excel sheet
     export_and_plot_average_data_to_excel(summary_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
@@ -3521,7 +3521,7 @@ def save_workbook_and_generate_reports(ecu_type, setup_type, summary_sheet, over
     # Copy summary to ECU_Summary workbook
     for es_sheet in es_sheets:
         if es_sheet.title == f"{setup_type}_{ecu_type}":
-            each_iteration_test_status(ecu_type, report_file, es_sheet, overall_IG_ON_iteration, config, application_startup_order_status, isSummaryReport=True)
+            each_iteration_test_status(ecu_type, report_file, es_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True)
             export_and_plot_average_data_to_excel(es_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
             break
 
