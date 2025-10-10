@@ -6,6 +6,22 @@ from pathlib import Path
 from PyQt5.QtCore import QFileSystemWatcher
 from imports_utils import *
 
+common_groupbox_style = """
+    QGroupBox {
+        background-color: #F5F5F5;
+        border: 1px solid #999999;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+    QGroupBox::title {
+        subcontrol-origin: margin;
+        subcontrol-position: top center;
+        padding-left: 0px;
+        padding-top: 0px;
+    }
+"""
+
+
 
 class CustomIntValidator(QIntValidator):
     def __init__(self, min_value, max_value, parent=None):
@@ -771,6 +787,7 @@ class StartupTimeConfig(QDialog):
 
         # General Settings
         general_group = QGroupBox('General Settings')
+        general_group.setStyleSheet(common_groupbox_style)
         general_group.setFixedHeight(240)
         general_layout = QFormLayout()
         for key, validator in [
@@ -858,6 +875,21 @@ class StartupTimeConfig(QDialog):
         # Set the layout to the group box
         startup_order_group.setLayout(judgement_hlayout)
         
+        # Override the inherited style to use default appearance
+        startup_order_group.setStyleSheet("""
+            QGroupBox {
+                padding: 5px;
+                margin-top: 15px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                margin-top: 5px;
+                left: 15px;
+                padding: 0 5px;
+            }
+        """)
+        
         # Add the group box to the general layout
         general_layout.addRow(startup_order_group)
         
@@ -901,6 +933,7 @@ class StartupTimeConfig(QDialog):
 
         # Windows Settings
         win_group = QGroupBox('DLT Viewer Path Settings')
+        win_group.setStyleSheet(common_groupbox_style)
         win_group.setFixedHeight(100)
         win_layout = QFormLayout()
         win = self.config_data.get('windows', {})
@@ -937,6 +970,7 @@ class StartupTimeConfig(QDialog):
 
         # ECU Configurations
         self.ec_group = QGroupBox('ECU Configurations')
+        self.ec_group.setStyleSheet(common_groupbox_style)
         ec_vbox = QVBoxLayout()
         self.widgets['ecu-config'] = []
 
@@ -963,7 +997,7 @@ class StartupTimeConfig(QDialog):
                 valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isSOC1)
                 block.disableRemoveButton(valid_gb)
             print(f"ECU: {ecu_type}, Valid: {valid_gb}")
-            block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if self.is_any_ecu_selected_flag and not valid_gb else '0px'};}}")  # Set border color based on validity
+            block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if self.is_any_ecu_selected_flag and not valid_gb else '1px solid #999999'};}}")  # Set border color based on validity
             for startup_group in self.startup_group_list:
                 startup_group.setEnabled(startup_order_group.isChecked()) 
             self.ecu_block_list.append(block)
@@ -1124,6 +1158,7 @@ class StartupTimeConfig(QDialog):
         
         # Startup Order Section
         startup_group = QGroupBox('Startup Order Configuration')
+        startup_group.setStyleSheet(common_groupbox_style)
         startup_vbox = QVBoxLayout()
         startup_fl = QFormLayout()
         startup_entries = []
@@ -1143,10 +1178,12 @@ class StartupTimeConfig(QDialog):
 
         # Threshold Config Section
         self.threshold_group = QGroupBox('Threshold Configuration')
+        self.threshold_group.setStyleSheet(common_groupbox_style)
         threshold_vbox = QVBoxLayout()
         
         # Non-Configured Application Settings
         non_config_group = QGroupBox('Non-Configured Application Settings for Startup Time Threshold')
+        non_config_group.setStyleSheet(common_groupbox_style)
         non_config_layout = QHBoxLayout()
         
         # Get settings from config data
@@ -1594,7 +1631,7 @@ class StartupTimeConfig(QDialog):
         )
         
         # Apply appropriate border style
-        border_style = '1px solid red' if should_have_red_border else '0px'
+        border_style = '1px solid red' if should_have_red_border else '1px solid #999999'
         ecu_gb.setStyleSheet(f"{ecu_gb.styleSheet()}CollapsibleGroupBox{{border: {border_style};}}")
 
     def _notify_content_changed(self, ecu_idx):
