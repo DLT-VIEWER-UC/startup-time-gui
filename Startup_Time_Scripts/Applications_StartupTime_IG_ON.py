@@ -1038,10 +1038,11 @@ def get_expected_startup_order(application_name, application_startup_order, logg
             cur_pos += 1
     return [None, None, None]
 
-def get_expected_startup_order_str(order_type, expected_order, grp_len):
+def get_expected_startup_order_str(order_type, expected_order, grp_len, seq_no_grp_len_map):
     if not expected_order:
         return '-'
     else:
+        seq_no_grp_len_map[expected_order] = grp_len
         if order_type.lower() == OrderType.SEQUENTIAL.value:
             return f'Se{expected_order}'
         else:
@@ -1122,7 +1123,8 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         sheet.append(['', '', '', '', '', '', '', 'Applicable', 'Signal', 'Cause'])
        
     start_row = sheet.max_row + 1
-    relative_startup_order = []
+    relative_startup_order = {}
+    seq_no_grp_len_map = {}
     encountered_apps = set(dltstart_timestamps.keys())
     # Iterate over the DLTStart timestamps and differences in parallel using zip
     for position, (process, dltstart_line) in enumerate(dltstart_timestamps.items()):
@@ -1142,8 +1144,8 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             # Create a data row for the process
             if app_registration:
                 odr_type, expected_order, grp_len = get_expected_startup_order(process, application_startup_order, logger)
-                data_row.append(get_expected_startup_order_str(odr_type, expected_order, grp_len))
-                order_failure_type = validate_ind_app_startup_order(expected_order, relative_startup_order)
+                data_row.append(get_expected_startup_order_str(odr_type, expected_order, grp_len, seq_no_grp_len_map))
+                order_failure_type = validate_ind_app_startup_order(expected_order, process, application_startup_order, dltstart_timestamps.keys(), relative_startup_order, seq_no_grp_len_map)
                 if order_failure_type != 0:
                     if application_startup_order_status_iteration['startup_order_status']:
                         application_startup_order_status_iteration['startup_order_status'] = bool(
@@ -2234,18 +2236,43 @@ def extract_dltstart_timestamps(lines, logger):
     # Return the dictionary of process start timestamps
     return app_start_timestamps
 
-def validate_ind_app_startup_order(expected_order: int, relative_startup_order: List[int]) -> int:
+def validate_ind_app_startup_order(expected_order: int, application: str, application_startup_order: list[tuple[str, list[str]]], started_apps: set[str], relative_startup_order: dict[int, set[str]], seq_no_grp_len_map: dict[int, int]) -> int:
+    
     if not expected_order:
         return 2
-    elif len(relative_startup_order) == 0:
-        relative_startup_order.append(expected_order)
-        return 0
+            
+    # Check if the application is already in any of the previous sets
+    if expected_order in relative_startup_order:
+        relative_startup_order[expected_order].add(application)
     else:
-        if relative_startup_order[-1] <= expected_order:
-            relative_startup_order.append(expected_order)
-            return 0
+        relative_startup_order[expected_order] = {application}
+    
+    # Validate the order only if we have seen all previous orders
+    if len(relative_startup_order) == expected_order and max(relative_startup_order)==expected_order:
+        for order_no, application_list in relative_startup_order.items():
+            if order_no == expected_order:
+                continue
+            if seq_no_grp_len_map[order_no] != len(application_list) and not is_rem_apps_not_started(order_no, application_list, application_startup_order, started_apps):
+                return 1
+        return 0
+    return 1
+
+def is_rem_apps_not_started(order_no: int, application_list: list[str], application_startup_order: list[tuple[str, list[str]]], started_apps: set[str]) -> bool:
+    cur_order_no = 1
+    for order_type, app_list in application_startup_order:
+        if order_type.lower() == OrderType.PARALLEL.value:
+            if cur_order_no == order_no:
+                for app in app_list:
+                    if (app not in application_list) and (app in started_apps):
+                        return False
+                return True
+            else:
+                cur_order_no += 1
         else:
-            return 1
+            cur_order_no += len(app_list)
+    return True
+            
+    
 
 def validate_app_startup_order(dltstart_timestamps, application_startup_order):
     """
