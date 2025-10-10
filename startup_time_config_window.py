@@ -526,11 +526,10 @@ class StartupTimeConfig(QDialog):
         # 'DLT-Viewer Log Capture Time': 0,
         # 'Iterations': 0,
         # 'Threshold': 0,
+        'Startup Order Application Registration': False,
         'Startup Order Judgement': False,
-        'Application Registration': False,
-        'Order Mismatch Judgement': False,
-        'Not Found Judgement': False,
-        'Not Configured Judgement': False,
+        'Missing Judgement': False,
+        'Unexpected Judgement': False,
         'windows': {'Is Environment Path Set': False, 'DLT-Viewer Installed Path': ''},
         'ecu-config': []
     }
@@ -557,6 +556,16 @@ class StartupTimeConfig(QDialog):
         #     'Elite': {'RCAR': True, 'SoC0': False, 'SoC1': True},
         #     'PADAS': {'RCAR': False}
         # }
+        self.ecu_map = {
+            "PADAS": "PADAS_RCAR",
+            "RCAR": "ELITE_RCAR",
+            "SoC0": "ELITE_SoC0",
+            "SoC1": "ELITE_SoC1",
+            "PADAS_RCAR": "PADAS",
+            "ELITE_RCAR": "RCAR",
+            "ELITE_SoC0": "SoC0",
+            "ELITE_SoC1": "SoC1"
+        }
         
         self.ecu_selection = main_window.ecu_selection_status
         if self.is_any_ecu_selected_flag and is_checked:
@@ -762,7 +771,7 @@ class StartupTimeConfig(QDialog):
 
         # General Settings
         general_group = QGroupBox('General Settings')
-        general_group.setFixedHeight(280)
+        general_group.setFixedHeight(240)
         general_layout = QFormLayout()
         for key, validator in [
             ('DLT-Viewer Log Capture Time', CustomIntValidator(1, 500)),
@@ -803,37 +812,34 @@ class StartupTimeConfig(QDialog):
         app_input_layout.addStretch()  # Push everything to the left
         general_layout.addRow(QLabel('Application Input List'), app_input_layout)
         
-        vcb = QCheckBox(); vcb.setChecked(self.config_data.get('Startup Order Judgement', False))
-        general_layout.addRow(QLabel('Startup Order Judgement'), vcb)
-        self.widgets['Startup Order Judgement'] = vcb
+        # Create group box with checkbox as title
+        startup_order_group = QGroupBox()
+        startup_order_group.setCheckable(True)
+        startup_order_group.setChecked(self.config_data.get('Startup Order Application Registration', False))
+        startup_order_group.setTitle('Startup Order Application Registration')
+        self.widgets['Startup Order Application Registration'] = startup_order_group
         
-        # Add the four new checkboxes that depend on 'Startup Order Judgement'
-        app_registration_cb = QCheckBox(); app_registration_cb.setChecked(self.config_data.get('Application Registration', False))
-        app_registration_label = QLabel('Application Registration')
-        general_layout.addRow(app_registration_label, app_registration_cb)
-        self.widgets['Application Registration'] = app_registration_cb
-        
-        # Create horizontal layout for the three judgement checkboxes without header
+        # Create horizontal layout for the three judgement checkboxes
         judgement_hlayout = QHBoxLayout()
-        judgement_hlayout.setContentsMargins(0, 0, 0, 0)
+        judgement_hlayout.setContentsMargins(10, 10, 10, 10)
         
         # Order Mismatch Judgement
-        order_mismatch_label = QLabel('Order Mismatch Judgement')
+        order_mismatch_label = QLabel('Startup Order Judgement')
         order_mismatch_cb = QCheckBox()
-        order_mismatch_cb.setChecked(self.config_data.get('Order Mismatch Judgement', False))
-        self.widgets['Order Mismatch Judgement'] = order_mismatch_cb
+        order_mismatch_cb.setChecked(self.config_data.get('Startup Order Judgement', False))
+        self.widgets['Startup Order Judgement'] = order_mismatch_cb
         
         # Not Found Judgement
-        not_found_label = QLabel('Not Found Judgement')
+        not_found_label = QLabel('Missing Judgement')
         not_found_cb = QCheckBox()
-        not_found_cb.setChecked(self.config_data.get('Not Found Judgement', False))
-        self.widgets['Not Found Judgement'] = not_found_cb
+        not_found_cb.setChecked(self.config_data.get('Missing Judgement', False))
+        self.widgets['Missing Judgement'] = not_found_cb
         
         # Not Configured Judgement
-        not_configured_label = QLabel('Not Configured Judgement')
+        not_configured_label = QLabel('Unexpected Judgement')
         not_configured_cb = QCheckBox()
-        not_configured_cb.setChecked(self.config_data.get('Not Configured Judgement', False))
-        self.widgets['Not Configured Judgement'] = not_configured_cb
+        not_configured_cb.setChecked(self.config_data.get('Unexpected Judgement', False))
+        self.widgets['Unexpected Judgement'] = not_configured_cb
         
         # Add components to horizontal layout with spacing
         judgement_hlayout.addWidget(order_mismatch_label)
@@ -849,8 +855,11 @@ class StartupTimeConfig(QDialog):
         judgement_hlayout.addWidget(not_configured_cb)
         judgement_hlayout.addStretch()  # Push everything to the left
         
-        # Add the horizontal layout directly to the form layout
-        general_layout.addRow(judgement_hlayout)
+        # Set the layout to the group box
+        startup_order_group.setLayout(judgement_hlayout)
+        
+        # Add the group box to the general layout
+        general_layout.addRow(startup_order_group)
         
         self.pre_gen_logs_cb = QCheckBox(); self.pre_gen_logs_cb.setChecked(self.config_data.get('Pre-Generated Logs', False))
         
@@ -956,22 +965,20 @@ class StartupTimeConfig(QDialog):
             print(f"ECU: {ecu_type}, Valid: {valid_gb}")
             block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if self.is_any_ecu_selected_flag and not valid_gb else '0px'};}}")  # Set border color based on validity
             for startup_group in self.startup_group_list:
-                startup_group.setEnabled(vcb.isChecked()) 
+                startup_group.setEnabled(startup_order_group.isChecked()) 
             self.ecu_block_list.append(block)
             ec_vbox.addWidget(block)
 
         self.ec_group.setLayout(ec_vbox)
         layout.addWidget(self.ec_group)
         
-        # Enable/disable the dependent checkboxes and startup groups based on 'Startup Order Judgement'
+        # Enable/disable the dependent checkboxes and startup groups based on 'Startup Order Application Registration'
         def toggle_startup_order_dependent_controls(checked):
             self.on_change_update_ok_btn_state()
             # Enable/disable startup groups
             for startup_group in self.startup_group_list:
                 startup_group.setEnabled(checked)
-            # Enable/disable the four dependent checkboxes
-            app_registration_cb.setEnabled(checked)
-            app_registration_label.setEnabled(checked)
+            # Enable/disable the four dependent checkboxes inside the group box
             order_mismatch_cb.setEnabled(checked)
             order_mismatch_label.setEnabled(checked)
             not_found_cb.setEnabled(checked)
@@ -980,13 +987,12 @@ class StartupTimeConfig(QDialog):
             not_configured_label.setEnabled(checked)
         
         # Set initial state for dependent controls
-        startup_order_enabled = vcb.isChecked()
-        app_registration_cb.setEnabled(startup_order_enabled)
+        startup_order_enabled = startup_order_group.isChecked()
         order_mismatch_cb.setEnabled(startup_order_enabled)
         not_found_cb.setEnabled(startup_order_enabled)
         not_configured_cb.setEnabled(startup_order_enabled)
         
-        vcb.toggled.connect(toggle_startup_order_dependent_controls)
+        startup_order_group.toggled.connect(toggle_startup_order_dependent_controls)
         self.pre_gen_logs_cb.toggled.connect(lambda checked: [
             self.on_change_update_ok_btn_state(),
             win_group.setDisabled(checked),
@@ -1444,7 +1450,7 @@ class StartupTimeConfig(QDialog):
                 self._set_widget_style(threshold_input, 'border: 0px;')
             for entry in self.widgets['ecu-config'][i]['startup']:
                 text = self._get_widget_text(entry[2])
-                if entry[4].isChecked() and self.widgets['Startup Order Judgement'].isChecked() and (not text or len(text) == 0 or text.startswith(' ') or text.endswith(' ')):
+                if entry[4].isChecked() and self.widgets['Startup Order Application Registration'].isChecked() and (not text or len(text) == 0 or text.startswith(' ') or text.endswith(' ')):
                     self._set_widget_style(entry[2], 'border: 1px solid red;')
                     enabled = False
                     ecu_error_list[i] = True
@@ -1484,8 +1490,8 @@ class StartupTimeConfig(QDialog):
             path_le = self.widgets['windows.DLT-Viewer Installed Path']
             if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0 or path_le.text().startswith(' ') or path_le.text().endswith(' ')):
                 enabled = False
-        vcb = self.widgets['Startup Order Judgement']
-        if vcb.isChecked():
+        startup_order_group = self.widgets['Startup Order Application Registration']
+        if startup_order_group.isChecked():
             if self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
                 if len(self.widgets['ecu-config'][0]['startup']) == 0:
                     enabled=False
@@ -1868,11 +1874,11 @@ class StartupTimeConfig(QDialog):
             # print(w.text())
             if w.text() and len(w.text())>0:
                 data[key] = int(w.text())
+        data['Startup Order Application Registration'] = self.widgets['Startup Order Application Registration'].isChecked()
+        # data['Application Registration'] = self.widgets['Application Registration'].isChecked()
         data['Startup Order Judgement'] = self.widgets['Startup Order Judgement'].isChecked()
-        data['Application Registration'] = self.widgets['Application Registration'].isChecked()
-        data['Order Mismatch Judgement'] = self.widgets['Order Mismatch Judgement'].isChecked()
-        data['Not Found Judgement'] = self.widgets['Not Found Judgement'].isChecked()
-        data['Not Configured Judgement'] = self.widgets['Not Configured Judgement'].isChecked()
+        data['Missing Judgement'] = self.widgets['Missing Judgement'].isChecked()
+        data['Unexpected Judgement'] = self.widgets['Unexpected Judgement'].isChecked()
         data['Pre-Generated Logs'] = self.widgets['Pre-Generated Logs'].isChecked()
         data['windows'] = {
             'Is Environment Path Set': self.widgets['windows.Is Environment Path Set'].isChecked(),
@@ -1880,7 +1886,7 @@ class StartupTimeConfig(QDialog):
         }
         ec = []
         for idx, item in enumerate(self.widgets['ecu-config']):
-            title = self.ecu_block_list[idx].title
+            title = self.ecu_map.get(self.ecu_block_list[idx].title, self.ecu_block_list[idx].title)
             ec_item = {'ecu-type': title, 'startup-order': [], 'threshold-config': []}
             if self.ecu_block_list[idx].disabled or ((title == 'PADAS' and not (self.isRCAR and self.isPadas)) or 
                (title == 'RCAR' and not (self.isRCAR and self.isElite)) or 

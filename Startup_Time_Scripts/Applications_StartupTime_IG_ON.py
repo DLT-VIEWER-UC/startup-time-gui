@@ -1048,11 +1048,11 @@ def get_expected_startup_order_str(order_type, expected_order, grp_len):
             return f'Pa{expected_order}-{grp_len}'
 
 def fill_disabled_cell_with_grey(order_mismatch_col, not_found_col, not_configured_col, sheet, config):
-    validate_startup_order = config.get('Startup Order Judgement', False)
-    app_registration = config.get('Application Registration', False)
-    order_mismatch_judgement = config.get('Order Mismatch Judgement', False)
-    not_found_judgement = config.get('Not Found Judgement', False)
-    not_configured_judgement = config.get('Not Configured Judgement', False)
+    validate_startup_order = True # config.get('Startup Order Judgement', False)
+    app_registration = config.get('Startup Order Application Registration', False)
+    order_mismatch_judgement = config.get('Startup Order Judgement', False)
+    not_found_judgement = config.get('Missing Judgement', False)
+    not_configured_judgement = config.get('Unexpected Judgement', False)
     if validate_startup_order and app_registration:
         if not order_mismatch_judgement:
             order_mismatch_cell = sheet.cell(row=sheet.max_row, column=order_mismatch_col)
@@ -1110,11 +1110,11 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         This function is central to the reporting system and provides the detailed
         data that feeds into summary reports and visualizations.
     """
-    validate_startup_order = config.get('Startup Order Judgement', False)
-    app_registration = config.get('Application Registration', False)
-    order_mismatch_judgement = config.get('Order Mismatch Judgement', False)
-    not_found_judgement = config.get('Not Found Judgement', False)
-    not_configured_judgement = config.get('Not Configured Judgement', False)
+    validate_startup_order = True # config.get('Startup Order Judgement', False)
+    app_registration = config.get('Startup Order Application Registration', False)
+    order_mismatch_judgement = config.get('Startup Order Judgement', False)
+    not_found_judgement = config.get('Missing Judgement', False)
+    not_configured_judgement = config.get('Unexpected Judgement', False)
     startup_order_count_idx = sheet.max_row + 1
     if validate_startup_order:
         sheet.append(['', '', '', '', '', '', '', '', '', 0, 0, 0, 'Applicable', 'Signal', 'Cause'])
@@ -1480,11 +1480,11 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
         This summary table is typically the first thing stakeholders review
         to get an overall assessment of system performance across test iterations.
     """
-    app_registration = config.get('Application Registration', False)
-    order_mismatch_judgement = config.get('Order Mismatch Judgement', False)
-    not_found_judgement = config.get('Not Found Judgement', False)
-    not_configured_judgement = config.get('Not Configured Judgement', False)
-    start_row = create_header(summary_sheet, ecu_type, config['Startup Order Judgement'], 'overall_test_columns')
+    app_registration = config.get('Startup Order Application Registration', False)
+    order_mismatch_judgement = config.get('Startup Order Judgement', False)
+    not_found_judgement = config.get('Missing Judgement', False)
+    not_configured_judgement = config.get('Unexpected Judgement', False)
+    start_row = create_header(summary_sheet, ecu_type, True, 'overall_test_columns')
     for i in range(config['Iterations']):
         if i in overall_IG_ON_iteration:
             overall_value = overall_IG_ON_iteration[i]['timestamp'] + OFFSET_TIME
@@ -1495,7 +1495,7 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
             else:
                 test_status = 'FAIL'
             data_row = [f'=HYPERLINK("{'./'+os.path.basename(report_file) if isSummaryReport else ''}#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
-            if config['Startup Order Judgement'] and i in application_startup_order_status:
+            if i in application_startup_order_status: # config['Startup Order Judgement'] and
                 if app_registration:
                     startup_order_status = '-'
                     if any((order_mismatch_judgement, not_found_judgement, not_configured_judgement)):
@@ -1599,7 +1599,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
         helping identify performance trends, outliers, and optimization opportunities.
     """
     # Create a header in the Excel sheet for the average data
-    start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'min_max_avg_columns')
+    start_row = create_header(sheet, ecu_type, True, 'min_max_avg_columns')
 
     # Initialize an empty dictionary to store the average differences
     differences = {}
@@ -1683,7 +1683,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
     format_excel_cells(sheet, start_row)
 
     # Create a header in the Excel sheet for the average data
-    start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'min_max_avg_individual')
+    start_row = create_header(sheet, ecu_type, True, 'min_max_avg_individual')
 
     for index, (process, start_times) in enumerate(process_start_times.items()):
         # Calculate the minimum, maximum, and average start times for the process
@@ -1828,7 +1828,7 @@ def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, ov
         startup time that includes system-level delays.
     """
     # Create the header for the Excel sheet
-    start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'info_columns')
+    start_row = create_header(sheet, ecu_type, True, 'info_columns')
     filtered_data = []
 
     for index, (process, process_data) in enumerate(process_timing_info.items()):
@@ -1901,7 +1901,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
         summary reports that aggregate data across multiple iterations.
     """
     # Create the header for the Excel sheet
-    start_row = create_header(sheet, ecu_type, config['Startup Order Judgement'], 'startup_time_columns')
+    start_row = create_header(sheet, ecu_type, True, 'startup_time_columns')
 
     # Write the data to the Excel sheet
     write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
@@ -2861,7 +2861,7 @@ def add_appendix_sheet(workbook, ecu_type, config):
     appendix_sheet = workbook.create_sheet(title='Appendix')
     # appendix_sheet.title = 'Appendix'
     appendix_sheet.sheet_view.showGridLines = False
-    start_row = create_header(appendix_sheet, ecu_type, config['Startup Order Judgement'], 'startup_appendix')
+    start_row = create_header(appendix_sheet, ecu_type, True, 'startup_appendix')
     for data_row in startup_field_descriptions:
         appendix_sheet.append(data_row)
     format_sheet(appendix_sheet, start_row, appendix_columns)
