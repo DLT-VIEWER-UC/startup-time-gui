@@ -3882,6 +3882,9 @@ def start_startup_time_measurement(logger):
             logger.info("Stop flag detected before report generation.")
             return False
 
+        # Initialize report counter
+        no_of_ecu_reports_generated = 0
+
         # Save workbooks and generate reports for each ECU type
         ecu_summary_workbook_items = workbook_map['ECU_Summary']
         for ecu_type, (report_file, workbook, sheets, summary_sheet) in workbook_map.items():
@@ -3907,6 +3910,9 @@ def start_startup_time_measurement(logger):
                     ecu_summary_workbook_items,
                     logger):
                     isSuccess = False
+                else:
+                    no_of_ecu_reports_generated += 1
+                    print(f"Report generated for {ecu_type}: {report_file}")
         if any(anySheet) and len(ecu_summary_workbook_items)==4 and all(ecu_summary_workbook_items):
             # Format the Excel cells
             format_excel_cells(ecu_summary_workbook_items[3], 1)
@@ -3915,6 +3921,10 @@ def start_startup_time_measurement(logger):
             ecu_summary_workbook_items[1].save(ecu_summary_workbook_items[0])
         else:
             logger.error("Error: Unable to create ECU Summary workbook.")
+            
+        if no_of_ecu_reports_generated < len(enabled_ecu_list):
+            isSuccess = False
+            logger.error("Error: Some of the ECU reports are not generated.")
 
     except KeyError as e:
         logger.error(f"Error: Missing expected key in ECU input fields: {e}")
