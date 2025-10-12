@@ -24,7 +24,7 @@ common_groupbox_style = """
 
 
 class CustomIntValidator(QIntValidator):
-    def __init__(self, min_value, max_value, parent=None):
+    def __init__(self, min_value, max_value=2147483647, parent=None):
         super().__init__(min_value, max_value, parent)
         self.min_value = min_value
         self.max_value = max_value
@@ -791,9 +791,9 @@ class StartupTimeConfig(QDialog):
         general_group.setFixedHeight(240)
         general_layout = QFormLayout()
         for key, validator in [
-            ('DLT-Viewer Log Capture Time', CustomIntValidator(1, 500)),
-            ('Iterations', CustomIntValidator(1, 50)),
-            ('Power ON-OFF Delay', CustomIntValidator(1, 100))
+            ('DLT-Viewer Log Capture Time', CustomIntValidator(1)),
+            ('Iterations', CustomIntValidator(1)),
+            ('Power ON-OFF Delay', CustomIntValidator(1))
         ]:
             widgets_lst = list()
             le = QLineEdit(str(self.config_data.get(key, '')))
@@ -805,11 +805,11 @@ class StartupTimeConfig(QDialog):
             row_layout.addWidget(le)
             units_text = ''
             if key == 'DLT-Viewer Log Capture Time':
-                units_text = '[Int: 20-500 sec]'
+                units_text = '[Int: 20~ (sec)]'
             elif key == 'Iterations':
-                units_text = '[Int: 1-50]'
+                units_text = '[Int: 1~]'
             elif key == 'Power ON-OFF Delay':
-                units_text = '[Int: 20-50 sec]'
+                units_text = '[Int: 20~ (sec)]'
             units_lbl = QLabel(units_text)
             row_layout.addWidget(units_lbl)
             widgets_lst.append(units_lbl)
@@ -1088,19 +1088,19 @@ class StartupTimeConfig(QDialog):
         
         if key == 'DLT-Viewer Log Capture Time':
             text = self.widgets[key][0].text()
-            if self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text) <= 500):
+            if self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text)):
                 self.widgets[key][0].setStyleSheet('border: 0px;')
             else:
                 self.widgets[key][0].setStyleSheet('border: 1px solid red;')
         elif key == 'Power ON-OFF Delay':
             text = self.widgets[key][0].text()
-            if self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text) <= 50):
+            if self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text)):
                 self.widgets[key][0].setStyleSheet('border: 0px;')
             else:
                 self.widgets[key][0].setStyleSheet('border: 1px solid red;')
         elif key == 'Iterations':
             text = self.widgets[key][0].text()
-            if (text and 1 <= int(text) <= 50):
+            if (text and 1 <= int(text)):
                 self.widgets[key][0].setStyleSheet('border: 0px;')
             else:
                 self.widgets[key][0].setStyleSheet('border: 1px solid red;')
@@ -1198,10 +1198,10 @@ class StartupTimeConfig(QDialog):
         # Threshold input section
         threshold_label = QLabel('Threshold')
         threshold_input = QLineEdit(str(threshold_value))
-        threshold_input.setValidator(CustomIntValidator(1, 100))
+        threshold_input.setValidator(CustomIntValidator(1))
         threshold_input.setFixedWidth(80)
         threshold_input.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
-        sec_label = QLabel('sec')
+        sec_label = QLabel('[Int: 1~ (sec)]')
         
         # Enable/disable threshold row based on checkbox selection
         def toggle_threshold_row():
@@ -1425,7 +1425,7 @@ class StartupTimeConfig(QDialog):
         # Threshold row with count label at the end
         thresh = QLineEdit(str(threshold_val))
         thresh.setPlaceholderText('5')
-        thresh.setValidator(CustomIntValidator(1, 100))
+        thresh.setValidator(CustomIntValidator(1))
         thresh.setFixedWidth(80)
         thresh.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
         
@@ -1433,7 +1433,7 @@ class StartupTimeConfig(QDialog):
         thresh_hl = QHBoxLayout(thresh_row)
         thresh_hl.setContentsMargins(0, 0, 0, 0)
         thresh_hl.addWidget(thresh)
-        thresh_hl.addWidget(QLabel('[Int: 1 - 100 sec]'))
+        thresh_hl.addWidget(QLabel('[Int: 1~ (sec)]'))
         thresh_hl.addStretch()  # Push count label to the right
         thresh_hl.addWidget(count_label)
 
@@ -1479,7 +1479,7 @@ class StartupTimeConfig(QDialog):
                 continue
             enable_checkbox=self.widgets['ecu-config'][i]['apply_checkbox']
             threshold_input=self.widgets['ecu-config'][i]['nc_threshold_input']
-            if enable_checkbox.isChecked() and (not threshold_input.text() or len(threshold_input.text()) == 0 or not threshold_input.text().isdigit() or not (1 <= int(threshold_input.text()) <= 100)):
+            if enable_checkbox.isChecked() and (not threshold_input.text() or len(threshold_input.text()) == 0 or not threshold_input.text().isdigit() or not (1 <= int(threshold_input.text()))):
                 self._set_widget_style(threshold_input, 'border: 1px solid red;')
                 enabled = False
                 ecu_error_list[i] = True
@@ -1502,7 +1502,7 @@ class StartupTimeConfig(QDialog):
                 else:
                     self._set_widget_style(entry[1], 'border: 0px;')
                 threshold_text = self._get_widget_text(entry[2])
-                if entry[3].isChecked() and (not threshold_text or len(threshold_text) == 0 or not threshold_text.isdigit() or not (1 <= int(threshold_text) <= 100)):
+                if entry[3].isChecked() and (not threshold_text or len(threshold_text) == 0 or not threshold_text.isdigit() or not (1 <= int(threshold_text))):
                     self._set_widget_style(entry[2], 'border: 1px solid red;')
                 else:
                     self._set_widget_style(entry[2], 'border: 0px;')
@@ -1514,13 +1514,13 @@ class StartupTimeConfig(QDialog):
                 enabled = False
                 break
             if key == 'DLT-Viewer Log Capture Time':
-                if not (self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text) <= 500)):
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text))):
                     enabled = False
             elif key == 'Power ON-OFF Delay':
-                if not (self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text) <= 50)):
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text))):
                     enabled = False
             elif key == 'Iterations':
-                if not (text and 1 <= int(text) <= 50):
+                if not (text and 1 <= int(text)):
                     enabled = False
         if not self.widgets['Pre-Generated Logs'].isChecked():
             path_cb = self.widgets['windows.Is Environment Path Set']
