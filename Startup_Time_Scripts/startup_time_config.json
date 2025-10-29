@@ -1,16 +1,15 @@
 {
-  "DLT-Viewer Log Capture Time": 30,
-  "Iterations": 2,
-  "Power ON-OFF Delay": 1,
+  "DLT-Viewer Log Capture Time": 111,
+  "Iterations": 1,
+  "Power ON-OFF Delay": 22,
+  "Startup Order Application Registration": true,
   "Startup Order Judgement": true,
-  "Application Registration": false,
-  "Order Mismatch Judgement": false,
-  "Not Found Judgement": true,
-  "Not Configured Judgement": false,
+  "Missing Judgement": false,
+  "Unexpected Judgement": true,
   "Pre-Generated Logs": true,
   "windows": {
-    "Is Environment Path Set": false,
-    "DLT-Viewer Installed Path": "C:\\Users\\nanib\\AppData\\Local\\Programs\\dlt-viewer\\dlt-viewer.exe"
+    "Is Environment Path Set": true,
+    "DLT-Viewer Installed Path": ""
   },
   "ecu-config": [
     {
@@ -18,74 +17,104 @@
       "startup-order": [
         {
           "Order Type": "Sequential",
-          "Applications": "dltdaemon,healthmanager,ipcd,access_manager"
+          "Applications": "qam-mng-app,diag-default-services-app,h-diag-app,packagemanager,Test_App_2_C10,dltdaemon,healthmanager,ipcd,access_manager",
+          "enabled": true
         },
         {
           "Order Type": "Parallel",
-          "Applications": "someipd,statemanager,functiongroupmanager,crypto_keystorage_manager"
+          "Applications": "someipd,statemanager,functiongroupmanager,crypto_keystorage_manager",
+          "enabled": true
         },
         {
           "Order Type": "Sequential",
-          "Applications": "Test_App_4_C12,Test_App_3_C12,Test_App_1_C12,Test_App_29_M500,Test_App_30_M500"
+          "Applications": "Test_App_4_C12,Test_App_3_C12,Test_App_1_C12,Test_App_29_M500,Test_App_30_M500",
+          "enabled": true
         },
         {
           "Order Type": "Parallel",
-          "Applications": "Test_App_28_M500,Test_App_27_M500,Test_App_26_M500,Test_App_25_M500,Test_App_24_M500"
+          "Applications": "Test_App_28_M500,Test_App_27_M500,Test_App_26_M500,Test_App_25_M500,Test_App_24_M500",
+          "enabled": true
         },
         {
           "Order Type": "Sequential",
-          "Applications": "Test_App_23_M500,Test_App_22_M500,Test_App_11_C5,Test_App_21_M500,Test_App_6_C12,Test_App_20_M500,Test_App_5_C12,Test_App_2_C12,Test_App_19_M500,Test_App_18_M500,Test_App_17_M500,Test_App_16_M500,ucm_subordinate,h-diag-app-soc0"
+          "Applications": "Test_App_23_M500,Test_App_22_M500,Test_App_11_C5,Test_App_21_M500,Test_App_6_C12,Test_App_20_M500,Test_App_5_C12,Test_App_2_C12,Test_App_191_M500,Test_App_18_M500,Test_App_17_M500,Test_App_16_M500,ucm_subordinate,h-diag-app-soc0",
+          "enabled": true
         }
       ],
-      "threshold-config": []
+      "threshold-config": [],
+      "non-configured-settings": {
+        "apply": false,
+        "threshold": 5
+      }
     },
     {
       "ecu-type": "SoC0",
       "startup-order": [
         {
           "Order Type": "Sequential",
-          "Applications": "functiongroupmanager1"
+          "Applications": "functiongroupmanager1",
+          "enabled": false
         }
       ],
       "threshold-config": [
         {
           "Threshold": 3,
-          "Applications": "functiongroupmanager1"
+          "Applications": "functiongroupmanager1",
+          "enabled": false
         }
-      ]
+      ],
+      "non-configured-settings": {
+        "apply": false,
+        "threshold": 5
+      }
     },
     {
       "ecu-type": "SoC1",
       "startup-order": [],
-      "threshold-config": []
+      "threshold-config": [],
+      "non-configured-settings": {
+        "apply": false,
+        "threshold": 5
+      }
     },
     {
       "ecu-type": "PADAS",
       "startup-order": [
         {
           "Order Type": "Sequential",
-          "Applications": "functiongroupmanager1"
+          "Applications": "One, Two, Three, Four",
+          "enabled": true
+        },
+        {
+          "Order Type": "Parallel",
+          "Applications": "access_manager, functiongroupmanager, dltdaemon,Test_App_22_M500, Test_App_23_M500, Test_App_24_M500, Test_App_25_M500",
+          "enabled": true
         }
       ],
       "threshold-config": [
         {
           "Threshold": 3,
-          "Applications": "functiongroupmanager1"
+          "Applications": "functiongroupmanager1",
+          "enabled": true
         }
-      ]
+      ],
+      "non-configured-settings": {
+        "apply": true,
+        "threshold": 5
+      }
     }
   ],
   "ECU_setting": {
     "RCAR_IPAddress": "192.168.1.33",
     "Qualcomm_SoC0_IPAddress": "192.168.1.3",
     "Qualcomm_SoC1_IPAddress": "192.168.1.58",
-    "PADAS": {
-      "RCAR": true
-    },
     "Elite": {
-      "RCAR": false,
+      "RCAR": true,
       "SoC0": false,
       "SoC1": false
+    },
+    "PADAS": {
+      "RCAR": false
     }
   }
 }

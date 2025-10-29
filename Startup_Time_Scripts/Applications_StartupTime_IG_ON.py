@@ -1038,11 +1038,10 @@ def get_expected_startup_order(application_name, application_startup_order, logg
             cur_pos += 1
     return [None, None, None]
 
-def get_expected_startup_order_str(order_type, expected_order, grp_len, seq_no_grp_len_map):
+def get_expected_startup_order_str(order_type, expected_order, grp_len):
     if not expected_order:
         return '-'
     else:
-        seq_no_grp_len_map[expected_order] = grp_len
         if order_type.lower() == OrderType.SEQUENTIAL.value:
             return f'Se{expected_order}'
         else:
@@ -1124,28 +1123,27 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
        
     start_row = sheet.max_row + 1
     relative_startup_order = {}
-    seq_no_grp_len_map = {}
     encountered_apps = set(dltstart_timestamps.keys())
     # Iterate over the DLTStart timestamps and differences in parallel using zip
     for position, (process, dltstart_line) in enumerate(dltstart_timestamps.items()):
         # Check if the process names match
         result = '-'
         if process in threshold_map[ecu_type] or 'Non-Configured Applications' in threshold_map[ecu_type]:
-            if float(dltstart_line + OFFSET_TIME) < threshold_map[ecu_type].get(process, threshold_map[ecu_type]['Non-Configured Applications']):
+            if float(dltstart_line + OFFSET_TIME) < threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)):
                 result = 'PASS'
                 overall_IG_ON_cur_iteration['passed_count'] += 1
             else:
                 result = 'FAIL'
                 overall_IG_ON_cur_iteration['status'] = False
 
-        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type].get(process, threshold_map[ecu_type]['Non-Configured Applications']) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', result]
+        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', result]
 
         if validate_startup_order:
             # Create a data row for the process
             if app_registration:
                 odr_type, expected_order, grp_len = get_expected_startup_order(process, application_startup_order, logger)
-                data_row.append(get_expected_startup_order_str(odr_type, expected_order, grp_len, seq_no_grp_len_map))
-                order_failure_type = validate_ind_app_startup_order(expected_order, process, application_startup_order, dltstart_timestamps.keys(), relative_startup_order, seq_no_grp_len_map)
+                data_row.append(get_expected_startup_order_str(odr_type, expected_order, grp_len))
+                order_failure_type = validate_ind_app_startup_order(expected_order, process, application_startup_order, dltstart_timestamps.keys(), relative_startup_order)
                 if order_failure_type != 0:
                     if application_startup_order_status_iteration['startup_order_status']:
                         application_startup_order_status_iteration['startup_order_status'] = bool(
@@ -1195,7 +1193,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 overall_IG_ON_cur_iteration['configured_applications'].add(app)
                 if app not in dltstart_timestamps:
                     encountered_apps.add(app)
-                    data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type]['Non-Configured Applications']) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if app in threshold_map[ecu_type] else '-']
+                    data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if app in threshold_map[ecu_type] else '-']
                     if app in threshold_map[ecu_type]:
                         overall_IG_ON_cur_iteration['status'] = False
 
@@ -1228,7 +1226,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             overall_IG_ON_cur_iteration['terminated_applications'].add(process)
         if process not in encountered_apps:
             encountered_apps.add(process)
-            data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type].get(process, threshold_map[ecu_type]['Non-Configured Applications']) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if process in threshold_map[ecu_type] else '-']
+            data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if process in threshold_map[ecu_type] else '-']
             if process in threshold_map[ecu_type]:
                 overall_IG_ON_cur_iteration['status'] = False
             if validate_startup_order:
@@ -1547,6 +1545,8 @@ def get_app_configured_and_terminated_list(ecu_type, overall_IG_ON_iteration):
     for index, summary_info in overall_IG_ON_iteration.items():
         configured_apps.update(summary_info['configured_applications'])
         terminated_apps.update(summary_info['terminated_applications'])
+    if 'Non-Configured Applications' in configured_apps:
+        configured_apps.remove('Non-Configured Applications')
     return configured_apps.union(terminated_apps)
 
 
@@ -1658,7 +1658,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
             data_row['max_time'],
             data_row['avg_time'],
             float(data_row['avg_time']) + OFFSET_TIME if data_row['avg_time'] != '-' else '-',
-            threshold_map[ecu_type].get(data_row['process'], threshold_map[ecu_type]['Non-Configured Applications']) if ((data_row['process'] in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-',
+            threshold_map[ecu_type].get(data_row['process'], threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((data_row['process'] in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-',
             data_row['count'],
             data_row['terminated_count']
         ])
@@ -2128,7 +2128,7 @@ def extract_process_timestamps(lines, setup_type):
                    # logger.info(f"Process name: {process_name}, End Timestamp: {end_timestamp}")
         elif 'EM: Process' in line:
             if 'was terminated by signal' in line:
-                line_parts = line.split('EM: Process ')
+                line_parts = line.split('EM: Process : ')
                 if len(line_parts) > 1:
                     app_terminated_signal_info = line_parts[1]
                     app_terminated_signal_info_parts = app_terminated_signal_info.split(' was terminated by signal ')
@@ -2236,7 +2236,7 @@ def extract_dltstart_timestamps(lines, logger):
     # Return the dictionary of process start timestamps
     return app_start_timestamps
 
-def validate_ind_app_startup_order(expected_order: int, application: str, application_startup_order: list[tuple[str, list[str]]], started_apps: set[str], relative_startup_order: dict[int, set[str]], seq_no_grp_len_map: dict[int, int]) -> int:
+def validate_ind_app_startup_order(expected_order: int, application: str, application_startup_order: list[tuple[str, list[str]]], started_apps: set[str], relative_startup_order: dict[int, set[str]]) -> int:
     
     if not expected_order:
         return 2
@@ -2246,31 +2246,27 @@ def validate_ind_app_startup_order(expected_order: int, application: str, applic
         relative_startup_order[expected_order].add(application)
     else:
         relative_startup_order[expected_order] = {application}
-    
-    # Validate the order only if we have seen all previous orders
-    if len(relative_startup_order) == expected_order and max(relative_startup_order)==expected_order:
-        for order_no, application_list in relative_startup_order.items():
-            if order_no == expected_order:
-                continue
-            if seq_no_grp_len_map[order_no] != len(application_list) and not is_rem_apps_not_started(order_no, application_list, application_startup_order, started_apps):
-                return 1
-        return 0
-    return 1
-
-def is_rem_apps_not_started(order_no: int, application_list: list[str], application_startup_order: list[tuple[str, list[str]]], started_apps: set[str]) -> bool:
-    cur_order_no = 1
-    for order_type, app_list in application_startup_order:
-        if order_type.lower() == OrderType.PARALLEL.value:
-            if cur_order_no == order_no:
+        
+    if max(relative_startup_order)==expected_order:
+        cur_order_no = 1
+        for order_type, app_list in application_startup_order:
+            if cur_order_no >= expected_order:
+                return 0
+            if order_type.lower() == OrderType.PARALLEL.value:
                 for app in app_list:
-                    if (app not in application_list) and (app in started_apps):
-                        return False
-                return True
-            else:
+                    if cur_order_no == expected_order:
+                        return 0
+                    if app not in relative_startup_order.get(cur_order_no, set()) and app in started_apps:
+                        return 1
                 cur_order_no += 1
-        else:
-            cur_order_no += len(app_list)
-    return True
+            else:
+                for app in app_list:
+                    if cur_order_no == expected_order:
+                        return 0
+                    if app not in relative_startup_order.get(cur_order_no, set()) and app in started_apps:
+                        return 1
+                    cur_order_no += 1
+    return 1
             
     
 
@@ -3764,17 +3760,17 @@ def start_startup_time_measurement(logger):
             for i, threshold_config_grp in enumerate(ecu.get('threshold-config', {})):
                 if not threshold_config_grp.get('enabled', True):
                     continue
-                if threshold_config_grp.get('Threshold', -1) < 0 or threshold_config_grp.get('Threshold', -1) > 100:
+                if threshold_config_grp.get('Threshold', -1) < 0:
                     logger.error(f"Configured 'Threshold' is not valid. Configure its value in range[0, 100] for {i}th group in {ecu['ecu-type']}.")
                     return False
                 for app in threshold_config_grp.get('Applications', '').split(','):
                     if len(app.strip()) > 0:
                         threshold_map[ecu['ecu-type']][app.strip()] = threshold_config_grp.get('Threshold')
-            if ecu.get('non-configured-settings', {}).get('enabled', False):
-                if ecu['non-configured-settings'].get('Threshold', -1) < 0 or ecu['non-configured-settings'].get('Threshold', -1) > 100:
+            if ecu.get('non-configured-settings', {}).get('apply', False):
+                if ecu['non-configured-settings'].get('threshold', -1) < 0:
                     logger.error(f"Configured 'Threshold' is not valid. Configure its value in range[0, 100] for Non-Configured Applications in {ecu['ecu-type']}.")
                     return False
-                threshold_map[ecu['ecu-type']]['Non-Configured Applications'] = ecu['non-configured-settings'].get('Threshold')
+                threshold_map[ecu['ecu-type']]['Non-Configured Applications'] = ecu['non-configured-settings'].get('threshold')
              
         logger.info(f"Threshold Map: {threshold_map}")
 

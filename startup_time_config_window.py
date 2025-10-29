@@ -805,11 +805,11 @@ class StartupTimeConfig(QDialog):
             row_layout.addWidget(le)
             units_text = ''
             if key == 'DLT-Viewer Log Capture Time':
-                units_text = '[Int: 20~ (sec)]'
+                units_text = '[Int: 1~ (sec)]'
             elif key == 'Iterations':
                 units_text = '[Int: 1~]'
             elif key == 'Power ON-OFF Delay':
-                units_text = '[Int: 20~ (sec)]'
+                units_text = '[Int: 1~ (sec)]'
             units_lbl = QLabel(units_text)
             row_layout.addWidget(units_lbl)
             widgets_lst.append(units_lbl)
@@ -1088,13 +1088,13 @@ class StartupTimeConfig(QDialog):
         
         if key == 'DLT-Viewer Log Capture Time':
             text = self.widgets[key][0].text()
-            if self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text)):
+            if self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text)):
                 self.widgets[key][0].setStyleSheet('border: 0px;')
             else:
                 self.widgets[key][0].setStyleSheet('border: 1px solid red;')
         elif key == 'Power ON-OFF Delay':
             text = self.widgets[key][0].text()
-            if self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text)):
+            if self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text)):
                 self.widgets[key][0].setStyleSheet('border: 0px;')
             else:
                 self.widgets[key][0].setStyleSheet('border: 1px solid red;')
@@ -1514,10 +1514,10 @@ class StartupTimeConfig(QDialog):
                 enabled = False
                 break
             if key == 'DLT-Viewer Log Capture Time':
-                if not (self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text))):
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
                     enabled = False
             elif key == 'Power ON-OFF Delay':
-                if not (self.pre_gen_logs_cb.isChecked() or (text and 20 <= int(text))):
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
                     enabled = False
             elif key == 'Iterations':
                 if not (text and 1 <= int(text)):
