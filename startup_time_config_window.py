@@ -611,6 +611,9 @@ class StartupTimeConfig(QDialog):
         self.application_list = None
         self.parse_application_input_list()
 
+        # Track the Excel file path for cleanup
+        self.excel_file_path = None
+
         self.init_ui()
    
     def set_window_properties(self):
@@ -1740,6 +1743,9 @@ class StartupTimeConfig(QDialog):
             print(f"Application_Input_List_for_Startup_Time.xlsx not found at: {app_input_path}")
             return
         
+        # Store the file path for cleanup later
+        self.excel_file_path = str(app_input_path)
+        
         # Open the Excel file with the default application
         try:
             if platform.system() == "Windows":
@@ -1750,6 +1756,36 @@ class StartupTimeConfig(QDialog):
                 subprocess.run(["xdg-open", app_input_path])
         except Exception as e:
             print(f"Error opening Application_Input_List_for_Startup_Time.xlsx: {e}")
+    
+    def close_opened_excel_files(self):
+        """Close the specific Excel file if it's open"""
+        if not self.excel_file_path:
+            return
+            
+        try:
+            # Try to use Windows COM API to close the specific Excel file
+            import win32com.client
+            xl = win32com.client.GetActiveObject("Excel.Application")
+            
+            # Check how many workbooks are currently open
+            workbook_count = xl.Workbooks.Count
+            
+            # Look for our specific file and close it
+            for wb in xl.Workbooks:
+                if wb.FullName.lower() == self.excel_file_path.lower():
+                    wb.Close(SaveChanges=False)
+                    print(f"Closed Excel file: {self.excel_file_path}")
+                    
+                    # If this was the only workbook, quit Excel entirely
+                    if workbook_count == 1:
+                        xl.Quit()
+                        print("Closed Excel application (was the last workbook)")
+                    break
+                    
+        except Exception as e:
+            # If COM approach fails, silently continue (Excel might not be running or file not open)
+            print(f"Could not close Excel file via COM: {e}")
+            pass
     
     def check_app_input_file(self):
         """Check if Application_Input_List_for_Startup_Time.xlsx exists"""
@@ -1970,3 +2006,18 @@ class StartupTimeConfig(QDialog):
             self.accept()
         except Exception as e:
             print(f'Failed to save config: {e}')
+
+    def closeEvent(self, event):
+        """Handle dialog close event to cleanup Excel processes"""
+        self.close_opened_excel_files()
+        super().closeEvent(event)
+    
+    def reject(self):
+        """Handle dialog cancel to cleanup Excel processes"""
+        self.close_opened_excel_files()
+        super().reject()
+    
+    def done(self, result):
+        """Handle dialog completion to cleanup Excel processes"""
+        self.close_opened_excel_files()
+        super().done(result)

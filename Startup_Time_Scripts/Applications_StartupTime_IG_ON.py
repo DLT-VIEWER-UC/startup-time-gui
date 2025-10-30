@@ -1187,14 +1187,15 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     merged_range = f'D{start_row}:D{sheet.max_row}'
     sheet.merge_cells(merged_range)
    
-    if validate_startup_order:
+    if app_registration:
         for order_type, order in application_startup_order:
             for app in order:
                 overall_IG_ON_cur_iteration['configured_applications'].add(app)
                 if app not in dltstart_timestamps:
                     encountered_apps.add(app)
-                    data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if app in threshold_map[ecu_type] else '-']
-                    if app in threshold_map[ecu_type]:
+                    data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
+                    if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
+                    # if app in threshold_map[ecu_type]:
                         overall_IG_ON_cur_iteration['status'] = False
 
                     if app_registration:
@@ -1226,8 +1227,9 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             overall_IG_ON_cur_iteration['terminated_applications'].add(process)
         if process not in encountered_apps:
             encountered_apps.add(process)
-            data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if process in threshold_map[ecu_type] else '-']
-            if process in threshold_map[ecu_type]:
+            data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
+            if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
+            # if process in threshold_map[ecu_type]:
                 overall_IG_ON_cur_iteration['status'] = False
             if validate_startup_order:
                 if app_registration:
@@ -1549,6 +1551,15 @@ def get_app_configured_and_terminated_list(ecu_type, overall_IG_ON_iteration):
         configured_apps.remove('Non-Configured Applications')
     return configured_apps.union(terminated_apps)
 
+def get_ind_app_configured_and_terminated_list(ecu_type, overall_IG_ON_cur_iteration):
+    configured_apps = overall_IG_ON_cur_iteration['configured_applications']
+    terminated_apps = overall_IG_ON_cur_iteration['terminated_applications']
+    threshold_apps = set(threshold_map[ecu_type].keys())
+    configured_apps.update(threshold_apps)
+    if 'Non-Configured Applications' in configured_apps:
+        configured_apps.remove('Non-Configured Applications')
+    return configured_apps.union(terminated_apps)
+
 
 def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger):
     """
@@ -1841,7 +1852,8 @@ def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, ov
         else:
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
-    for process in overall_IG_ON_cur_iteration['configured_applications']:
+    ind_app_configured_and_terminated_list = get_ind_app_configured_and_terminated_list(ecu_type, overall_IG_ON_cur_iteration)
+    for process in ind_app_configured_and_terminated_list:
         if process not in process_timing_info:
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
