@@ -164,6 +164,7 @@ threshold_map = None
 current_timestamp = None
 is_pre_gen_logs = None
 table_headers = None
+max_log_files_count = None
 
 def setup_logging():
     """
@@ -880,7 +881,7 @@ def find_log_files_with_keywords(folder_path, keywords, logger):
     return filtered_files
 
 def extract_log_file_paths(index, ecu_type, setup_type, logger):
-    parent_dir = pre_gen_logs_folder_path / "Logs"
+    parent_dir = pre_gen_logs_folder_path
     keywords = [ecu_type, setup_type, f'N{index+1}']
     filtered_files = find_log_files_with_keywords(parent_dir / f"{setup_type}_{ecu_type}", keywords, logger)
     if not filtered_files or len(filtered_files) == 0:
@@ -2642,7 +2643,7 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, lo
     return True
 
 
-def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, logger):
+def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, is_pre_gen_logs, logger):
     """
     Creates a comprehensive Excel workbook for startup time analysis reporting.
    
@@ -2698,10 +2699,16 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
         to generate comprehensive performance reports.
     """
     try:
+        global max_log_files_count
+        log_files = glob.glob(os.path.join(pre_gen_logs_folder_path / f"{setup_type}_{ecu_type}", "*.log"))
+        if is_pre_gen_logs:
+            iterations = len(log_files)
+            max_log_files_count = max(max_log_files_count, iterations)
+        print("Creating sheets for iterations: ", iterations)
         # Create the report file name based on the ECU type and current timestamp
         reportName = f"Startup_Time_Report_{setup_type}_{ecu_type}_N{iterations}_{current_timestamp}.xlsx"
         if ecu_type == 'ECU_Summary':
-            reportName = f"Startup_Time_{ecu_type}_Report_{setup_type}_N{iterations}_{current_timestamp}.xlsx"
+            reportName = f"Startup_Time_Report_{setup_type}_Summary_{current_timestamp}.xlsx"
        
         # Define the directory where the report will be saved
         report_dir = local_save_path
@@ -3650,6 +3657,8 @@ def start_startup_time_measurement(logger):
     global threshold_map
     threshold_map = {}
     global current_timestamp
+    global max_log_files_count
+    max_log_files_count = 0
     # current_timestamp = '20250630_175500'
     current_timestamp = cur_dt_time_obj.strftime("%Y%m%d_%H%M%S")
 
@@ -3740,7 +3749,7 @@ def start_startup_time_measurement(logger):
             return False
 
         ecu_config_list = [ecu for ecu in config['ecu-config'] if ecu['ecu-type'] in enabled_ecu_list]
-        workbook_map['ECU_Summary'] = tuple(create_workBook('ECU_Summary', setup_type, enabled_ecu_list, iterations, config, logger))
+        workbook_map['ECU_Summary'] = tuple(create_workBook('ECU_Summary', setup_type, enabled_ecu_list, iterations, config, is_pre_gen_logs, logger))
         for ecu in ecu_config_list:
             if ecu['ecu-type'] == ECUType.PADAS.value:
                 ecu['ecu-type'] = ECUType.RCAR.value
@@ -3751,7 +3760,7 @@ def start_startup_time_measurement(logger):
                     ecu['ip-address'] = config['ECU_setting']['Qualcomm_SoC0_IPAddress']
                 elif ecu['ecu-type'] == ECUType.SoC1.value:
                     ecu['ip-address'] = config['ECU_setting']['Qualcomm_SoC1_IPAddress']
-            workbook_map[ecu['ecu-type']] = tuple(create_workBook(ecu['ecu-type'], setup_type, enabled_ecu_list, iterations, config, logger))
+            workbook_map[ecu['ecu-type']] = tuple(create_workBook(ecu['ecu-type'], setup_type, enabled_ecu_list, iterations, config, is_pre_gen_logs, logger))
            
             # Check if the workbook creation was successful
             if workbook_map[ecu['ecu-type']][2] is None:
@@ -3792,9 +3801,10 @@ def start_startup_time_measurement(logger):
         dlp_files = create_dlp_files(ecu_config_list, setup_type, config)
         if not is_pre_gen_logs and (not dlp_files or len(dlp_files) == 0):
             return False
-
+        if not is_pre_gen_logs:
+            max_log_files_count = iterations
         # Loop through the iterations
-        for i in range(iterations):
+        for i in range(max_log_files_count):
             # Check for stop flag before each iteration
             if check_stop_flag_periodically():
                 logger.info(f"Stop flag detected. Aborting iteration {i+1}/{iterations}.")
@@ -3815,6 +3825,8 @@ def start_startup_time_measurement(logger):
            
             threads = []
             for ecu_type, (report_file, workbook, sheets, summary_sheet) in workbook_map.items():
+                if(len(sheets)<=i):
+                    continue
                 if ecu_type == 'ECU_Summary':
                     continue
                 print("Thread: ", ecu_type, ": Started")
