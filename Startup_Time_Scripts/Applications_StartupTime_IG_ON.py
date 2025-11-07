@@ -479,6 +479,7 @@ def format_excel_cells(sheet, start_row):
             elif cell.value == "FAIL":
                 # If the cell value is "FAIL", fill it with a light red color.
                 cell.fill = PatternFill(start_color = "FF0000", end_color = "FF0000", fill_type = "solid")
+                cell.font = Font(color="FFFFFF")
             elif cell.value == '⬤':
                 cell.font = Font(bold=True)
                
@@ -1281,7 +1282,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         ]
         for offset, count in enumerate(counts, start=10):
             cell = sheet.cell(row=startup_order_count_idx, column=offset)
-            cell.value = count
+            cell.value = f'Count: {count}'
             cell.fill = yellow_fill
             cell.border = border_style
    
@@ -1310,7 +1311,8 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         cell.border = border_style
    
     terminated_count_cell = sheet.cell(row=startup_order_count_idx, column=13 if validate_startup_order else 8)
-    terminated_count_cell.value = f'Applicable ({application_startup_order_status_iteration["terminated_applications_count"]})'
+    terminated_count_cell.value = f'Count: {application_startup_order_status_iteration["terminated_applications_count"]}'
+    terminated_count_cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
    
 
     other_header_columns.extend([terminated_count_cell.value, 'Signal', 'Cause'])
@@ -1321,7 +1323,47 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             cell.border = border_style
 
 
-def create_header(sheet, ecu_type, validate_startup_order, app_columns):
+def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
+    """
+    Adds a title header row at the beginning of each sheet with specified formatting.
+    
+    Creates a merged title cell (A-E) and log folder information (F-G) with custom styling.
+    
+    Args:
+        sheet: Excel worksheet object
+        ecu_type: ECU type identifier (e.g., 'SoC1', 'RCAR')
+        setup_type: Setup type (e.g., 'ELITE', 'PADAS')
+    """
+    # Insert a new row at the top
+    sheet.insert_rows(1)
+    
+    # Merge cells A1 to E1 for the title
+    sheet.merge_cells('A1:E1')
+    title_cell = sheet['A1']
+    title_cell.value = f'Startup Time Report {setup_type} {ecu_type} - {sheet_type} -'
+    title_cell.font = Font(name='Calibri', size=18, bold=True)
+    title_cell.alignment = Alignment(horizontal='left', vertical='center')
+    
+    # Cell F1 - "Log Folder" label
+    log_label_cell = sheet['F1']
+    log_label_cell.value = 'Log Folder'
+    log_label_cell.font = Font(name='Calibri', size=10, color='FFFFFF')
+    log_label_cell.fill = PatternFill(start_color='006fc0', end_color='006fc0', fill_type='solid')
+    log_label_cell.alignment = Alignment(horizontal='center', vertical='center')
+    log_label_cell.border = border_style
+    
+    # Cell G1 - Log folder path with hyperlink
+    log_path_cell = sheet['G1']
+    log_folder_path = f'Logs\\{setup_type}_{ecu_type}'
+    # Create hyperlink formula
+    hyperlink_formula = f'=HYPERLINK(".\\{log_folder_path}", "{log_folder_path}")'
+    log_path_cell.value = hyperlink_formula
+    log_path_cell.font = Font(name='Calibri', size=10, color='0000FF')
+    log_path_cell.alignment = Alignment(horizontal='left', vertical='center')
+    log_path_cell.border = border_style
+
+
+def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_columns):
     """
     Creates formatted section headers for different types of data in Excel worksheets.
    
@@ -1381,13 +1423,13 @@ def create_header(sheet, ecu_type, validate_startup_order, app_columns):
 
     elif app_columns == 'startup_time_columns':
         # If avg_flag is False, only include Startup Time in the header
-        header = f'Services/Applications Startup Time on {ecu_type}'
+        header = f'Applications Startup Time from IG-ON on {setup_type} {ecu_type}'
         columns = application_startup_time_columns
         if not validate_startup_order:
             columns=columns[:7] + columns[-3:]  # Remove startup order validation columns if not enabled
    
     elif app_columns == 'info_columns':
-        header = f'Services/Applications Init(Up) Time on {ecu_type}'
+        header = f'Applications Init Up Time on {setup_type} {ecu_type}'
         columns = application_info_columns
    
     elif app_columns == 'overall_test_columns':
@@ -1417,9 +1459,9 @@ def create_header(sheet, ecu_type, validate_startup_order, app_columns):
     merged_cell = sheet.cell(row=sheet.max_row, column=1)
 
     # Apply formatting to the merged cell (gray fill, bold text, centered alignment)
-    merged_cell.fill = PatternFill(start_color="9EB9DA", end_color="9EB9DA", fill_type="solid")
+    merged_cell.fill = PatternFill(start_color="006fc0", end_color="006fc0", fill_type="solid")
     merged_cell.alignment = Alignment(horizontal='center', vertical='center')
-    merged_cell.font = Font(bold=True)
+    merged_cell.font = Font(bold=True, color="FFFFFF")
 
     # Append the column names for the header
     sheet.append(columns)    
@@ -1440,7 +1482,7 @@ def create_header(sheet, ecu_type, validate_startup_order, app_columns):
     return start_row
 
 
-def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False):
+def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False):
     """
     Creates a summary table showing test results for each iteration with hyperlinks to detailed data.
    
@@ -1486,7 +1528,7 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
     order_mismatch_judgement = config.get('Startup Order Judgement', False)
     not_found_judgement = config.get('Missing Judgement', False)
     not_configured_judgement = config.get('Unexpected Judgement', False)
-    start_row = create_header(summary_sheet, ecu_type, True, 'overall_test_columns')
+    start_row = create_header(summary_sheet, ecu_type, setup_type, True, 'overall_test_columns')
     for i in range(config['Iterations']):
         if i in overall_IG_ON_iteration:
             overall_value = overall_IG_ON_iteration[i]['timestamp'] + OFFSET_TIME
@@ -1524,6 +1566,7 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
             terminated_count_cell = summary_sheet.cell(row=summary_sheet.max_row, column=len(data_row))  # Column 9 is the terminated count column
             if data_row[-1] > 0:
                 terminated_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+                terminated_count_cell.font = Font(color="FFFFFF")  # White font for contrast
             # Apply grey fill to disabled cells
             fill_disabled_cell_with_grey(5, 6, 7, summary_sheet, config)
 
@@ -1561,7 +1604,7 @@ def get_ind_app_configured_and_terminated_list(ecu_type, overall_IG_ON_cur_itera
    return configured_apps.union(terminated_apps)
 
 
-def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger):
+def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger):
     """
     Generates comprehensive statistical analysis and visualizations of application startup performance.
    
@@ -1612,7 +1655,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
         helping identify performance trends, outliers, and optimization opportunities.
     """
     # Create a header in the Excel sheet for the average data
-    start_row = create_header(sheet, ecu_type, True, 'min_max_avg_columns')
+    start_row = create_header(sheet, ecu_type, setup_type, True, 'min_max_avg_columns')
 
     # Initialize an empty dictionary to store the average differences
     differences = {}
@@ -1681,10 +1724,12 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
                 count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
             else:
                 count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+                count_cell.font = Font(color="FFFFFF")  # White font for contrast
         # Apply color formatting to the terminated count cell (last column)
         terminated_count_cell = sheet.cell(row=sheet.max_row, column=9)  # Column 9 is the terminated count column
         if data_row['terminated_count'] > 0:
             terminated_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+            terminated_count_cell.font = Font(color="FFFFFF")  # White font for contrast
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             differences[data_row['process']] = float(data_row['avg_time'])
@@ -1696,7 +1741,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, proces
     format_excel_cells(sheet, start_row)
 
     # Create a header in the Excel sheet for the average data
-    start_row = create_header(sheet, ecu_type, True, 'min_max_avg_individual')
+    start_row = create_header(sheet, ecu_type, setup_type, True, 'min_max_avg_individual')
 
     for index, (process, start_times) in enumerate(process_start_times.items()):
         # Calculate the minimum, maximum, and average start times for the process
@@ -1791,7 +1836,7 @@ def add_logfile_hyperlink(report_path, log_path, sheet, ecu_type, setup_type):
     sheet.cell(row=row_no, column=1).value = "Log File:"  
  
     # Use Excel's =HYPERLINK() formula with the relative path
-    hyperlink_formula = f'=HYPERLINK(".\Logs\{setup_type}_{ecu_type}\{log_path}", "{log_path}")'
+    hyperlink_formula = f'=HYPERLINK(".\\Logs\\{setup_type}_{ecu_type}\\{log_path}", "{log_path}")'
     # Insert the hyperlink formula
     sheet.cell(row=row_no + 1, column=1).value = hyperlink_formula
    
@@ -1799,7 +1844,7 @@ def add_logfile_hyperlink(report_path, log_path, sheet, ecu_type, setup_type):
     sheet.cell(row=row_no + 1, column=1).font = Font(color="0000FF")
 
 
-def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, config):
+def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, config):
     """
     Generates a detailed report of application initialization (Init/Up) times with visualization.
    
@@ -1841,7 +1886,7 @@ def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, ov
         startup time that includes system-level delays.
     """
     # Create the header for the Excel sheet
-    start_row = create_header(sheet, ecu_type, True, 'info_columns')
+    start_row = create_header(sheet, ecu_type, setup_type, True, 'info_columns')
     filtered_data = []
 
     for index, (process, process_data) in enumerate(process_timing_info.items()):
@@ -1865,7 +1910,7 @@ def generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, ov
     format_excel_cells(sheet, start_row)
 
 
-def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltstart_timestamps,  process_timing_info, application_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
+def generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, sheet, dltstart_timestamps,  process_timing_info, application_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
     """
     Generates a comprehensive startup time analysis report for a single test iteration.
    
@@ -1915,7 +1960,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
         summary reports that aggregate data across multiple iterations.
     """
     # Create the header for the Excel sheet
-    start_row = create_header(sheet, ecu_type, True, 'startup_time_columns')
+    start_row = create_header(sheet, ecu_type, setup_type, True, 'startup_time_columns')
 
     # Write the data to the Excel sheet
     write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
@@ -1926,7 +1971,7 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltst
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
 
-    generate_apps_start_end_time_report(ecu_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, config)
+    generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, config)
 
     # Adjust the column width of the Excel sheet
     adjust_column_width(sheet, ecu_type, logger)
@@ -2739,7 +2784,7 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
         summary_sheet = workbook.active
 
         # Set the title of the sheet
-        summary_sheet.title = 'Summary' if ecu_type != 'ECU_Summary' else ecu_type
+        summary_sheet.title = f'{setup_type}_{ecu_type}_Summary' if ecu_type != 'ECU_Summary' else f'{setup_type}_Summary'
 
         # Create a list to store the sheets
         sheets = []
@@ -2747,20 +2792,24 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
         if ecu_type != 'ECU_Summary':
             # Create each sheet and add it to the list
             for i in range(1, iterations + 1):
-                sheet_title = f"GEN3_StartupTime_{i:02d}"
+                sheet_title = f"N{i}"
                 sheet = workbook.create_sheet(title=sheet_title)
+                # Add title header to each iteration sheet
+                add_sheet_title_header(sheet, ecu_type, setup_type, sheet_title)
                 sheets.append(sheet)
+            # Add title header to summary sheet (only for non-ECU_Summary workbooks)
+            add_sheet_title_header(summary_sheet, ecu_type, setup_type, 'Summary')
         else:
             for enabled_ecu in enabled_ecu_list:
                 if enabled_ecu == ECUType.PADAS.value:
                     enabled_ecu = 'RCAR'
-                sheet_title = f"{setup_type}_{enabled_ecu}"
+                sheet_title = f"{setup_type}_{enabled_ecu}_Summary"
                 sheet = workbook.create_sheet(title=sheet_title)
                 sheets.append(sheet)
 
 
             # Create sheet for Appendix
-            add_appendix_sheet(workbook, ecu_type, config)
+            add_appendix_sheet(workbook, ecu_type, setup_type, config)
  
         # Remove gridlines from all the sheets in the workbook
         for sheet_exl in sheets:
@@ -2775,6 +2824,7 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
     except Exception as e:
         # If any exception occurs while creating the workbook or sheet, logger. the error message and return None
         logger.error(f"An error occurred while creating the workbook or sheet: {e}")
+        raise e
         # return None, None, None, None
 
 
@@ -2849,7 +2899,7 @@ def load_config(file_path, logger):
         return None
 
 
-def add_appendix_sheet(workbook, ecu_type, config):
+def add_appendix_sheet(workbook, ecu_type, setup_type, config):
     """
     Creates an appendix worksheet with field descriptions and documentation.
    
@@ -2902,7 +2952,7 @@ def add_appendix_sheet(workbook, ecu_type, config):
     appendix_sheet = workbook.create_sheet(title='Appendix')
     # appendix_sheet.title = 'Appendix'
     appendix_sheet.sheet_view.showGridLines = False
-    start_row = create_header(appendix_sheet, ecu_type, True, 'startup_appendix')
+    start_row = create_header(appendix_sheet, ecu_type, setup_type, True, 'startup_appendix')
     for data_row in startup_field_descriptions:
         appendix_sheet.append(data_row)
     format_sheet(appendix_sheet, start_row, appendix_columns)
@@ -3467,7 +3517,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         }
         print ("overall_IG_ON_iteration:"+str(overall_IG_ON_iteration))
 
-        generate_apps_startup_report_from_QNX_startup(ecu_type, config, sheet, dltstart_timestamps, process_timing_info, application_startup_order, application_startup_order_status[i], overall_IG_ON_iteration[i], logger)
+        generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, sheet, dltstart_timestamps, process_timing_info, application_startup_order, application_startup_order_status[i], overall_IG_ON_iteration[i], logger)
        
         # Add a hyperlink to the log file in the Excel sheet
         add_logfile_hyperlink(filename, logfile, sheet, ecu_type, setup_type)
@@ -3551,20 +3601,20 @@ def save_workbook_and_generate_reports(ecu_type, setup_type, summary_sheet, over
         logger.error("Error: Unable to create workbook.")
         return False
 
-    each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False)
+    each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False)
    
     es_report_file, es_workbook, es_sheets, es_summary_sheet = ecu_summary_workbook_items
     if es_summary_sheet:
-        each_iteration_test_status(ecu_type, report_file, es_summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True)
+        each_iteration_test_status(ecu_type, setup_type, report_file, es_summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True)
 
     # Export the average data to the Excel sheet
-    export_and_plot_average_data_to_excel(summary_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
+    export_and_plot_average_data_to_excel(summary_sheet, ecu_type, setup_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
    
     # Copy summary to ECU_Summary workbook
     for es_sheet in es_sheets:
-        if es_sheet.title == f"{setup_type}_{ecu_type}":
-            each_iteration_test_status(ecu_type, report_file, es_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True)
-            export_and_plot_average_data_to_excel(es_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
+        if es_sheet.title == f"{setup_type}_{ecu_type}_Summary":
+            each_iteration_test_status(ecu_type, setup_type, report_file, es_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True)
+            export_and_plot_average_data_to_excel(es_sheet, ecu_type, setup_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
             break
 
     # Save the Excel workbook
@@ -3952,6 +4002,7 @@ def start_startup_time_measurement(logger):
     except Exception as e:
         logger.error(f"An error occurred: {e}")
         isSuccess = False
+        raise e
     finally:
         # Set stop flag to ensure all monitoring stops
         stop_requested.clear()
