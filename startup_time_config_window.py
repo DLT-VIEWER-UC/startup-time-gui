@@ -48,7 +48,7 @@ class CustomIntValidator(QIntValidator):
 
 class ApplicationSelectorWidget(QWidget):
     """Custom widget for selecting applications with dropdown checkboxes and editable text field"""
-    
+   
     def __init__(self, parent=None, ecu_family=None, ecu_type=None, ecu_idx=None, placeholder_text="App1, App2"):
         super().__init__(parent)
         self.parent_dialog = parent
@@ -59,21 +59,21 @@ class ApplicationSelectorWidget(QWidget):
         self.select_all_checkbox = None
         self.updating_from_text = False
         self.updating_from_checkboxes = False
-        
+       
         self.setup_ui(placeholder_text)
         self.load_applications()
-        
+       
     def setup_ui(self, placeholder_text):
         """Setup the UI components"""
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)  # Remove spacing between text field and button
-        
+       
         # Text field for editing applications
         self.text_field = QLineEdit()
         self.text_field.setPlaceholderText(placeholder_text)
         self.text_field.textChanged.connect(self.on_text_changed)
-        
+       
         # Dropdown button
         self.dropdown_btn = QPushButton("▼")
         self.dropdown_btn.setFocusPolicy(Qt.NoFocus)
@@ -93,7 +93,7 @@ class ApplicationSelectorWidget(QWidget):
                 background-color: #d0d0d0;
             }
         """)
-        
+       
         # Dropdown menu (initially hidden)
         self.dropdown_menu = QWidget()
         self.dropdown_menu.setWindowFlags(Qt.Popup)
@@ -145,60 +145,60 @@ class ApplicationSelectorWidget(QWidget):
                 background: none;
             }
         """)
-        
+       
         dropdown_layout = QVBoxLayout(self.dropdown_menu)
         dropdown_layout.setContentsMargins(0, 0, 0, 0)
         dropdown_layout.setSpacing(0)
-        
+       
         # Scroll area for applications
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setMaximumHeight(200)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        
+       
         self.apps_widget = QWidget()
         self.apps_layout = QVBoxLayout(self.apps_widget)
         self.apps_layout.setContentsMargins(0, 0, 0, 0)
         self.apps_layout.setSpacing(0)
-        
+       
         self.scroll_area.setWidget(self.apps_widget)
         dropdown_layout.addWidget(self.scroll_area)
-        
+       
         layout.addWidget(self.text_field)
         layout.addWidget(self.dropdown_btn)
-        
+       
     def load_applications(self):
         """Load applications from the parent dialog's application list"""
         self.clear_checkboxes()
-        
+       
         if not self.parent_dialog or not hasattr(self.parent_dialog, 'application_list'):
             return
-            
+           
         if not self.parent_dialog.application_list:
             return
-            
+           
         # Get applications for this ECU type
         apps = []
         if self.ecu_family and self.ecu_type:
             apps = self.parent_dialog.application_list.get(self.ecu_family, {}).get(self.ecu_type, [])
-        
+       
         if not apps:
             return
-            
+           
         # Add "Select All" checkbox
         self.select_all_checkbox = QCheckBox("Select All")
         # Use clicked signal to avoid recursive calls and ensure it's always responsive
         self.select_all_checkbox.clicked.connect(self.on_select_all_clicked)
         self.select_all_checkbox.setStyleSheet("font-weight: bold; padding: 8px;")
         self.apps_layout.addWidget(self.select_all_checkbox)
-        
+       
         # Add separator
         separator = QWidget()
         separator.setFixedHeight(1)
         separator.setStyleSheet("background-color: #cccccc; margin: 2px 0px;")
         self.apps_layout.addWidget(separator)
-        
+       
         # Add application checkboxes
         for app in apps:
             checkbox = QCheckBox(app)
@@ -206,7 +206,7 @@ class ApplicationSelectorWidget(QWidget):
             checkbox.clicked.connect(self.on_application_checkbox_changed)
             self.application_checkboxes[app] = checkbox
             self.apps_layout.addWidget(checkbox)
-            
+           
         # Pre-render disabled states (but defer if parent widgets aren't ready)
         try:
             self.update_disabled_states()
@@ -214,10 +214,10 @@ class ApplicationSelectorWidget(QWidget):
             # If parent widget structure isn't ready yet, skip for now
             # This will be called again later when needed
             pass
-        
+       
         # Update dropdown size to match text field width
         self.update_dropdown_size()
-        
+       
     def clear_checkboxes(self):
         """Clear all checkboxes from the dropdown"""
         # Remove all widgets from layout
@@ -225,33 +225,33 @@ class ApplicationSelectorWidget(QWidget):
             child = self.apps_layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
-                
+               
         self.application_checkboxes.clear()
         self.select_all_checkbox = None
-        
+       
     def update_dropdown_size(self):
         """Update dropdown size to match text field width"""
         if hasattr(self, 'dropdown_menu') and hasattr(self, 'text_field'):
             # Get the combined width of text field and button
             total_width = self.text_field.width() + self.dropdown_btn.width()
             self.dropdown_menu.setFixedWidth(total_width)
-            
+           
     def update_disabled_states(self):
         """Update disabled states for all checkboxes based on cross-group selections within same group type"""
         if not self.parent_dialog or self.ecu_idx is None or self.updating_from_checkboxes:
             return
-            
+           
         # Safety check - ensure parent widget structure is ready
         if not hasattr(self.parent_dialog, 'widgets') or 'ecu-config' not in self.parent_dialog.widgets:
             return
-            
+           
         # Skip during checkbox updates to avoid interference
         if hasattr(self, 'updating_from_text') and self.updating_from_text:
             return
-            
+           
         # Determine if this widget is in startup or threshold group
         is_startup_widget = self.is_startup_widget()
-        
+       
         # Get all selected applications from same group type for this ECU
         selected_apps_in_group = set()
         if hasattr(self.parent_dialog, 'widgets') and 'ecu-config' in self.parent_dialog.widgets:
@@ -259,9 +259,9 @@ class ApplicationSelectorWidget(QWidget):
             ecu_configs = self.parent_dialog.widgets['ecu-config']
             if self.ecu_idx >= len(ecu_configs):
                 return  # Exit early if index is out of range
-                
+               
             ecu_config = ecu_configs[self.ecu_idx]
-            
+           
             # Collect widgets of the same type (startup or threshold)
             same_type_widgets = []
             if is_startup_widget:
@@ -272,101 +272,101 @@ class ApplicationSelectorWidget(QWidget):
                 for entry in ecu_config['threshold']:
                     if len(entry) >= 2 and hasattr(entry[1], 'application_checkboxes'):
                         same_type_widgets.append(entry[1])
-            
+           
             # Collect all currently selected applications from same group type
             for widget in same_type_widgets:
                 if widget != self:  # Don't include this widget's selections yet
                     for app, checkbox in widget.application_checkboxes.items():
                         if checkbox.isChecked():
                             selected_apps_in_group.add(app)
-            
+           
             # Update only this widget's checkboxes based on other widgets' selections
             for app, checkbox in self.application_checkboxes.items():
                 # Enable checkbox if app is not selected in other widgets of same type
                 is_selected_elsewhere = app in selected_apps_in_group
                 checkbox.setEnabled(not is_selected_elsewhere or checkbox.isChecked())
-                    
+                   
         # Update Select All checkbox state
         self.update_select_all_state()
-        
+       
     def is_startup_widget(self):
         """Determine if this widget is in a startup group by checking parent hierarchy"""
         if not self.parent_dialog or self.ecu_idx is None:
             return True  # Default to startup
-            
+           
         if hasattr(self.parent_dialog, 'widgets') and 'ecu-config' in self.parent_dialog.widgets:
             # Add bounds checking to prevent IndexError
             ecu_configs = self.parent_dialog.widgets['ecu-config']
             if self.ecu_idx >= len(ecu_configs):
                 return True  # Default to startup if index is out of range
-                
+               
             ecu_config = ecu_configs[self.ecu_idx]
-            
+           
             # Check if this widget is in startup entries
             for entry in ecu_config['startup']:
                 if len(entry) >= 3 and entry[2] is self:
                     return True
-                    
+                   
             # Check if this widget is in threshold entries  
             for entry in ecu_config['threshold']:
                 if len(entry) >= 2 and entry[1] is self:
                     return False
-                    
+                   
         return True  # Default to startup if not found
-        
+       
     def update_select_all_state(self):
         """Update the Select All checkbox state based on enabled applications"""
         if not self.select_all_checkbox or self.updating_from_checkboxes:
             return
-            
+           
         self.update_select_all_visual_state()
-        
+       
     def update_select_all_visual_state(self):
         """Update the visual state of Select All checkbox without triggering events"""
         if not self.select_all_checkbox:
             return
-            
+           
         # Temporarily disconnect signal to avoid recursive calls
         self.select_all_checkbox.clicked.disconnect()
-        
+       
         enabled_checkboxes = [cb for cb in self.application_checkboxes.values() if cb.isEnabled()]
-        
+       
         # Always keep Select All enabled so users can interact with it
         self.select_all_checkbox.setEnabled(True)
-        
+       
         if not enabled_checkboxes:
             # If no enabled checkboxes, set to unchecked but keep clickable
             self.select_all_checkbox.setCheckState(Qt.Unchecked)
         else:
             checked_enabled = [cb for cb in enabled_checkboxes if cb.isChecked()]
-            
+           
             if len(checked_enabled) == 0:
                 self.select_all_checkbox.setCheckState(Qt.Unchecked)
             elif len(checked_enabled) == len(enabled_checkboxes):
                 self.select_all_checkbox.setCheckState(Qt.Checked)
             else:
                 self.select_all_checkbox.setCheckState(Qt.PartiallyChecked)
-        
+       
         # Reconnect the signal
         self.select_all_checkbox.clicked.connect(self.on_select_all_clicked)
-        
+       
     def merge_checkbox_and_manual_apps(self):
         """Merge checkbox selections with manually entered applications, preserving manual entries"""
         # Get current text and parse all applications
         current_text = self.text_field.text()
         all_current_apps = [app.strip() for app in current_text.split(',') if app.strip()]
-        
+       
         # Get applications from checkboxes
-        checkbox_apps = [app for app, checkbox in self.application_checkboxes.items() 
+        checkbox_apps = [app for app, checkbox in self.application_checkboxes.items()
                         if checkbox.isChecked()]
-        
+       
         # Get manually entered applications (those not in dropdown)
-        manual_apps = [app for app in all_current_apps 
+        manual_apps = [app for app in all_current_apps
                       if app not in self.application_checkboxes]
-        
+       
         # Combine checkbox selections with manual entries
         combined_apps = checkbox_apps + manual_apps
-        
+       
         # Remove duplicates while preserving order
         final_apps = []
         seen = set()
@@ -374,9 +374,9 @@ class ApplicationSelectorWidget(QWidget):
             if app not in seen:
                 final_apps.append(app)
                 seen.add(app)
-        
+       
         return final_apps
-            
+           
     def update_all_cross_group_disabling(self):
         """Update cross-group disabling for all widgets in the same ECU and same group type"""
         if self.parent_dialog and hasattr(self.parent_dialog, 'widgets') and 'ecu-config' in self.parent_dialog.widgets:
@@ -384,12 +384,12 @@ class ApplicationSelectorWidget(QWidget):
             ecu_configs = self.parent_dialog.widgets['ecu-config']
             if self.ecu_idx >= len(ecu_configs):
                 return  # Exit early if index is out of range
-                
+               
             ecu_config = ecu_configs[self.ecu_idx]
-            
+           
             # Determine if this is a startup or threshold widget
             is_startup = self.is_startup_widget()
-            
+           
             # Update only widgets of the same type
             if is_startup:
                 # Update all startup widgets for this ECU
@@ -401,7 +401,7 @@ class ApplicationSelectorWidget(QWidget):
                 for entry in ecu_config['threshold']:
                     if len(entry) >= 2 and hasattr(entry[1], 'update_disabled_states'):
                         entry[1].update_disabled_states()
-        
+       
     def toggle_dropdown(self):
         """Toggle the dropdown visibility"""
         if self.dropdown_menu.isVisible():
@@ -410,83 +410,83 @@ class ApplicationSelectorWidget(QWidget):
             # Update dropdown size and disabled states before showing
             self.update_dropdown_size()
             self.update_disabled_states()
-            
+           
             # Position dropdown below the widget with some spacing
             pos = self.mapToGlobal(self.text_field.geometry().bottomLeft())
             pos.setY(pos.y() + 5)  # Add 5 pixels spacing below the button
             self.dropdown_menu.move(pos)
             self.dropdown_menu.show()
             self.dropdown_menu.raise_()
-            
+           
     def on_text_changed(self):
         """Handle text field changes"""
         if self.updating_from_checkboxes:
             return
-            
+           
         self.updating_from_text = True
-        
+       
         # Parse applications from text
         text = self.text_field.text()
         selected_apps = [app.strip() for app in text.split(',') if app.strip()]
-        
+       
         # Temporarily disconnect checkbox signals to avoid recursive calls
         for app, checkbox in self.application_checkboxes.items():
             checkbox.clicked.disconnect()
             checkbox.setChecked(app in selected_apps)
             checkbox.clicked.connect(self.on_application_checkbox_changed)
-        
+       
         # Update Select All state
         self.update_select_all_visual_state()
-                
+               
         # Update cross-group disabling for all widgets (after a small delay)
         if hasattr(self.parent_dialog, 'update_all_disabled_states_delayed'):
             self.parent_dialog.update_all_disabled_states_delayed()
-        
+       
         self.updating_from_text = False
-        
+       
     def on_application_checkbox_changed(self):
         """Handle individual application checkbox changes"""
         if self.updating_from_text:
             return
-            
+           
         self.updating_from_checkboxes = True
-        
+       
         # Merge checkbox selections with manually entered applications
         final_apps = self.merge_checkbox_and_manual_apps()
-        
+       
         # Update text field with combined applications
         self.text_field.setText(', '.join(final_apps))
-        
+       
         # Update Select All visual state
         self.update_select_all_visual_state()
-                
+               
         # Trigger validation update on parent dialog
         if hasattr(self.parent_dialog, 'on_change_update_ok_btn_state'):
             self.parent_dialog.on_change_update_ok_btn_state()
-        
+       
         self.updating_from_checkboxes = False
-        
+       
         # Update cross-group disabling after the current operation is complete
         if hasattr(self.parent_dialog, 'update_all_disabled_states_delayed'):
             self.parent_dialog.update_all_disabled_states_delayed()
-        
+       
     def on_select_all_clicked(self):
         """Handle select all checkbox clicks - only affects this dropdown's applications"""
         if self.updating_from_text or not self.select_all_checkbox:
             return
-            
+           
         self.updating_from_checkboxes = True
-        
+       
         # Get all enabled checkboxes
         enabled_checkboxes = [(app, cb) for app, cb in self.application_checkboxes.items() if cb.isEnabled()]
-        
+       
         if not enabled_checkboxes:
             self.updating_from_checkboxes = False
             return
-        
+       
         # Count currently selected enabled applications
         selected_enabled = [cb for app, cb in enabled_checkboxes if cb.isChecked()]
-        
+       
         # Determine action based on current selection state:
         # - If all enabled apps are selected -> uncheck all
         # - If no apps or some apps are selected -> check all enabled apps
@@ -496,40 +496,40 @@ class ApplicationSelectorWidget(QWidget):
         else:
             # No apps or some apps selected, so check all enabled apps
             check_all = True
-        
+       
         # Update only the enabled checkboxes in this dropdown
         for app, checkbox in enabled_checkboxes:
             checkbox.setChecked(check_all)
-        
+       
         # Merge checkbox selections with manually entered applications
         final_apps = self.merge_checkbox_and_manual_apps()
-        
+       
         # Update text field with combined applications
         self.text_field.setText(', '.join(final_apps))
-        
+       
         # Update Select All visual state
         self.update_select_all_visual_state()
-            
+           
         # Update cross-group disabling for all widgets in same group type
         self.update_all_cross_group_disabling()
-        
+       
         # Trigger validation update on parent dialog
         if hasattr(self.parent_dialog, 'on_change_update_ok_btn_state'):
             self.parent_dialog.on_change_update_ok_btn_state()
-        
+       
         self.updating_from_checkboxes = False
-        
+       
 
-                                
+                               
     def get_text(self):
         """Get the current text value"""
         return self.text_field.text()
-        
+       
     def set_text(self, text):
         """Set the text value"""
         self.text_field.setText(text)
         self.on_text_changed()  # Trigger update
-        
+       
     def refresh_applications(self):
         """Refresh the application list from the parent dialog"""
         current_text = self.text_field.text()
@@ -560,18 +560,20 @@ class StartupTimeConfig(QDialog):
         self.widgets = {}
         self.ecu_block_list = []
         self.startup_group_list = []
-        
+       
         self.isElite, self.isPadas = True, True
         self.isRCAR, self.isSOC0, self.isSOC1 = True, True, True
 
         # Flag indicating whether any ECU is selected in the main window
         self.is_any_ecu_selected_flag = main_window.is_any_ecu_selected_flag
-        
+       
+        self.is_checked = is_checked      
         # Check which ECU type is enabled (only one can be selected at a time)
-        # self.ecu_selection = {
-        #     'Elite': {'RCAR': True, 'SoC0': False, 'SoC1': True},
-        #     'PADAS': {'RCAR': False}
-        # }
+        self.ecu_selection = {
+            'Elite': {'RCAR': False, 'SoC0': False, 'SoC1': False},
+            'PADAS': {'RCAR': False}
+        }
+
         self.ecu_map = {
             "PADAS": "PADAS_RCAR",
             "RCAR": "ELITE_RCAR",
@@ -582,9 +584,10 @@ class StartupTimeConfig(QDialog):
             "ELITE_SoC0": "SoC0",
             "ELITE_SoC1": "SoC1"
         }
-        
-        self.ecu_selection = main_window.ecu_selection_status
-        if self.is_any_ecu_selected_flag and is_checked:
+       
+        # self.ecu_selection = main_window.ecu_selection_status
+        if self.is_any_ecu_selected_flag and self.is_checked:
+            self.ecu_selection = main_window.ecu_selection_status
             if self.ecu_selection.get('PADAS', {}).get('RCAR', False):
                 self.isElite = False
                 self.isSOC0 = False
@@ -618,7 +621,7 @@ class StartupTimeConfig(QDialog):
    
     def set_window_properties(self):
         self.setWindowTitle('Startup Time Configuration')
-        self.setWindowIcon(QIcon('KPIT_logo.png'))
+        self.setWindowIcon(QIcon('KPIT_logo.ico'))
 
         # Get the geometry of the MainWindow
         main_window_x = self.main_window.x()
@@ -653,15 +656,15 @@ class StartupTimeConfig(QDialog):
     def setup_file_watcher(self):
         """Setup file system watcher for the logs folder and its subdirectories"""
         self.file_watcher = QFileSystemWatcher()
-        
+       
         # Create directories if they don't exist and add them to watcher
         directories_to_watch = [
             self.logs_path / 'PADAS_RCAR',
             self.logs_path / 'ELITE_RCAR',
-            self.logs_path / 'ELITE_SoC0', 
+            self.logs_path / 'ELITE_SoC0',
             self.logs_path / 'ELITE_SoC1'
         ]
-        
+       
         for directory in directories_to_watch:
             if not directory.exists():
                 try:
@@ -669,15 +672,15 @@ class StartupTimeConfig(QDialog):
                 except Exception as e:
                     print(f"Error creating directory {directory}: {e}")
                     continue
-            
+           
             # Add directory to watcher
             self.file_watcher.addPath(str(directory))
-        
+       
         # Add the current directory to watch for Application_Input_List_for_Startup_Time.xlsx
         current_dir = Path(__file__).parent
         self.app_input_file_path = current_dir / 'Application_Input_List_for_Startup_Time.xlsx'
         self.file_watcher.addPath(str(current_dir))
-        
+       
         # Connect the watcher signals to update methods
         self.file_watcher.directoryChanged.connect(self.update_logs_tooltip)
         self.file_watcher.fileChanged.connect(self.update_logs_tooltip)
@@ -688,11 +691,11 @@ class StartupTimeConfig(QDialog):
         """Check for .log files in the specified directories and return status"""
         status = {
             'main': False,
-            'rcar': False, 
+            'rcar': False,
             'soc0': False,
             'soc1': False
         }
-        
+       
         try:
             # Check main Logs folder
             padas_path = self.logs_path / 'PADAS_RCAR'
@@ -703,45 +706,45 @@ class StartupTimeConfig(QDialog):
             rcar_path = self.logs_path / 'ELITE_RCAR'
             if rcar_path.exists():
                 status['rcar'] = any(rcar_path.glob('*.log'))
-            
+           
             # Check SoC0 subfolder  
             soc0_path = self.logs_path / 'ELITE_SoC0'
             if soc0_path.exists():
                 status['soc0'] = any(soc0_path.glob('*.log'))
-            
+           
             # Check SoC1 subfolder
             soc1_path = self.logs_path / 'ELITE_SoC1'
             if soc1_path.exists():
                 status['soc1'] = any(soc1_path.glob('*.log'))
-                
+               
         except Exception as e:
             print(f"Error checking log files: {e}")
-        
+       
         return status
 
     def update_logs_tooltip(self):
         """Update the tooltip based on the presence of log files"""
         if not hasattr(self, 'open_logs_btn'):
             return
-            
+           
         status = self.check_log_files()
         active_status = list()
-        
+       
         # Create tooltip text based on status
         tooltip_lines = ["Pre-Generated Logs Folder Status:"]
-        
+       
         # Main folder
         main_status = "✓" if status['main'] else "✗"
         if self.isPadas and self.isRCAR:
             active_status.append(status['main'])
             tooltip_lines.append(f"{main_status} RCAR Logs folder (PADAS): {'Has .log files' if status['main'] else 'No .log files'}")
-        
+       
         # RCAR folder
         rcar_status = "✓" if status['rcar'] else "✗"
         if self.isElite and self.isRCAR:
             active_status.append(status['rcar'])
             tooltip_lines.append(f"{rcar_status} RCAR folder (Elite): {'Has .log files' if status['rcar'] else 'No .log files'}")
-        
+       
         # SoC0 folder
         soc0_status = "✓" if status['soc0'] else "✗"
         if self.isElite and self.isSOC0:
@@ -757,7 +760,7 @@ class StartupTimeConfig(QDialog):
         # Set the tooltip
         tooltip_text = '\n'.join(tooltip_lines)
         self.open_logs_btn.setToolTip(tooltip_text)
-        
+       
         # Update stylesheet with proper state handling
         border_color = 'green' if all(active_status) else 'red'
         self.open_logs_btn.setStyleSheet(f"""
@@ -791,7 +794,7 @@ class StartupTimeConfig(QDialog):
         # General Settings
         general_group = QGroupBox('General Settings')
         general_group.setStyleSheet(common_groupbox_style)
-        general_group.setFixedHeight(240)
+        general_group.setFixedHeight(280)
         general_layout = QFormLayout()
         for key, validator in [
             ('DLT-Viewer Log Capture Time', CustomIntValidator(1)),
@@ -820,7 +823,7 @@ class StartupTimeConfig(QDialog):
             widgets_lst.append(key_lbl)
             general_layout.addRow(key_lbl, row_layout)
             self.widgets[key] = widgets_lst
-        
+       
         # Application Input List row
         app_input_layout = QHBoxLayout()
         self.app_input_btn = QPushButton()
@@ -831,36 +834,36 @@ class StartupTimeConfig(QDialog):
         app_input_layout.addWidget(self.app_input_btn)
         app_input_layout.addStretch()  # Push everything to the left
         general_layout.addRow(QLabel('Application Input List'), app_input_layout)
-        
+       
         # Create group box with checkbox as title
         startup_order_group = QGroupBox()
         startup_order_group.setCheckable(True)
         startup_order_group.setChecked(self.config_data.get('Startup Order Application Registration', False))
         startup_order_group.setTitle('Startup Order Application Registration')
         self.widgets['Startup Order Application Registration'] = startup_order_group
-        
+       
         # Create horizontal layout for the three judgement checkboxes
         judgement_hlayout = QHBoxLayout()
         judgement_hlayout.setContentsMargins(10, 10, 10, 10)
-        
+       
         # Order Mismatch Judgement
         order_mismatch_label = QLabel('Startup Order Judgement')
         order_mismatch_cb = QCheckBox()
         order_mismatch_cb.setChecked(self.config_data.get('Startup Order Judgement', False))
         self.widgets['Startup Order Judgement'] = order_mismatch_cb
-        
+       
         # Not Found Judgement
         not_found_label = QLabel('Missing Judgement')
         not_found_cb = QCheckBox()
         not_found_cb.setChecked(self.config_data.get('Missing Judgement', False))
         self.widgets['Missing Judgement'] = not_found_cb
-        
+       
         # Not Configured Judgement
         not_configured_label = QLabel('Unexpected Judgement')
         not_configured_cb = QCheckBox()
         not_configured_cb.setChecked(self.config_data.get('Unexpected Judgement', False))
         self.widgets['Unexpected Judgement'] = not_configured_cb
-        
+       
         # Add components to horizontal layout with spacing
         judgement_hlayout.addWidget(order_mismatch_label)
         judgement_hlayout.addSpacing(16)
@@ -874,10 +877,10 @@ class StartupTimeConfig(QDialog):
         judgement_hlayout.addSpacing(16)
         judgement_hlayout.addWidget(not_configured_cb)
         judgement_hlayout.addStretch()  # Push everything to the left
-        
+       
         # Set the layout to the group box
         startup_order_group.setLayout(judgement_hlayout)
-        
+       
         # Override the inherited style to use default appearance
         startup_order_group.setStyleSheet("""
             QGroupBox {
@@ -892,16 +895,16 @@ class StartupTimeConfig(QDialog):
                 padding: 0 5px;
             }
         """)
-        
+       
         # Add the group box to the general layout
         general_layout.addRow(startup_order_group)
-        
+       
         self.pre_gen_logs_cb = QCheckBox(); self.pre_gen_logs_cb.setChecked(self.config_data.get('Pre-Generated Logs', False))
-        
+       
         # Create horizontal layout for Pre-Generated Logs with button
         pre_gen_layout = QHBoxLayout()
         pre_gen_layout.addWidget(self.pre_gen_logs_cb)
-        
+       
         # Add button to open File Explorer
         self.open_logs_btn = QPushButton()
         self.open_logs_btn.setFocusPolicy(Qt.NoFocus)
@@ -909,7 +912,7 @@ class StartupTimeConfig(QDialog):
         self.open_logs_btn.setText("📁")  # Use folder emoji as icon
         self.open_logs_btn.clicked.connect(self.open_logs_folder)
         self.open_logs_btn.setEnabled(self.pre_gen_logs_cb.isChecked())  # Initially set based on checkbox state
-        
+       
         # Set style for disabled state to make it grey for better readability
         self.open_logs_btn.setStyleSheet("""
             QPushButton:enabled {
@@ -922,15 +925,15 @@ class StartupTimeConfig(QDialog):
                 border: 1px solid #d0d0d0;
             }
         """)
-        
+       
         # Set initial tooltip
         self.update_logs_tooltip()
         pre_gen_layout.addWidget(self.open_logs_btn)
         pre_gen_layout.addStretch()  # Push everything to the left
-        
+       
         general_layout.addRow(QLabel('Pre-Generated Logs'), pre_gen_layout)
         self.widgets['Pre-Generated Logs'] = self.pre_gen_logs_cb
-        
+       
         general_group.setLayout(general_layout)
         layout.addWidget(general_group)
 
@@ -985,30 +988,30 @@ class StartupTimeConfig(QDialog):
             valid_gb = True
             if ecu_type == 'PADAS':
                 # block.setVisible(self.isPadas and self.isRCAR)
-                valid_gb = self.is_any_ecu_selected_flag and (self.isPadas and self.isRCAR)
+                valid_gb = self.is_any_ecu_selected_flag and self.is_checked and (self.isPadas and self.isRCAR)
                 block.disableRemoveButton(valid_gb)
             if ecu_type=='RCAR':
                 # block.setVisible(self.isRCAR and self.isElite)
-                valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isRCAR)
+                valid_gb = self.is_any_ecu_selected_flag and self.is_checked and (self.isElite and self.isRCAR)
                 block.disableRemoveButton(valid_gb)
             elif ecu_type=='SoC0':
                 # block.setVisible(self.isSOC0 and self.isElite)
-                valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isSOC0)
+                valid_gb = self.is_any_ecu_selected_flag and self.is_checked and (self.isElite and self.isSOC0)
                 block.disableRemoveButton(valid_gb)
             elif ecu_type=='SoC1':
                 # block.setVisible(self.isSOC1 and self.isElite)
-                valid_gb = self.is_any_ecu_selected_flag and (self.isElite and self.isSOC1)
+                valid_gb = self.is_any_ecu_selected_flag and self.is_checked and (self.isElite and self.isSOC1)
                 block.disableRemoveButton(valid_gb)
-            print(f"ECU: {ecu_type}, Valid: {valid_gb}")
-            block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if self.is_any_ecu_selected_flag and not valid_gb else '1px solid #999999'};}}")  # Set border color based on validity
+            # print(f"ECU: {ecu_type}, Valid: {valid_gb}")
+            block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if self.is_any_ecu_selected_flag and self.is_checked and not valid_gb else '1px solid #999999'};}}")  # Set border color based on validity
             for startup_group in self.startup_group_list:
-                startup_group.setEnabled(startup_order_group.isChecked()) 
+                startup_group.setEnabled(startup_order_group.isChecked())
             self.ecu_block_list.append(block)
             ec_vbox.addWidget(block)
 
         self.ec_group.setLayout(ec_vbox)
         layout.addWidget(self.ec_group)
-        
+       
         # Enable/disable the dependent checkboxes and startup groups based on 'Startup Order Application Registration'
         def toggle_startup_order_dependent_controls(checked):
             self.on_change_update_ok_btn_state()
@@ -1022,13 +1025,13 @@ class StartupTimeConfig(QDialog):
             not_found_label.setEnabled(checked)
             not_configured_cb.setEnabled(checked)
             not_configured_label.setEnabled(checked)
-        
+       
         # Set initial state for dependent controls
         startup_order_enabled = startup_order_group.isChecked()
         order_mismatch_cb.setEnabled(startup_order_enabled)
         not_found_cb.setEnabled(startup_order_enabled)
         not_configured_cb.setEnabled(startup_order_enabled)
-        
+       
         startup_order_group.toggled.connect(toggle_startup_order_dependent_controls)
         self.pre_gen_logs_cb.toggled.connect(lambda checked: [
             self.on_change_update_ok_btn_state(),
@@ -1061,7 +1064,7 @@ class StartupTimeConfig(QDialog):
         for i, ecu_config in enumerate(self.widgets['ecu-config']):
             if len(ecu_config['startup']) == 0:
                 self.add_startup_row(ecu_config['ecu_type'], i)
-        
+       
         for idx, ecu_type in enumerate(['PADAS', 'RCAR', 'SoC0', 'SoC1']):
             block = self.ecu_block_list[idx]
             # Define the condition for each ECU type
@@ -1071,24 +1074,24 @@ class StartupTimeConfig(QDialog):
                 'SoC0': self.isElite and self.isSOC0,
                 'SoC1': self.isElite and self.isSOC1
             }
-            if self.is_any_ecu_selected_flag:
+            if self.is_any_ecu_selected_flag and self.is_checked:
                 if ecu_conditions[ecu_type]:
                     # ECU is selected, keep it visible
                     pass
                 elif ecu_type not in ecu_types:
                     # ECU is not selected and not in config, remove it
                     block.remove_button.click()
-        
+       
         # Set initial state for Application Input List button
         self.update_app_input_button()
-        
+       
         self.on_change_update_ok_btn_state()
         for ecu_widgets in self.widgets['ecu-config']:
             apply_checkbox = ecu_widgets['apply_checkbox']
             apply_checkbox.toggled.connect(self.on_change_update_ok_btn_state)
 
     def update_border(self, key):
-        
+       
         if key == 'DLT-Viewer Log Capture Time':
             text = self.widgets[key][0].text()
             if self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text)):
@@ -1119,8 +1122,8 @@ class StartupTimeConfig(QDialog):
         # Check if we should add a restore button
         # Only add restore button if ECU is not selected in main window
         should_add_restore = True
-        
-        if self.is_any_ecu_selected_flag:
+       
+        if self.is_any_ecu_selected_flag and self.is_checked:
             # Check if this ECU type is selected in the main window
             ecu_type = removed_group.title
             if ecu_type == 'PADAS_RCAR' and  not (self.isPadas and self.isRCAR):
@@ -1131,18 +1134,18 @@ class StartupTimeConfig(QDialog):
                 should_add_restore = False
             elif ecu_type == 'ELITE_SoC1' and not (self.isElite and self.isSOC1):
                 should_add_restore = False
-        
+       
         if should_add_restore:
             # Create a restore button
             restore_button = removed_group.create_restore_button()
-            
+           
             # Connect the restore button to update OK button state when clicked
             restore_button.clicked.connect(self.on_change_update_ok_btn_state)
-            
+           
             # Add the restore button to the same layout position
             if removed_group.parent_layout and removed_group.layout_index >= 0:
                 removed_group.parent_layout.insertWidget(removed_group.layout_index, restore_button)
-            
+           
         # Update the OK button state when a group is removed
         self.on_change_update_ok_btn_state()
 
@@ -1158,7 +1161,7 @@ class StartupTimeConfig(QDialog):
         # Create the main collapsible group box for the ECU
         gb = CollapsibleGroupBox(data.get('ecu-type'))
         vbox = QVBoxLayout()
-        
+       
         # Startup Order Section
         startup_group = QGroupBox('Startup Order Configuration')
         startup_group.setStyleSheet(common_groupbox_style)
@@ -1183,21 +1186,21 @@ class StartupTimeConfig(QDialog):
         self.threshold_group = QGroupBox('Threshold Configuration')
         self.threshold_group.setStyleSheet(common_groupbox_style)
         threshold_vbox = QVBoxLayout()
-        
+       
         # Non-Configured Application Settings
         non_config_group = QGroupBox('Non-Configured Application Settings for Startup Time Threshold')
         non_config_group.setStyleSheet(common_groupbox_style)
         non_config_layout = QHBoxLayout()
-        
+       
         # Get settings from config data
         non_config_settings = data.get('non-configured-settings', {})
         apply_threshold = non_config_settings.get('apply', False)
         threshold_value = non_config_settings.get('threshold', 5)
-        
+       
         # Apply checkbox
         apply_checkbox = QCheckBox('Apply')
         apply_checkbox.setChecked(apply_threshold)
-        
+       
         # Threshold input section
         threshold_label = QLabel('Threshold')
         threshold_input = QLineEdit(str(threshold_value))
@@ -1205,20 +1208,20 @@ class StartupTimeConfig(QDialog):
         threshold_input.setFixedWidth(80)
         threshold_input.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
         sec_label = QLabel('[Int: 1~ (sec)]')
-        
+       
         # Enable/disable threshold row based on checkbox selection
         def toggle_threshold_row():
             enabled = apply_checkbox.isChecked()
             threshold_label.setEnabled(enabled)
             threshold_input.setEnabled(enabled)
             sec_label.setEnabled(enabled)
-            
+           
         # Connect checkbox to the toggle function
         apply_checkbox.toggled.connect(toggle_threshold_row)
-        
+       
         # Set initial enabled state
         toggle_threshold_row()
-        
+       
         # Layout arrangement: checkbox, then threshold controls
         non_config_layout.addWidget(apply_checkbox)
         non_config_layout.addSpacing(20)  # Add padding between checkbox and threshold controls
@@ -1227,12 +1230,12 @@ class StartupTimeConfig(QDialog):
         non_config_layout.addWidget(sec_label)
         non_config_layout.addStretch()
         non_config_group.setLayout(non_config_layout)
-        non_config_group.setFixedWidth(400)
-        
-        
+        non_config_group.setFixedWidth(500)
+       
+       
         # Add to threshold section
         threshold_vbox.addWidget(non_config_group)
-        
+       
         # Regular threshold configuration
         threshold_fl = QFormLayout()
         threshold_entries = []
@@ -1250,21 +1253,21 @@ class StartupTimeConfig(QDialog):
 
         vbox.addWidget(self.threshold_group)
         vbox.addWidget(startup_group)
-        
+       
         # Set the content layout for the collapsible group box
         gb.setContentLayout(vbox)
-        
+       
         # Connect the removed signal to handle restore functionality
         gb.removed.connect(self.handle_group_removed)
-        
+       
         self.startup_group_list.append(startup_group)
         self.widgets['ecu-config'].append({
-            'ecu_type': data.get('ecu-type'), 
-            'startup_layout': startup_fl, 
-            'startup': startup_entries, 
-            'threshold_layout': threshold_fl, 
-            'threshold': threshold_entries, 
-            'add_startup_btn': add_startup_btn, 
+            'ecu_type': data.get('ecu-type'),
+            'startup_layout': startup_fl,
+            'startup': startup_entries,
+            'threshold_layout': threshold_fl,
+            'threshold': threshold_entries,
+            'add_startup_btn': add_startup_btn,
             'add_threshold_btn': add_threshold_btn,
             'apply_checkbox': apply_checkbox,
             'nc_threshold_input': threshold_input
@@ -1280,7 +1283,7 @@ class StartupTimeConfig(QDialog):
             'SoC1': ('ELITE', 'SoC1')   # ELITE-SoC1
         }
         return ecu_mapping.get(ecu_type, (None, None))
-    
+   
     def _get_widget_text(self, widget):
         """Get text from either QLineEdit or ApplicationSelectorWidget"""
         if hasattr(widget, 'get_text'):
@@ -1289,7 +1292,7 @@ class StartupTimeConfig(QDialog):
             return widget.text()
         else:
             return ''
-    
+   
     def _set_widget_style(self, widget, style):
         """Set style for either QLineEdit or ApplicationSelectorWidget"""
         if hasattr(widget, 'text_field'):
@@ -1300,26 +1303,26 @@ class StartupTimeConfig(QDialog):
     def _create_startup_row(self, ecu_type, type_val, apps_val, ecu_idx, enabled=True):
         row = QWidget()
         main_layout = QHBoxLayout(); row.setLayout(main_layout)
-        
+       
         # Enable/Disable checkbox at the start
         enable_cb = QCheckBox()
         enable_cb.setChecked(enabled)
-        
+       
         # Left side - form layout for type and apps
         left_widget = QWidget()
         left_form = QFormLayout(left_widget)
         left_form.setContentsMargins(0, 0, 0, 0)
-        
+       
         # Apps row - using custom application selector widget
         ecu_family, ecu_type = self._get_ecu_family_and_type(ecu_type)
         apps = ApplicationSelectorWidget(
-            parent=self, 
-            ecu_family=ecu_family, 
-            ecu_type=ecu_type, 
+            parent=self,
+            ecu_family=ecu_family,
+            ecu_type=ecu_type,
             ecu_idx=ecu_idx,
             placeholder_text='App1, App2'
         )
-        
+       
         # Create application count label
         def count_applications(text):
             """Count non-empty comma-separated values"""
@@ -1327,16 +1330,16 @@ class StartupTimeConfig(QDialog):
                 return 0
             apps_list = [app.strip() for app in text.split(',') if app.strip()]
             return len(apps_list)
-        
+       
         count_label = QLabel(f"Configured Application Count: {count_applications(apps_val)}")
         count_label.setStyleSheet("color: #666666; font-size: 11px;")
-        
+       
         # Update count when text changes
         def update_count_and_validation(text):
             count = count_applications(text)
             count_label.setText(f"Configured Application Count: {count}")
             self.on_change_update_ok_btn_state()
-            
+           
         apps.set_text(apps_val)
         apps.text_field.textChanged.connect(update_count_and_validation)
 
@@ -1345,7 +1348,7 @@ class StartupTimeConfig(QDialog):
         dd.setFixedWidth(150)  # Set fixed width to 150 pixels
         idx = dd.findText(type_val)
         dd.setCurrentIndex(idx if idx != -1 else 0)
-        
+       
         type_row = QWidget()
         type_hl = QHBoxLayout(type_row)
         type_hl.setContentsMargins(0, 0, 0, 0)
@@ -1357,49 +1360,49 @@ class StartupTimeConfig(QDialog):
         apps_hl = QHBoxLayout(apps_row)
         apps_hl.setContentsMargins(0, 0, 0, 0)
         apps_hl.addWidget(apps)
-        
+       
         left_form.addRow(QLabel('Order Type'), type_row)
         left_form.addRow(QLabel('Applications'), apps_row)
 
         rem = QPushButton('Remove')
         rem.setFocusPolicy(Qt.NoFocus)
         rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_startup_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
-        
+       
         main_layout.addWidget(enable_cb, alignment=Qt.AlignVCenter)
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
-        
+       
         enable_cb.clicked.connect(lambda: [self.on_change_update_ok_btn_state(), left_widget.setEnabled(enable_cb.isChecked())])
-        
+       
         # Set initial enabled state
         left_widget.setEnabled(enabled)
-        
+       
         return row, dd, apps, rem, enable_cb
 
     def _create_threshold_row(self, ecu_type, apps_val, threshold_val, ecu_idx, enabled=True):
         row = QWidget()
         main_layout = QHBoxLayout(); row.setLayout(main_layout)
-        
+       
         # Enable/Disable checkbox at the start
         enable_cb = QCheckBox()
         enable_cb.setChecked(enabled)
         enable_cb.clicked.connect(lambda: self.on_change_update_ok_btn_state())
-        
+       
         # Left side - form layout for apps and threshold
         left_widget = QWidget()
         left_form = QFormLayout(left_widget)
         left_form.setContentsMargins(0, 0, 0, 0)
-        
+       
         # Applications row - using custom application selector widget
         ecu_family, ecu_type = self._get_ecu_family_and_type(ecu_type)
         apps = ApplicationSelectorWidget(
-            parent=self, 
-            ecu_family=ecu_family, 
-            ecu_type=ecu_type, 
+            parent=self,
+            ecu_family=ecu_family,
+            ecu_type=ecu_type,
             ecu_idx=ecu_idx,
             placeholder_text='App1, App2, App3'
         )
-        
+       
         # Create application count label
         def count_applications(text):
             """Count non-empty comma-separated values"""
@@ -1407,16 +1410,16 @@ class StartupTimeConfig(QDialog):
                 return 0
             apps_list = [app.strip() for app in text.split(',') if app.strip()]
             return len(apps_list)
-        
+       
         count_label = QLabel(f"Configured Application Count: {count_applications(apps_val)}")
         count_label.setStyleSheet("color: #666666; font-size: 11px;")
-        
+       
         # Update count when text changes
         def update_count_and_validation(text):
             count = count_applications(text)
             count_label.setText(f"Configured Application Count: {count}")
             self.on_change_update_ok_btn_state()
-            
+           
         apps.set_text(apps_val)
         apps.text_field.textChanged.connect(update_count_and_validation)
 
@@ -1424,14 +1427,14 @@ class StartupTimeConfig(QDialog):
         apps_hl = QHBoxLayout(apps_row)
         apps_hl.setContentsMargins(0, 0, 0, 0)
         apps_hl.addWidget(apps)
-        
+       
         # Threshold row with count label at the end
         thresh = QLineEdit(str(threshold_val))
         thresh.setPlaceholderText('5')
         thresh.setValidator(CustomIntValidator(1))
         thresh.setFixedWidth(80)
         thresh.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
-        
+       
         thresh_row = QWidget()
         thresh_hl = QHBoxLayout(thresh_row)
         thresh_hl.setContentsMargins(0, 0, 0, 0)
@@ -1447,22 +1450,22 @@ class StartupTimeConfig(QDialog):
         rem = QPushButton('Remove')
         rem.setFocusPolicy(Qt.NoFocus)
         rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_threshold_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
-        
+       
         main_layout.addWidget(enable_cb, alignment=Qt.AlignVCenter)
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
-        
+       
         enable_cb.clicked.connect(lambda: [self.on_change_update_ok_btn_state(), left_widget.setEnabled(enable_cb.isChecked())])
-        
+       
         # Set initial enabled state
         left_widget.setEnabled(enabled)
-        
+       
         return row, apps, thresh, enable_cb
 
     def on_change_update_ok_btn_state(self):
         enabled = True
         ecu_error_list = [False, False, False, False]
-        if self.is_any_ecu_selected_flag:
+        if self.is_any_ecu_selected_flag and self.is_checked:
             if self.isPadas:
                 for i in range(1, 4):
                     if not self.ecu_block_list[i].disabled:
@@ -1476,7 +1479,7 @@ class StartupTimeConfig(QDialog):
                     enabled = False
                 if not self.isSOC1 and not self.ecu_block_list[3].disabled:
                     enabled = False
-        
+       
         for i in range(4):
             if self.ecu_block_list[i].disabled:
                 continue
@@ -1616,7 +1619,7 @@ class StartupTimeConfig(QDialog):
             self.update_ecu_block_styles(self.ecu_block_list[i], ecu_error_list[i])
 
         self.ok_btn.setEnabled(enabled)
-        
+       
     def update_ecu_block_styles(self, ecu_gb, has_error):
         """Update the styles of the ECU block based on error state."""
         # Define condition mappings for each ECU type
@@ -1626,13 +1629,13 @@ class StartupTimeConfig(QDialog):
             'SoC0': self.isSOC0 and self.isElite,
             'SoC1': self.isSOC1 and self.isElite
         }
-        
+       
         # Determine if border should be red
         should_have_red_border = (
-            has_error or 
-            (self.is_any_ecu_selected_flag and not ecu_conditions.get(ecu_gb.title, True))
+            has_error or
+            (self.is_any_ecu_selected_flag and self.is_checked and not ecu_conditions.get(ecu_gb.title, True))
         )
-        
+       
         # Apply appropriate border style
         border_style = '1px solid red' if should_have_red_border else '1px solid #999999'
         ecu_gb.setStyleSheet(f"{ecu_gb.styleSheet()}CollapsibleGroupBox{{border: {border_style};}}")
@@ -1695,7 +1698,7 @@ class StartupTimeConfig(QDialog):
         else:
             # Default to C drive if path is empty or invalid
             start_dir = 'C:\\'
-        
+       
         path, _ = QFileDialog.getOpenFileName(self, 'Select dlt-viewer executable', start_dir, 'Executable Files (*.exe)')
         if path:
             line_edit.setText(path)
@@ -1707,7 +1710,7 @@ class StartupTimeConfig(QDialog):
 
     def open_logs_folder(self):
         """Open the Pre-Generated Logs folder in File Explorer"""
-        
+       
         # Use the instance variable logs_path
         logs_path = self.logs_path
 
@@ -1719,7 +1722,7 @@ class StartupTimeConfig(QDialog):
             except Exception as e:
                 print(f"Error creating logs directory: {e}")
                 return
-        
+       
         # Open the folder in the default file manager
         try:
             if platform.system() == "Windows":
@@ -1730,22 +1733,22 @@ class StartupTimeConfig(QDialog):
                 subprocess.run(["xdg-open", logs_path])
         except Exception as e:
             print(f"Error opening logs folder: {e}")
-            
+           
         # Update tooltip after opening (in case folder structure changed)
         self.update_logs_tooltip()
 
     def open_application_input_list(self):
         """Open the Application_Input_List_for_Startup_Time.xlsx file"""
         app_input_path = self.app_input_file_path
-        
+       
         # Check if the file exists
         if not app_input_path.exists():
             print(f"Application_Input_List_for_Startup_Time.xlsx not found at: {app_input_path}")
             return
-        
+       
         # Store the file path for cleanup later
         self.excel_file_path = str(app_input_path)
-        
+       
         # Open the Excel file with the default application
         try:
             if platform.system() == "Windows":
@@ -1756,52 +1759,52 @@ class StartupTimeConfig(QDialog):
                 subprocess.run(["xdg-open", app_input_path])
         except Exception as e:
             print(f"Error opening Application_Input_List_for_Startup_Time.xlsx: {e}")
-    
+   
     def close_opened_excel_files(self):
         """Close the specific Excel file if it's open"""
         if not self.excel_file_path:
             return
-            
+           
         try:
             # Try to use Windows COM API to close the specific Excel file
             import win32com.client
             xl = win32com.client.GetActiveObject("Excel.Application")
-            
+           
             # Check how many workbooks are currently open
             workbook_count = xl.Workbooks.Count
-            
+           
             # Look for our specific file and close it
             for wb in xl.Workbooks:
                 if wb.FullName.lower() == self.excel_file_path.lower():
                     wb.Close(SaveChanges=False)
                     print(f"Closed Excel file: {self.excel_file_path}")
-                    
+                   
                     # If this was the only workbook, quit Excel entirely
                     if workbook_count == 1:
                         xl.Quit()
                         print("Closed Excel application (was the last workbook)")
                     break
-                    
+                   
         except Exception as e:
             # If COM approach fails, silently continue (Excel might not be running or file not open)
             print(f"Could not close Excel file via COM: {e}")
             pass
-    
+   
     def check_app_input_file(self):
         """Check if Application_Input_List_for_Startup_Time.xlsx exists"""
         return self.app_input_file_path.exists()
-    
+   
     def update_app_input_button(self):
         """Update the Application Input List button appearance based on file presence"""
         if not hasattr(self, 'app_input_btn'):
             return
-            
+           
         file_exists = self.check_app_input_file()
-        
+       
         # Create tooltip text
         if file_exists:
             tooltip_lines = ["Application_Input_List_for_Startup_Time.xlsx found - Click to open", ""]
-            
+           
             # Add application counts if available
             if hasattr(self, 'application_list') and self.application_list:
                 tooltip_lines.append("Loaded Applications:")
@@ -1811,15 +1814,15 @@ class StartupTimeConfig(QDialog):
                             tooltip_lines.append(f"  {ecu_family}({ecu_type}): {len(apps)} apps")
             else:
                 tooltip_lines.append("No applications loaded yet")
-            
+           
             tooltip_text = "\n".join(tooltip_lines)
             border_color = 'green'
         else:
             tooltip_text = "Application_Input_List_for_Startup_Time.xlsx not found in current directory"
             border_color = 'red'
-        
+       
         self.app_input_btn.setToolTip(tooltip_text)
-        
+       
         # Update button style with border color
         self.app_input_btn.setStyleSheet(f"""
             QPushButton {{
@@ -1838,12 +1841,12 @@ class StartupTimeConfig(QDialog):
         if not self.check_app_input_file():
             print("Application_Input_List_for_Startup_Time.xlsx not found, cannot parse applications")
             return None
-        
+       
         try:
             # Load the Excel workbook
             workbook = openpyxl.load_workbook(self.app_input_file_path)
             worksheet = workbook.active
-            
+           
             # Initialize the applications dictionary
             applications = {
                 'ELITE': {
@@ -1855,78 +1858,78 @@ class StartupTimeConfig(QDialog):
                     'RCAR': []
                 }
             }
-            
+           
             # Column mapping according to the Excel structure
             # Column B = ELITE RCAR, Column C = ELITE SoC0, Column D = ELITE SoC1, Column E = PADAS RCAR
             column_mapping = {
                 'B': ('ELITE', 'RCAR'),
-                'C': ('ELITE', 'SOC0'), 
+                'C': ('ELITE', 'SOC0'),
                 'D': ('ELITE', 'SOC1'),
                 'E': ('PADAS', 'RCAR')
             }
-            
+           
             # Start reading from row 3 (row 1 has title, row 2 has column headers)
             # We'll read up to row 100 or until we find 10 consecutive empty rows
             max_row = min(worksheet.max_row, 100)
             empty_row_count = 0
-            
+           
             for row_num in range(3, max_row + 1):
                 row_has_data = False
-                
+               
                 for col_letter, (ecu_family, ecu_type) in column_mapping.items():
                     cell_value = worksheet[f'{col_letter}{row_num}'].value
-                    
+                   
                     if cell_value and str(cell_value).strip():
                         app_name = str(cell_value).strip()
-                        
+                       
                         # Skip header-like values
                         if app_name.upper() not in ['ELITE', 'PADAS', 'RCAR', 'SOC0', 'SOC1', 'NO.']:
                             applications[ecu_family.upper()][ecu_type.upper()].append(app_name)
                             row_has_data = True
-                
+               
                 if row_has_data:
                     empty_row_count = 0
                 else:
                     empty_row_count += 1
-                    
+                   
                 # Stop if we encounter 10 consecutive empty rows
                 if empty_row_count >= 10:
                     break
-            
+           
             workbook.close()
-            
+           
             # Store the parsed applications for later use
             self.application_list = applications
-            
+           
             # Print parsed data for debugging
-            print("Parsed Application Input List:")
-            for ecu_family, ecu_types in applications.items():
-                for ecu_type, apps in ecu_types.items():
-                    if apps:
-                        print(f"  {ecu_family} {ecu_type}: {apps}")
-            
+            #print("Parsed Application Input List:")
+            #for ecu_family, ecu_types in applications.items():
+                #for ecu_type, apps in ecu_types.items():
+                    #if apps:
+                        #print(f"  {ecu_family} {ecu_type}: {apps}")
+           
             return applications
-            
+           
         except Exception as e:
             print(f"Error parsing Application_Input_List_for_Startup_Time.xlsx: {e}")
             return None
-    
+   
     def get_applications_for_ecu(self, ecu_family, ecu_type):
         """Get the list of applications for a specific ECU type"""
         ecu_family = ecu_family.upper()
         ecu_type = ecu_type.upper()
         if not hasattr(self, 'application_list') or not self.application_list:
             self.parse_application_input_list()
-        
+       
         if self.application_list and ecu_family in self.application_list:
             return self.application_list[ecu_family].get(ecu_type, [])
         return []
-    
+   
     def refresh_application_list(self):
         """Refresh the application list by re-parsing the Excel file"""
-        print("Refreshing Application Input List...")
+        #print("Refreshing Application Input List...")
         self.parse_application_input_list()
-        
+       
         # Refresh all ApplicationSelectorWidget instances
         if hasattr(self, 'widgets') and 'ecu-config' in self.widgets:
             for ecu_config in self.widgets['ecu-config']:
@@ -1934,7 +1937,7 @@ class StartupTimeConfig(QDialog):
                 for entry in ecu_config['startup']:
                     if len(entry) >= 3 and hasattr(entry[2], 'refresh_applications'):
                         entry[2].refresh_applications()
-                
+               
                 # Refresh threshold entries  
                 for entry in ecu_config['threshold']:
                     if len(entry) >= 2 and hasattr(entry[1], 'refresh_applications'):
@@ -1961,16 +1964,16 @@ class StartupTimeConfig(QDialog):
         for idx, item in enumerate(self.widgets['ecu-config']):
             title = self.ecu_map.get(self.ecu_block_list[idx].title, self.ecu_block_list[idx].title)
             ec_item = {'ecu-type': title, 'startup-order': [], 'threshold-config': []}
-            if self.ecu_block_list[idx].disabled or ((title == 'PADAS' and not (self.isRCAR and self.isPadas)) or 
-               (title == 'RCAR' and not (self.isRCAR and self.isElite)) or 
-               (title == 'SoC0' and not (self.isSOC0 and self.isElite)) or 
+            if self.ecu_block_list[idx].disabled or ((title == 'PADAS' and not (self.isRCAR and self.isPadas)) or
+               (title == 'RCAR' and not (self.isRCAR and self.isElite)) or
+               (title == 'SoC0' and not (self.isSOC0 and self.isElite)) or
                (title == 'SoC1' and not (self.isSOC1 and self.isElite))):
                 continue
             for entry in item['startup']:
                 # entry is (row, dd, apps, rem, enable_cb)
                 _, dd, apps, _, enable_cb = entry
                 ec_item['startup-order'].append({
-                    'Order Type': dd.currentText(), 
+                    'Order Type': dd.currentText(),
                     'Applications': self._get_widget_text(apps),
                     'enabled': enable_cb.isChecked()
                 })
@@ -1980,11 +1983,11 @@ class StartupTimeConfig(QDialog):
                 threshold_text = self._get_widget_text(thresh)
                 if threshold_text:  # Only save if threshold value is provided
                     ec_item['threshold-config'].append({
-                        'Applications': self._get_widget_text(apps), 
+                        'Applications': self._get_widget_text(apps),
                         'Threshold': int(threshold_text),
                         'enabled': enable_cb.isChecked()
                     })
-            
+           
             # Save non-configured application settings
             apply_checkbox = item['apply_checkbox']
             threshold_input = item['nc_threshold_input']
@@ -1995,8 +1998,28 @@ class StartupTimeConfig(QDialog):
                     'threshold': int(threshold_input.text()) if threshold_input.text() else 5
                 }
                 ec_item['non-configured-settings'] = non_config_settings
-            
+           
             ec.append(ec_item)
+           
+        validation_map = {
+            "PADAS": ("PADAS", "RCAR"),
+            "RCAR": ("Elite", "RCAR"),
+            "SoC0": ("Elite", "SoC0"),
+            "SoC1": ("Elite", "SoC1"),
+        }
+       
+        for idx, block in enumerate(self.ecu_block_list):
+            if block.disabled:
+                continue  # Skip disabled blocks
+ 
+            # Get mapped title if available
+            title = self.ecu_map.get(block.title, block.title)
+            group, key = validation_map[title]
+            self.ecu_selection[group][key] = True
+            # py_logger.info(f"Enabled ECU: {title}")
+ 
+        # py_logger.info(f'self.ecu_selection: {self.ecu_selection}')
+ 
         data['ecu-config'] = ec
         data['ECU_setting'] = self.ecu_selection
         try:
@@ -2011,12 +2034,12 @@ class StartupTimeConfig(QDialog):
         """Handle dialog close event to cleanup Excel processes"""
         self.close_opened_excel_files()
         super().closeEvent(event)
-    
+   
     def reject(self):
         """Handle dialog cancel to cleanup Excel processes"""
         self.close_opened_excel_files()
         super().reject()
-    
+   
     def done(self, result):
         """Handle dialog completion to cleanup Excel processes"""
         self.close_opened_excel_files()

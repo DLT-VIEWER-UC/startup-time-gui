@@ -56,7 +56,7 @@ def check_stop_flag():
 def register_process(process):
     """
     Register a subprocess for tracking so it can be terminated if stop flag is detected.
-    
+   
     Args:
         process: subprocess.Popen object or process ID
     """
@@ -66,7 +66,7 @@ def register_process(process):
 def register_thread(thread):
     """
     Register a thread for tracking so it can be terminated if stop flag is detected.
-    
+   
     Args:
         thread: threading.Thread object
     """
@@ -79,9 +79,9 @@ def terminate_all_processes():
     This function is called when stop flag is detected.
     """
     global running_processes, running_threads
-    
+   
     print("Terminating all running processes and threads...")
-    
+   
     # Terminate all registered processes
     for process in running_processes[:]:  # Use slice to avoid modification during iteration
         try:
@@ -97,7 +97,7 @@ def terminate_all_processes():
             running_processes.remove(process)
         except Exception as e:
             print(f"Error terminating process: {e}")
-    
+   
     # Kill any dlt-viewer processes by name using system commands
     try:
         if sys.platform.startswith("win"):
@@ -114,7 +114,7 @@ def terminate_all_processes():
                 print(f"Error killing dlt-viewer processes: {e}")
     except Exception as e:
         print(f"Error accessing running processes: {e}")
-    
+   
     # Set stop event for threads
     for thread in running_threads[:]:
         try:
@@ -124,14 +124,14 @@ def terminate_all_processes():
                 # For system threads, we can't force stop them safely
         except Exception as e:
             print(f"Error stopping thread: {e}")
-    
+   
     print("Process and thread termination completed.")
 
 def check_stop_flag_periodically():
     """
     Check if stop flag exists and handle graceful shutdown if detected.
     This should be called periodically during long-running operations.
-    
+   
     Returns:
         bool: True if stop was requested, False otherwise
     """
@@ -871,9 +871,9 @@ def find_log_files_with_keywords(folder_path, keywords, logger):
     log_files = glob.glob(os.path.join(folder_path, "*.log"))
     filtered_files = [
         f for f in log_files
-        if all(keyword.lower() in os.path.basename(f).lower() for keyword in keywords[:-1]) 
+        if all(keyword.lower() in os.path.basename(f).lower() for keyword in keywords[:-1])
         and (
-            os.path.basename(f).lower().endswith(keywords[-1].lower()+'.log') or 
+            os.path.basename(f).lower().endswith(keywords[-1].lower()+'.log') or
             f"_{keywords[-1].lower()}_" in os.path.basename(f).lower()
         )
     ]
@@ -888,7 +888,7 @@ def extract_log_file_paths(index, ecu_type, setup_type, logger):
         return tuple((parent_dir / f"{setup_type}_{ecu_type}" / f'{ecu_type}_{setup_type}_N{index+1}.log', None, None))
     else:
         log_file_path = filtered_files.pop()
-        
+       
         # Copy log file to local save path with proper directory structure
         try:
             # Create target directory structure: Logs/{SETUP_TYPE}_{ECU_TYPE}/
@@ -897,21 +897,21 @@ def extract_log_file_paths(index, ecu_type, setup_type, logger):
             # else:  # PADAS
             #     target_logs_dir = local_save_path / "Logs"
             target_logs_dir = local_save_path / "Logs" / f"{setup_type}_{ecu_type}"
-            
+           
             # Create directory if it doesn't exist
             target_logs_dir.mkdir(parents=True, exist_ok=True)
-            
+           
             # Generate target file path with consistent naming
             target_filename = os.path.basename(log_file_path)
             target_file_path = target_logs_dir / target_filename
-            
+           
             # Copy the file to the target location
             shutil.copy2(log_file_path, target_file_path)
             logger.info(f"Copied log file from {log_file_path} to {target_file_path}")
-            
+           
             # Return the copied file path instead of the original
             return tuple((target_file_path, target_filename, None))
-            
+           
         except Exception as e:
             logger.error(f"Error copying log file {log_file_path}: {e}")
             # Fall back to original file path if copy fails
@@ -1124,6 +1124,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     start_row = sheet.max_row + 1
     relative_startup_order = {}
     encountered_apps = set(dltstart_timestamps.keys())
+    encountered_apps.add('Non-Configured Applications')
     # Iterate over the DLTStart timestamps and differences in parallel using zip
     for position, (process, dltstart_line) in enumerate(dltstart_timestamps.items()):
         # Check if the process names match
@@ -1195,7 +1196,6 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     encountered_apps.add(app)
                     data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
                     if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
-                    # if app in threshold_map[ecu_type]:
                         overall_IG_ON_cur_iteration['status'] = False
 
                     if app_registration:
@@ -1229,7 +1229,6 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             encountered_apps.add(process)
             data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
             if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
-            # if process in threshold_map[ecu_type]:
                 overall_IG_ON_cur_iteration['status'] = False
             if validate_startup_order:
                 if app_registration:
@@ -1496,7 +1495,7 @@ def each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_
                     test_status = 'PASS'
             else:
                 test_status = 'FAIL'
-            data_row = [f'=HYPERLINK("{'./'+os.path.basename(report_file) if isSummaryReport else ''}#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
+            data_row = ['=HYPERLINK("'+('./'+os.path.basename(report_file) if isSummaryReport else '')+f'#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
             if i in application_startup_order_status: # config['Startup Order Judgement'] and
                 if app_registration:
                     startup_order_status = '-'
@@ -1552,13 +1551,13 @@ def get_app_configured_and_terminated_list(ecu_type, overall_IG_ON_iteration):
     return configured_apps.union(terminated_apps)
 
 def get_ind_app_configured_and_terminated_list(ecu_type, overall_IG_ON_cur_iteration):
-    configured_apps = overall_IG_ON_cur_iteration['configured_applications']
-    terminated_apps = overall_IG_ON_cur_iteration['terminated_applications']
-    threshold_apps = set(threshold_map[ecu_type].keys())
-    configured_apps.update(threshold_apps)
-    if 'Non-Configured Applications' in configured_apps:
-        configured_apps.remove('Non-Configured Applications')
-    return configured_apps.union(terminated_apps)
+   configured_apps = overall_IG_ON_cur_iteration['configured_applications']
+   terminated_apps = overall_IG_ON_cur_iteration['terminated_applications']
+   threshold_apps = set(threshold_map[ecu_type].keys())
+   configured_apps.update(threshold_apps)
+   if 'Non-Configured Applications' in configured_apps:
+       configured_apps.remove('Non-Configured Applications')
+   return configured_apps.union(terminated_apps)
 
 
 def export_and_plot_average_data_to_excel(sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger):
@@ -2249,19 +2248,20 @@ def extract_dltstart_timestamps(lines, logger):
     return app_start_timestamps
 
 def validate_ind_app_startup_order(expected_order: int, application: str, application_startup_order: list[tuple[str, list[str]]], started_apps: set[str], relative_startup_order: dict[int, set[str]]) -> int:
-    
+   
     if not expected_order:
         return 2
-            
+           
     # Check if the application is already in any of the previous sets
     if expected_order in relative_startup_order:
         relative_startup_order[expected_order].add(application)
     else:
         relative_startup_order[expected_order] = {application}
-        
+
     if max(relative_startup_order)==expected_order:
         cur_order_no = 1
         for order_type, app_list in application_startup_order:
+            # print("cur_order_no :: ", cur_order_no, " :: expected_order :: ", expected_order)
             if cur_order_no >= expected_order:
                 return 0
             if order_type.lower() == OrderType.PARALLEL.value:
@@ -2279,8 +2279,7 @@ def validate_ind_app_startup_order(expected_order: int, application: str, applic
                         return 1
                     cur_order_no += 1
     return 1
-            
-    
+   
 
 def validate_app_startup_order(dltstart_timestamps, application_startup_order):
     """
@@ -2508,21 +2507,21 @@ def RCAR_ON_OFF_Relay(power_on_off_delay, logger):
         if check_stop_flag_periodically():
             logger.info("Stop flag detected. Aborting relay power cycle.")
             return False
-            
+           
         logger.info("Turning OFF relay...")
         process = subprocess.Popen(["usbrelay", "BITFT_1=0"])
         register_process(process)
         process.wait()
-        
+       
         # Monitor delay period with stop flag checking
         delay_step = 0.5  # Check every 500ms
         remaining_delay = float(power_on_off_delay)
-        
+       
         while remaining_delay > 0:
             if check_stop_flag_periodically():
                 logger.info("Stop flag detected during power cycle delay. Aborting.")
                 return False
-            
+           
             sleep_time = min(delay_step, remaining_delay)
             time.sleep(sleep_time)
             remaining_delay -= sleep_time
@@ -2600,7 +2599,7 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, lo
         if check_stop_flag_periodically():
             logger.info("Stop flag detected. Aborting serial relay power cycle.")
             return False
-            
+           
         #set up your serial port with the desire COM port and baudrate.
         signal = serial.Serial(serial_port_relay, baudrate_relay, bytesize=8, stopbits=1, timeout=1)
         if not signal.is_open:
@@ -2609,33 +2608,34 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, lo
        
         logger.info("Turning OFF relay...")
         signal.write("AT+CH1=0".encode())   # Relay OFF
-        
+       
+        time.sleep(power_on_off_delay)
         # Monitor delay period with stop flag checking
-        delay_step = 0.5  # Check every 500ms
-        remaining_delay = float(power_on_off_delay)
-        
-        while remaining_delay > 0:
-            if check_stop_flag_periodically():
-                logger.info("Stop flag detected during serial relay power cycle delay. Aborting.")
-                signal.close()
-                return False
-            
-            sleep_time = min(delay_step, remaining_delay)
-            time.sleep(sleep_time)
-            remaining_delay -= sleep_time
+        # delay_step = 0.5  # Check every 500ms
+        # remaining_delay = float(power_on_off_delay)
+       
+        # while remaining_delay > 0:
+        #     if check_stop_flag_periodically():
+        #         logger.info("Stop flag detected during serial relay power cycle delay. Aborting.")
+        #         signal.close()
+        #         return False
+           
+        #     sleep_time = min(delay_step, remaining_delay)
+        #     time.sleep(sleep_time)
+        #     remaining_delay -= sleep_time
 
         # Check stop flag before turning relay back on
-        if check_stop_flag_periodically():
-            logger.info("Stop flag detected. Aborting serial relay power on.")
-            signal.close()
-            return False
+        # if check_stop_flag_periodically():
+        #     logger.info("Stop flag detected. Aborting serial relay power on.")
+        #     signal.close()
+        #     return False
        
         logger.info("Turning ON relay...")
         signal.write("AT+CH1=1".encode())   # Relay ON
         time.sleep(0.1)  # 100ms delay
-        
+       
         signal.close()
-        
+       
     except Exception as e:
         logger.error(f"Failed to open serial port: {e}")
         return False
@@ -2736,7 +2736,7 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
 
         # Create a list to store the sheets
         sheets = []
-        
+       
         if ecu_type != 'ECU_Summary':
             # Create each sheet and add it to the list
             for i in range(1, iterations + 1):
@@ -2768,7 +2768,6 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
     except Exception as e:
         # If any exception occurs while creating the workbook or sheet, logger. the error message and return None
         logger.error(f"An error occurred while creating the workbook or sheet: {e}")
-        raise e
         # return None, None, None, None
 
 
@@ -3182,12 +3181,12 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
         provides the raw data for all subsequent processing and reporting.
     """
     print("capture_logs_from_dlt_viewer :: START")
-    
+   
     # Check for stop flag before starting
     if check_stop_flag_periodically():
         logger.info("Stop flag detected. Aborting log capture.")
         return False
-    
+   
     timeout = config['DLT-Viewer Log Capture Time']
     script_dir = Path(__file__).parent.joinpath("dlt-viewer.bat")
 
@@ -3197,7 +3196,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
             if isPathSet:
                 process = subprocess.Popen([script_dir, "dlt-viewer.exe", str(timeout), log_file_name, dlt_file_name, project_file_name])
                 register_process(process)
-                
+               
                 # Monitor process and check for stop flag
                 while process.poll() is None:
                     if check_stop_flag_periodically():
@@ -3205,16 +3204,16 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
                         process.terminate()
                         return False
                     time.sleep(1)
-                
+               
             else:
                 dlt_viewer_path = config['windows']['DLT-Viewer Installed Path']
                 log_file_name = os.path.join(log_file_name)
                 logger.info(f"dlt_viewer_path: {dlt_viewer_path}")
                 logger.info(f"log_file_name : {log_file_name}")
-                
+               
                 process = subprocess.Popen([script_dir, dlt_viewer_path, str(timeout), log_file_name, dlt_file_name, project_file_name])
                 register_process(process)
-                
+               
                 # Monitor process and check for stop flag
                 while process.poll() is None:
                     if check_stop_flag_periodically():
@@ -3222,12 +3221,12 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
                         process.terminate()
                         return False
                     time.sleep(1)
-                    
+                   
         elif sys.platform.startswith("linux"):
             # For Linux, use subprocess.run with timeout but in a separate thread to monitor stop flag
             process = subprocess.Popen(f"timeout {timeout} dlt-viewer -p {project_file_name} -l {dlt_file_name} -v", shell=True)
             register_process(process)
-            
+           
             # Monitor process and check for stop flag
             while process.poll() is None:
                 if check_stop_flag_periodically():
@@ -3235,17 +3234,17 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
                     process.terminate()
                     return False
                 time.sleep(1)
-            
+           
             print("Converting *.dlt to *.txt...")
-            
+           
             # Check stop flag before conversion
             if check_stop_flag_periodically():
                 logger.info("Stop flag detected. Skipping DLT conversion.")
                 return False
-                
+               
             conversion_process = subprocess.Popen(f"dlt-viewer -c logs.dlt {log_file_name}", shell=True)
             register_process(conversion_process)
-            
+           
             # Monitor conversion process
             while conversion_process.poll() is None:
                 if check_stop_flag_periodically():
@@ -3253,7 +3252,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
                     conversion_process.terminate()
                     return False
                 time.sleep(1)
-                
+               
             print("Conversion done, successfully...")
 
         # Final check for stop flag before validation
@@ -3266,7 +3265,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
             logger.warning(f"Generated {os.path.basename(log_file_name)} is empty, Please check for valid IP-address / Status of {ecu_type}.")
             return False
         return True
-        
+       
     except Exception as e:
         logger.error(f"Error during log capture: {e}")
         return False
@@ -3341,7 +3340,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         if check_stop_flag_periodically():
             logger.info(f"Stop flag detected. Aborting log processing for {ecu_type} iteration {i+1}.")
             return False
-            
+           
         # Get the log file path and name for the specified ECU type and timestamp
         filename, logfile, dltfile = log_file_details
         if not is_pre_gen_logs:
@@ -3468,6 +3467,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
 
     except Exception as e:
         logger.error(f"Exception :: {e}")
+        raise e
         return False
     return True
 
@@ -3545,14 +3545,14 @@ def save_workbook_and_generate_reports(ecu_type, setup_type, summary_sheet, over
         return False
 
     each_iteration_test_status(ecu_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False)
-    
+   
     es_report_file, es_workbook, es_sheets, es_summary_sheet = ecu_summary_workbook_items
     if es_summary_sheet:
         each_iteration_test_status(ecu_type, report_file, es_summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True)
 
     # Export the average data to the Excel sheet
     export_and_plot_average_data_to_excel(summary_sheet, ecu_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
-    
+   
     # Copy summary to ECU_Summary workbook
     for es_sheet in es_sheets:
         if es_sheet.title == f"{setup_type}_{ecu_type}":
@@ -3772,14 +3772,14 @@ def start_startup_time_measurement(logger):
             for i, threshold_config_grp in enumerate(ecu.get('threshold-config', {})):
                 if not threshold_config_grp.get('enabled', True):
                     continue
-                if threshold_config_grp.get('Threshold', -1) < 0:
+                if threshold_config_grp.get('Threshold', -1) < 0 :
                     logger.error(f"Configured 'Threshold' is not valid. Configure its value in range[0, 100] for {i}th group in {ecu['ecu-type']}.")
                     return False
                 for app in threshold_config_grp.get('Applications', '').split(','):
                     if len(app.strip()) > 0:
                         threshold_map[ecu['ecu-type']][app.strip()] = threshold_config_grp.get('Threshold')
             if ecu.get('non-configured-settings', {}).get('apply', False):
-                if ecu['non-configured-settings'].get('threshold', -1) < 0:
+                if ecu['non-configured-settings'].get('threshold', -1) < 0 or ecu['non-configured-settings'].get('threshold', -1) > 100:
                     logger.error(f"Configured 'Threshold' is not valid. Configure its value in range[0, 100] for Non-Configured Applications in {ecu['ecu-type']}.")
                     return False
                 threshold_map[ecu['ecu-type']]['Non-Configured Applications'] = ecu['non-configured-settings'].get('threshold')
@@ -3807,7 +3807,7 @@ def start_startup_time_measurement(logger):
                 else:
                     if not power_ON_OFF_Relay(config.get('serial-port-relay'), config.get('baudrate-relay'), config.get('Power ON-OFF Delay', 25), logger):
                         return False
-            
+           
             # Check for stop flag after power cycling
             if check_stop_flag_periodically():
                 logger.info(f"Stop flag detected after power cycling in iteration {i+1}/{iterations}.")
@@ -3834,12 +3834,12 @@ def start_startup_time_measurement(logger):
                     else:
                         logger.error(f"Log file not created for {ecu_type} in iteration {i}. Please check the configuration.")
                     return False
-                    
+                   
                 # Check for stop flag before creating thread
                 if check_stop_flag_periodically():
                     logger.info(f"Stop flag detected before creating thread for {ecu_type} in iteration {i+1}/{iterations}.")
                     return False
-                    
+                   
                 thread = ResultThread(
                     target=process_log_file,
                     args=(
@@ -3861,7 +3861,7 @@ def start_startup_time_measurement(logger):
                 threads.append(thread)
                 register_thread(thread)  # Register thread for monitoring
                 thread.start()
-                
+               
             # Wait for all threads to complete with stop flag checking
             for thread in threads:
                 while thread.is_alive():
@@ -3870,17 +3870,17 @@ def start_startup_time_measurement(logger):
                         # Allow threads to complete naturally as they will check stop flag themselves
                         break
                     time.sleep(0.5)  # Check every 500ms
-                    
+                   
                 thread.join(timeout=1)  # Don't wait indefinitely
                 print("Thread result :: ", thread.result)
                 # if not thread.result:
                 anySheet.append(thread.result)
-                
+               
             # Final check for stop flag after iteration
             if check_stop_flag_periodically():
                 logger.info(f"Stop flag detected after completing iteration {i+1}/{iterations}.")
                 return False
-                
+               
         print('anySheet:', anySheet)
         if not any(anySheet):
             isSuccess = False
@@ -3903,7 +3903,7 @@ def start_startup_time_measurement(logger):
                 if check_stop_flag_periodically():
                     logger.info(f"Stop flag detected before generating report for {ecu_type}.")
                     return False
-                    
+                   
                 if not save_workbook_and_generate_reports(
                     ecu_type,
                     setup_type,
@@ -3929,7 +3929,7 @@ def start_startup_time_measurement(logger):
             ecu_summary_workbook_items[1].save(ecu_summary_workbook_items[0])
         else:
             logger.error("Error: Unable to create ECU Summary workbook.")
-            
+           
         if no_of_ecu_reports_generated < len(enabled_ecu_list):
             isSuccess = False
             logger.error("Error: Some of the ECU reports are not generated.")
@@ -3942,7 +3942,7 @@ def start_startup_time_measurement(logger):
         isSuccess = False
     finally:
         # Set stop flag to ensure all monitoring stops
-        stop_requested.set()
+        stop_requested.clear()
         # Terminate any remaining processes
         terminate_all_processes()
         remove_png_files(logger)

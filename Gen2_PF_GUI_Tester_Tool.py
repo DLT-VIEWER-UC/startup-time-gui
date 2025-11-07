@@ -1,11 +1,107 @@
 from imports_utils import *
 from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
 
+class CustomIntValidator(QIntValidator):
+    def __init__(self, min_value, max_value, parent=None):
+        super().__init__(min_value, max_value, parent)
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def validate(self, input_str, pos):
+        # Case 1: Empty input
+        if input_str == "":
+            return (QIntValidator.Intermediate, input_str, pos)
+
+        # Case 2: Input is all digits
+        if input_str.isdigit():
+            # Case 2a: Input is "00" — treat as intermediate
+            if input_str == "00":
+                return (QIntValidator.Intermediate, input_str, pos)
+
+            # Case 2b: Input is "0"
+            if input_str == "0":
+                if self.min_value <= 0 <= self.max_value:
+                    return (QIntValidator.Acceptable, input_str, pos)
+                else:
+                    return (QIntValidator.Intermediate, input_str, pos)
+
+            # Case 2c: Input has leading zeros (e.g., "01", "002")
+            if input_str.startswith('0') and len(input_str) > 1:
+                return (QIntValidator.Invalid, input_str, pos)
+
+            # Case 2d: Normal integer input
+            value = int(input_str)
+
+            # Special case: values > 255 are intermediate
+            if value > 255:
+                return (QIntValidator.Intermediate, input_str, pos)
+
+            # Acceptable range check
+            if self.min_value <= value <= self.max_value:
+                return (QIntValidator.Acceptable, input_str, pos)
+            else:
+                return (QIntValidator.Invalid, input_str, pos)
+
+        # Case 3: Input contains non-digit characters
+        else:
+            return (QIntValidator.Invalid, input_str, pos)
+
+class SpinnerDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # Set a clean and user-friendly window title
+        self.setWindowTitle("Closing the Application...")
+
+        # Customize window flags (no minimize/maximize/close buttons)
+        self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint | Qt.Tool)
+
+        # Make the dialog non-blocking
+        self.setModal(False)
+
+        # Create the main layout
+        layout = QVBoxLayout()
+
+        # Spinner GIF label with light gray background
+        spinner_label = QLabel(self)
+        spinner_movie = QMovie("Hourglass.gif")  # Update path if needed
+        spinner_label.setMovie(spinner_movie)
+        spinner_movie.start()
+
+        # Add spinner to layout
+        layout.addWidget(spinner_label, alignment=Qt.AlignCenter)
+
+        # Add a descriptive message label
+        message_label = QLabel("Please wait for ECU cleanup or IG ON...")
+        message_label.setStyleSheet("font-size: 9pt;")
+        message_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(message_label)
+
+        # Set layout and size
+        self.setLayout(layout)
+        self.resize(250, 120)
+
+        # Move the dialog to center of the parent window
+        if parent:
+            self.move(parent.frameGeometry().center() - self.rect().center())
+
+        # Track parent window movement
+        if parent:
+            parent.installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        # Reposition the dialog when the parent moves
+        if obj == self.parent() and event.type() == QEvent.Move:
+            self.move(self.parent().frameGeometry().center() - self.rect().center())
+        return super().eventFilter(obj, event)
+
 class Worker(QObject):
     finished = pyqtSignal()
     update_status = pyqtSignal(str, str)
     disable_widgets = pyqtSignal()
     enable_widgets = pyqtSignal()
+    start_kpi_logging = pyqtSignal(str)  # Signal to start logging with KPI label
+    stop_kpi_logging = pyqtSignal()      # Signal to stop logging
 
     def __init__(self, ecu_input_fields, kpi_widgets):
         super().__init__()
@@ -56,11 +152,17 @@ class Worker(QObject):
             else:
                 py_logger.info(f"[Worker] Total terminated PIDs: {', '.join(pids_terminated)}")
 
+            # Current working directory
+            cwd = os.getcwd()
+            parent_dir = os.path.abspath(os.path.join(cwd, os.pardir))
+            full_path = os.path.join(cwd, "diag_abrupt_termination.bat")
+            subprocess.run(full_path, check=True, shell=True, cwd=os.path.dirname(full_path), env=os.environ.copy())      
+               
         except subprocess.CalledProcessError:
             py_logger.error("Process scan failed�no matches found.")
         except Exception as e:
             py_logger.error(f"Process termination error: {e}")
-
+   
     def launch_diag_application(self):      
         py_logger.info("Launching the Diag High Level ECU Tester, please wait!...")
 
@@ -82,8 +184,8 @@ class Worker(QObject):
                 subprocess.run(["chmod", "+x", exe_path])
 
             self.process = subprocess.Popen([exe_path])
-            time.sleep(10)
-            py_logger.info("Diag High Level ECU Tester is Successfully Launched.")
+            time.sleep(1)
+            # py_logger.info("Diag High Level ECU Tester is Successfully Launched.")
            
             # Wait for the process to complete or be forcefully stopped
             while self.process.poll() is None:
@@ -101,15 +203,16 @@ class Worker(QObject):
 
     def run_function(self):
         for label in labels:
-            widgets = self.kpi_widgets.get(label)
-
             if self._stop_requested:
                 return
+           
+            widgets = self.kpi_widgets.get(label)
 
             if widgets and widgets['checkbox'].isChecked():                
                 try:
+                    self.start_kpi_logging.emit(label)
+                   
                     if label == 'CPU and Memory Utilization':
-                        # from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
                         status = CPU_Memory_measurement()
                         color = "#60A917" if status else "#E51400"
                    
@@ -124,7 +227,7 @@ class Worker(QObject):
                         color = "#60A917" if status else "#E51400"
                    
                     elif label == 'Cyclic and Turnaround Time':
-                        from Cyclic_Turnaround_Time_Scripts.language_switcher import start_cyclic_turnaround_time_measurement
+                        from Cyclic_Turnaround_Time_Scripts.cyclic_turnaround_time_measurement import start_cyclic_turnaround_time_measurement
                         status = start_cyclic_turnaround_time_measurement()
                         color = "#60A917" if status else "#E51400"
                    
@@ -143,22 +246,64 @@ class Worker(QObject):
                         status = start_shutdown_time_measurement(py_logger)
                         color = "#60A917" if status else "#E51400"
                    
+                    # elif label == 'Continuous_KEV':
+                    #     flagManagerObject = FlagManager()
+                    #     subprocess.run(["python", "./Continuous_KEV_Scripts/main.py"])
+
+                    #     eventTriggerScriptRunStatus = flagManagerObject.get_event_trigger_status_flag()
+                    #     eventLogMoverRunStatus = flagManagerObject.get_log_mover_status_flag()
+                       
+                    #     status = False
+                    #     if eventTriggerScriptRunStatus and eventLogMoverRunStatus:
+                    #         status = True
+                       
+                    #     color = "#60A917" if status else "#E51400"
+                   
                     elif label == 'Continuous KEV':
                         flagManagerObject = FlagManager()
-                        subprocess.run(["python", "./Continuous_KEV_Scripts/main.py"])
 
+                        process = subprocess.Popen(
+                            ["python", "-u", "./Continuous_KEV_Scripts/main.py"],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            bufsize=1,           # Line-buffered
+                            universal_newlines=True,  # Text mode
+                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                        )
+
+                        # Print each line as it's received
+                        for line in process.stdout:
+                            print(line, end="")  # Avoid double newlines
+
+                        process.wait()
+
+                        # Check flags after script execution
                         eventTriggerScriptRunStatus = flagManagerObject.get_event_trigger_status_flag()
                         eventLogMoverRunStatus = flagManagerObject.get_log_mover_status_flag()
-                       
+
                         status = False
                         if eventTriggerScriptRunStatus and eventLogMoverRunStatus:
                             status = True
-                       
+
                         color = "#60A917" if status else "#E51400"
                    
                     elif label == 'Event Trigger KEV':
                         flagManagerObject = FlagManager()
-                        subprocess.run(["python", "./Event_Trigger_KEV_Scripts/main.py"])
+                       
+                        process = subprocess.Popen(
+                            ["python", "-u", "./Event_Trigger_KEV_Scripts/main.py"],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            bufsize=1,           # Line-buffered
+                            universal_newlines=True,  # Text mode
+                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                        )
+
+                        # Print each line as it's received
+                        for line in process.stdout:
+                            print(line, end="")  # Avoid double newlines
+
+                        process.wait()
 
                         eventTriggerScriptRunStatus = flagManagerObject.get_event_trigger_status_flag()
                         eventLogMoverRunStatus = flagManagerObject.get_log_mover_status_flag()
@@ -211,6 +356,7 @@ class Worker(QObject):
                     else:
                         color = "#E51400"        
 
+                    self.stop_kpi_logging.emit()
                     self.update_status.emit(label, color)
                     time.sleep(0.1)
                 except Exception as e:
@@ -236,7 +382,9 @@ class MainWindow(QMainWindow):
         self.configuration_flag = False    
         self.msg_box = None      
         self.is_any_ecu_selected_flag = False
-        self.is_test_in_progress = False  
+        self.is_test_in_progress = False
+        self.current_kpi_label = None
+        self.kpi_log_file = None  
 
         self.tab_widget = QTabWidget()
         self.setCentralWidget(self.tab_widget)
@@ -257,7 +405,7 @@ class MainWindow(QMainWindow):
         self.update_button_states()
 
         # To remove the stop.flag file
-        self.manage_stop_flag(create=False)    
+        self.manage_stop_flag(is_create=False)    
    
     def create_console_tab(self):        
         class EmittingStream(QObject):
@@ -308,10 +456,10 @@ class MainWindow(QMainWindow):
         self.clear_logs_button.setStyleSheet(common_enabled_style + common_hover_style)
         self.clear_logs_button.clicked.connect(self.console_output.clear)
 
-        self.download_button = QPushButton("Download Logs!")
+        self.download_button = QPushButton("Open KPI Logs!")
         self.download_button.setFixedSize(150, 35)
         self.download_button.setStyleSheet(common_enabled_style + common_hover_style)
-        self.download_button.clicked.connect(self.download_console_output)
+        self.download_button.clicked.connect(self.open_log_folder)
 
         button_layout = QHBoxLayout()
         button_layout.addStretch()
@@ -343,15 +491,62 @@ class MainWindow(QMainWindow):
         self.console_output.insertPlainText(text)
         self.console_output.moveCursor(self.console_output.textCursor().End)
 
-    def download_console_output(self):
-        if not self.console_output.toPlainText():
-            return
-       
-        options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Console Output", "", "Text Files (*.txt);;All Files (*)", options=options)
-        if file_path:
-            with open(file_path, 'w') as file:
-                file.write(self.console_output.toPlainText())
+        if self.kpi_log_file:
+            self.kpi_log_file.write(text)
+            self.kpi_log_file.flush()
+   
+    def start_kpi_logging(self, kpi_label):
+        try:
+            self.current_kpi_label = kpi_label
+
+            if kpi_label in diag_labels:
+                return
+
+            current_dir = os.getcwd()
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Safe for folder names
+            folder_name = folder_names.get(kpi_label)
+            if not folder_name:
+                raise ValueError(f"Invalid KPI label: {kpi_label}")
+
+            log_dir = os.path.join(current_dir, 'RUN_Time_Logs', folder_name, timestamp)
+            os.makedirs(log_dir, exist_ok=True)
+
+            log_file_path = os.path.join(log_dir, f"{folder_name}.log")
+            self.kpi_log_file = open(log_file_path, "a", encoding="utf-8")
+
+            separator = f"\n{'#' * 60}\n# KPI Logging Started at {timestamp}\n{'#' * 60}\n"
+            self.kpi_log_file.write(separator)
+            self.kpi_log_file.flush()
+
+            py_logger.info(f"Started logging for KPI: {kpi_label}")
+
+        except Exception as e:
+            py_logger.error(f"Failed to start KPI logging for {kpi_label}: {e}")
+            raise
+
+    def stop_kpi_logging(self):
+        if self.kpi_log_file:
+            py_logger.info(f"Stopped logging for KPI: {self.current_kpi_label}")
+            self.kpi_log_file.close()
+            self.kpi_log_file = None
+        self.current_kpi_label = None
+
+    def open_log_folder(self):
+        py_logger.info("log_folder")
+        log_folder_path = os.path.join(os.getcwd(), "RUN_Time_Logs")
+        py_logger.info(log_folder_path)
+
+        # Create folder if it doesn't exist
+        os.makedirs(log_folder_path, exist_ok=True)
+
+        # Open folder based on OS
+        if platform.system() == "Windows":
+            py_logger.info("Windows")
+            os.startfile(log_folder_path)
+        elif platform.system() == "Darwin":  # macOS
+            subprocess.Popen(["open", log_folder_path])
+        else:  # Linux
+            subprocess.Popen(["xdg-open", log_folder_path])
 
     def set_window_properties(self) -> None:
         """
@@ -361,7 +556,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Gen2 Platform Validation GUI Tester Tool")
        
         # Set the icon of the window
-        self.setWindowIcon(QIcon('KPIT_logo.png'))
+        self.setWindowIcon(QIcon('KPIT_logo.ico'))
 
         # Get the current position of the cursor
         cursor_pos = QApplication.desktop().cursor().pos()
@@ -389,7 +584,7 @@ class MainWindow(QMainWindow):
         # py_logger.info(f"Screen Resolution: {screen_width}x{screen_height}")
 
         # Calculate the window dimensions as a fraction of the screen dimensions
-        window_width = int(screen_width * 0.6)  # 60% of the screen width
+        window_width = int(screen_width * 0.65)  # 60% of the screen width
         window_height = int(screen_height * 0.95)  # 95% of the screen height
 
         # Ensure the window dimensions do not exceed the screen dimensions
@@ -557,8 +752,8 @@ class MainWindow(QMainWindow):
 
         edit_button = QPushButton()
         edit_button.setFixedSize(30, 30)
-        edit_button.setIcon(QIcon('pencil_write_icon.png'))
-        edit_button.setIconSize(QSize(25, 25))        
+        edit_button.setIcon(QIcon('pencil_write_icon.ico'))
+        edit_button.setIconSize(QSize(23, 23))        
 
         folder_button = QPushButton()
         folder_button.setFixedSize(30, 30)
@@ -758,12 +953,21 @@ class MainWindow(QMainWindow):
         relay_baudrate_layout = QHBoxLayout()
 
         relay_baudrate_label = QLabel('Relay Baudrate')
+       
+        # QIntValidator only supports 32-bit signed integers (qint32)
+        # So the maximum value must be within the range: -2,147,483,648 to 2,147,483,647
+        # Here, we set the minimum value to 1
+        # and the maximum value to 2147483647 (maximum for qint32)
+        max_int = 2147483647
+        validator = QIntValidator(1, max_int)
 
-        validator = QIntValidator(9600, 115200)
-        locale = QLocale("C")  # Use the "C" locale, which does not use a comma as a thousands separator
+        # Use the "C" locale to ensure consistent number formatting
+        # This avoids issues like commas or periods being interpreted as thousands separators
+        locale = QLocale("C")
         validator.setLocale(locale)
 
-        self.relay_baudrate_input = QLineEdit()        
+        self.relay_baudrate_input = QLineEdit()
+        # Apply the validator to the QLineEdit      
         self.relay_baudrate_input.setValidator(validator)
         self.relay_baudrate_input.setFixedWidth(80)
         self.relay_baudrate_input.textChanged.connect(lambda: self.update_button_states())
@@ -844,14 +1048,31 @@ class MainWindow(QMainWindow):
         self.Rcar_IP_label = QLabel('R-Car IP Address')
         self.Rcar_IP_label.setEnabled(False)
        
-        self.Rcar_IP_input = QLineEdit()
-        # self.Rcar_IP_input.setFixedWidth(150)
-        self.Rcar_IP_input.setPlaceholderText('Enter IP Address')
-        self.Rcar_IP_input.setValidator(ip_address_validator)
-        self.Rcar_IP_input.textChanged.connect(lambda: self.update_button_states())
-        self.Rcar_IP_input.setEnabled(False)
+        # Create four QLineEdit fields for each IP octet
+        self.rcar_ip1 = QLineEdit()
+        self.rcar_ip2 = QLineEdit()
+        self.rcar_ip3 = QLineEdit()
+        self.rcar_ip4 = QLineEdit()
+
+        for ip in [self.rcar_ip1, self.rcar_ip2, self.rcar_ip3, self.rcar_ip4]:
+            ip.setFixedWidth(40)
+            ip.setMaxLength(3)
+            ip.setValidator(CustomIntValidator(0, 999))
+            ip.setAlignment(Qt.AlignCenter)
+            ip.setEnabled(False)
+            ip.textChanged.connect(self.update_button_states)
+
+        ip_layout = QHBoxLayout()
+        ip_layout.setSpacing(0)
+        ip_layout.addWidget(self.rcar_ip1)
+        ip_layout.addWidget(QLabel("."))
+        ip_layout.addWidget(self.rcar_ip2)
+        ip_layout.addWidget(QLabel("."))
+        ip_layout.addWidget(self.rcar_ip3)
+        ip_layout.addWidget(QLabel("."))
+        ip_layout.addWidget(self.rcar_ip4)
        
-        Rcar_telent_layout.addRow(self.Rcar_IP_label, self.Rcar_IP_input)
+        Rcar_telent_layout.addRow(self.Rcar_IP_label, ip_layout)
        
         self.Rcar_telnet_username_label = QLabel('Telnet Username')
         self.Rcar_telnet_username_label.setEnabled(False)
@@ -934,14 +1155,31 @@ class MainWindow(QMainWindow):
         self.SoC0_IP_label = QLabel('SoC0 IP Address')
         self.SoC0_IP_label.setEnabled(False)
 
-        self.SoC0_IP_input = QLineEdit()
-        # self.SoC0_IP_input.setFixedWidth(150)
-        self.SoC0_IP_input.setPlaceholderText('Enter IP Address')
-        self.SoC0_IP_input.setValidator(ip_address_validator)
-        self.SoC0_IP_input.textChanged.connect(lambda: self.update_button_states())
-        self.SoC0_IP_input.setEnabled(False)
+        # Create four QLineEdit fields for each IP octet
+        self.soc0_ip1 = QLineEdit()
+        self.soc0_ip2 = QLineEdit()
+        self.soc0_ip3 = QLineEdit()
+        self.soc0_ip4 = QLineEdit()
 
-        SoC0_telent_layout.addRow(self.SoC0_IP_label, self.SoC0_IP_input)
+        for ip in [self.soc0_ip1, self.soc0_ip2, self.soc0_ip3, self.soc0_ip4]:
+            ip.setFixedWidth(40)
+            ip.setMaxLength(3)
+            ip.setValidator(CustomIntValidator(0, 999))
+            ip.setAlignment(Qt.AlignCenter)
+            ip.setEnabled(False)
+            ip.textChanged.connect(self.update_button_states)
+
+        ip_layout = QHBoxLayout()
+        ip_layout.setSpacing(0)
+        ip_layout.addWidget(self.soc0_ip1)
+        ip_layout.addWidget(QLabel("."))
+        ip_layout.addWidget(self.soc0_ip2)
+        ip_layout.addWidget(QLabel("."))
+        ip_layout.addWidget(self.soc0_ip3)
+        ip_layout.addWidget(QLabel("."))
+        ip_layout.addWidget(self.soc0_ip4)
+
+        SoC0_telent_layout.addRow(self.SoC0_IP_label, ip_layout)
 
         self.SoC0_telnet_username_label = QLabel('Telnet Username')
         self.SoC0_telnet_username_label.setEnabled(False)
@@ -1024,14 +1262,31 @@ class MainWindow(QMainWindow):
         self.SoC1_IP_label = QLabel('SoC1 IP Address')
         self.SoC1_IP_label.setEnabled(False)
 
-        self.SoC1_IP_input = QLineEdit()
-        # self.SoC1_IP_input.setFixedWidth(150)
-        self.SoC1_IP_input.setPlaceholderText('Enter IP Address')
-        self.SoC1_IP_input.setValidator(ip_address_validator)
-        self.SoC1_IP_input.textChanged.connect(lambda: self.update_button_states())
-        self.SoC1_IP_input.setEnabled(False)
+        # Create four QLineEdit fields for each IP octet
+        self.soc1_ip1 = QLineEdit()
+        self.soc1_ip2 = QLineEdit()
+        self.soc1_ip3 = QLineEdit()
+        self.soc1_ip4 = QLineEdit()
 
-        SoC1_telent_layout.addRow(self.SoC1_IP_label, self.SoC1_IP_input)
+        for ip in [self.soc1_ip1, self.soc1_ip2, self.soc1_ip3, self.soc1_ip4]:
+            ip.setFixedWidth(40)
+            ip.setMaxLength(3)
+            ip.setValidator(CustomIntValidator(0, 999))
+            ip.setAlignment(Qt.AlignCenter)
+            ip.setEnabled(False)
+            ip.textChanged.connect(self.update_button_states)
+
+        ip_layout = QHBoxLayout()
+        ip_layout.setSpacing(0)
+        ip_layout.addWidget(self.soc1_ip1)
+        ip_layout.addWidget(QLabel("."))
+        ip_layout.addWidget(self.soc1_ip2)
+        ip_layout.addWidget(QLabel("."))
+        ip_layout.addWidget(self.soc1_ip3)
+        ip_layout.addWidget(QLabel("."))
+        ip_layout.addWidget(self.soc1_ip4)
+
+        SoC1_telent_layout.addRow(self.SoC1_IP_label, ip_layout)
 
         self.SoC1_telnet_username_label = QLabel('Telnet Username')
         self.SoC1_telnet_username_label.setEnabled(False)
@@ -1101,27 +1356,51 @@ class MainWindow(QMainWindow):
         run_button_layout.addStretch()
         return run_button_layout    
    
+    def set_RCAR_ip_address(self, ip_address):
+        parts = ip_address.split(".")
+        if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+            self.rcar_ip1.setText(parts[0])
+            self.rcar_ip2.setText(parts[1])
+            self.rcar_ip3.setText(parts[2])
+            self.rcar_ip4.setText(parts[3])
+
+    def set_SoC0_ip_address(self, ip_address):
+        parts = ip_address.split(".")
+        if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+            self.soc0_ip1.setText(parts[0])
+            self.soc0_ip2.setText(parts[1])
+            self.soc0_ip3.setText(parts[2])
+            self.soc0_ip4.setText(parts[3])
+   
+    def set_SoC1_ip_address(self, ip_address):
+        parts = ip_address.split(".")
+        if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+            self.soc1_ip1.setText(parts[0])
+            self.soc1_ip2.setText(parts[1])
+            self.soc1_ip3.setText(parts[2])
+            self.soc1_ip4.setText(parts[3])
+
     def read_ECU_configuration(self):
         try:
             with open('ECU_Config.json', 'r') as file:
                 ecu_config = json.load(file)
 
             if 'RCAR' in ecu_config:
-                self.Rcar_IP_input.setText(ecu_config['RCAR']['IP'])
+                self.set_RCAR_ip_address(ecu_config['RCAR']['IP'])
                 self.Rcar_telnet_username_input.setText(ecu_config['RCAR']['telnet_username'])
                 self.Rcar_telnet_password_input.setText(ecu_config['RCAR']['telnet_password'])
                 self.Rcar_FTP_username_input.setText(ecu_config['RCAR']['FTP_username'])
                 self.Rcar_FTP_password_input.setText(ecu_config['RCAR']['FTP_password'])
            
             if 'SoC0' in ecu_config:
-                self.SoC0_IP_input.setText(ecu_config['SoC0']['IP'])
+                self.set_SoC0_ip_address(ecu_config['SoC0']['IP'])
                 self.SoC0_telnet_username_input.setText(ecu_config['SoC0']['telnet_username'])
                 self.SoC0_telnet_password_input.setText(ecu_config['SoC0']['telnet_password'])
                 self.SoC0_FTP_username_input.setText(ecu_config['SoC0']['FTP_username'])
                 self.SoC0_FTP_password_input.setText(ecu_config['SoC0']['FTP_password'])
            
             if 'SoC1' in ecu_config:
-                self.SoC1_IP_input.setText(ecu_config['SoC1']['IP'])
+                self.set_SoC1_ip_address(ecu_config['SoC1']['IP'])
                 self.SoC1_telnet_username_input.setText(ecu_config['SoC1']['telnet_username'])
                 self.SoC1_telnet_password_input.setText(ecu_config['SoC1']['telnet_password'])
                 self.SoC1_FTP_username_input.setText(ecu_config['SoC1']['FTP_username'])
@@ -1136,12 +1415,30 @@ class MainWindow(QMainWindow):
         except json.JSONDecodeError:
             py_logger.error("Invalid JSON format")
 
+    def get_RCAR_ip_address(self):
+        ip_parts = [self.rcar_ip1.text(), self.rcar_ip2.text(), self.rcar_ip3.text(), self.rcar_ip4.text()]
+        if all(part.isdigit() and 0 <= int(part) <= 999 for part in ip_parts):
+            return ".".join(ip_parts)
+        return None
+   
+    def get_SoC0_ip_address(self):
+        ip_parts = [self.soc0_ip1.text(), self.soc0_ip2.text(), self.soc0_ip3.text(), self.soc0_ip4.text()]
+        if all(part.isdigit() and 0 <= int(part) <= 999 for part in ip_parts):
+            return ".".join(ip_parts)
+        return None
+   
+    def get_SoC1_ip_address(self):
+        ip_parts = [self.soc1_ip1.text(), self.soc1_ip2.text(), self.soc1_ip3.text(), self.soc1_ip4.text()]
+        if all(part.isdigit() and 0 <= int(part) <= 999 for part in ip_parts):
+            return ".".join(ip_parts)
+        return None
+
     def Write_ECU_Configuration(self):
         try:
             ecu_input_fields = {}
 
             ecu_input_fields['RCAR'] = {
-                'IP': self.Rcar_IP_input.text(),
+                'IP': self.get_RCAR_ip_address(),
                 'telnet_username': self.Rcar_telnet_username_input.text(),
                 'telnet_password': self.Rcar_telnet_password_input.text(),
                 'FTP_username': self.Rcar_FTP_username_input.text(),
@@ -1149,7 +1446,7 @@ class MainWindow(QMainWindow):
             }
            
             ecu_input_fields['SoC0'] = {
-                'IP': self.SoC0_IP_input.text(),
+                'IP': self.get_SoC0_ip_address(),
                 'telnet_username': self.SoC0_telnet_username_input.text(),
                 'telnet_password': self.SoC0_telnet_password_input.text(),
                 'FTP_username': self.SoC0_FTP_username_input.text(),
@@ -1157,7 +1454,7 @@ class MainWindow(QMainWindow):
             }
            
             ecu_input_fields['SoC1'] = {
-                'IP': self.SoC1_IP_input.text(),
+                'IP': self.get_SoC1_ip_address(),
                 'telnet_username': self.SoC1_telnet_username_input.text(),
                 'telnet_password': self.SoC1_telnet_password_input.text(),
                 'FTP_username': self.SoC1_FTP_username_input.text(),
@@ -1234,11 +1531,12 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, f"{label}", "Configuration Dialog implementation is in progress.")
                 self.setEnabled(True)
                 return
-
-            dialog.setModal(True)
-            dialog.exec_()
+            if dialog:
+                dialog.setModal(True)
+                dialog.exec_()
 
             self.setEnabled(True)
+            self.is_any_ecu_selected()
             self.check_KPIs_config(label, edit_button, checkbox, folder_button)
 
             if not self.is_test_in_progress:
@@ -1322,17 +1620,18 @@ class MainWindow(QMainWindow):
             for filename in os.listdir(path):
                 # Check if the filename is a directory
                 if os.path.isdir(os.path.join(path, filename)):
+                    return True
                     # Define the expected date formats
-                    for date_format in ["%Y%m%d_%H-%M-%S", "%Y-%m-%d_%H-%M-%S", "%Y-%m-%d-%H-%M-%S"]:
-                        try:
-                            # Attempt to parse the filename as a date using the specified format
-                            datetime.strptime(filename, date_format)
-                            # py_logger.info(f"Folder found with format '{date_format}': {filename}")
-                            # Return True to indicate that a folder with the expected date format was found
-                            return True
-                        except ValueError:
-                            # If the filename does not match the date format, continue to the next iteration
-                            pass            
+                    # for date_format in ["%Y%m%d_%H-%M-%S", "%Y-%m-%d_%H-%M-%S", "%Y-%m-%d-%H-%M-%S"]:
+                    #     try:
+                    #         # Attempt to parse the filename as a date using the specified format
+                    #         datetime.strptime(filename, date_format)
+                    #         # py_logger.info(f"Folder found with format '{date_format}': {filename}")
+                    #         # Return True to indicate that a folder with the expected date format was found
+                    #         return True
+                    #     except ValueError:
+                    #         # If the filename does not match the date format, continue to the next iteration
+                    #         pass            
            
             # py_logger.info("No folders found with the expected date format.")
             # Return False to indicate that no folders with the expected date format were found
@@ -1426,37 +1725,9 @@ class MainWindow(QMainWindow):
             elif label == "Startup Time":
                 with open('./Startup_Time_Scripts/startup_time_config.json', 'r') as file:
                     data = json.load(file)
-               
+
                 is_valid = True
-
-                if not data.get("Pre-Generated Logs"):
-                    is_valid = is_valid and (
-                        isinstance(data.get("DLT-Viewer Log Capture Time"), int) and
-                        data.get("DLT-Viewer Log Capture Time") > 0 and
-                        isinstance(data.get("Power ON-OFF Delay"), int) and
-                        data.get("Power ON-OFF Delay") > 0 and
-                        isinstance(data.get("windows"), dict) and
-                        isinstance(data.get("windows", {}).get("Is Environment Path Set"), bool)
-                    )
-
-                    if not data.get("windows", {}).get("Is Environment Path Set"):
-                        is_valid = is_valid and (
-                            isinstance(data.get("windows", {}).get("DLT-Viewer Installed Path"), str) and
-                            data.get("windows", {}).get("DLT-Viewer Installed Path")
-                        )
-
-                is_valid = is_valid and (
-                    isinstance(data.get("ecu-config"), list) and
-                    all(isinstance(ecu, dict) for ecu in data.get("ecu-config", [])) and
-                    all(isinstance(ecu.get("ecu-type"), str) and
-                        isinstance(ecu.get("startup-order"), list) and
-                        all(isinstance(order, dict) for order in ecu.get("startup-order", [])) and
-                        all(isinstance(order.get("Order Type"), str) and
-                            isinstance(order.get("Applications"), str) for order in ecu.get("startup-order", [])) and
-                        isinstance(ecu.get("threshold-config"), list)
-                        for ecu in data.get("ecu-config", []))
-                )
-
+ 
                 if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
                     return bool(validate_ECU_configuration(data))
                 else:
@@ -1471,15 +1742,15 @@ class MainWindow(QMainWindow):
                     isinstance(data.get("QNXInstalledPath"), str) and
                     data.get("QNXInstalledPath") and
                     isinstance(data.get("GenerateKEVFile"), bool) and
-                    isinstance(data.get("Test_Report_Name"), str) and
-                    data.get("Test_Report_Name") and
-                    isinstance(data.get("Threshold Margin"), int) and
-                    data.get("Threshold Margin") > 0 and
+                    isinstance(data.get("project_name"), str) and
+                    data.get("project_name") and
+                    isinstance(data.get("project"), str) and
                     isinstance(data.get("Application_Settings"), list) and
                     data.get("Application_Settings") and
                     all(
                         isinstance(app.get("Application"), str) and
                         isinstance(app.get("CyclicThreshold"), int) and
+                        isinstance(app.get("CyclicThresholdMargin"), int) and
                         isinstance(app.get("TurnaroundThreshold"), int) and
                         isinstance(app.get("Soc"), str)
                         for app in data.get("Application_Settings", [])
@@ -1593,7 +1864,7 @@ class MainWindow(QMainWindow):
                     isinstance(data.get("kevlogger", {}).get("reportName"), str) and
                     data.get("kevlogger", {}).get("reportName") and
                     isinstance(data.get("kevlogger", {}).get("cpu_stable_runin_period"), int) and
-                    data.get("kevlogger", {}).get("cpu_stable_runin_period") > 0 and
+                    data.get("kevlogger", {}).get("cpu_stable_runin_period") >= 0 and
                     data.get("kevlogger", {}).get("TerminateAllECUExecutionOnError") is not None and
                     isinstance(data.get("logMover", {}), dict) and
                     isinstance(data.get("logMover", {}).get("pythonScriptRunTime"), int) and
@@ -1780,21 +2051,21 @@ class MainWindow(QMainWindow):
         """
         return {
             self.RCar_checkbox: [
-                self.Rcar_IP_label, self.Rcar_IP_input,
+                self.Rcar_IP_label, self.rcar_ip1, self.rcar_ip2, self.rcar_ip3, self.rcar_ip4,
                 self.Rcar_telnet_username_label, self.Rcar_telnet_username_input,
                 self.Rcar_telnet_password_label, self.Rcar_telnet_password_input,
                 self.Rcar_FTP_username_label, self.Rcar_FTP_username_input,
                 self.Rcar_FTP_password_label, self.Rcar_FTP_password_input
             ],
             self.SoC0_checkbox: [
-                self.SoC0_IP_label, self.SoC0_IP_input,
+                self.SoC0_IP_label, self.soc0_ip1, self.soc0_ip2, self.soc0_ip3, self.soc0_ip4,
                 self.SoC0_telnet_username_label, self.SoC0_telnet_username_input,
                 self.SoC0_telnet_password_label, self.SoC0_telnet_password_input,
                 self.SoC0_FTP_username_label, self.SoC0_FTP_username_input,
                 self.SoC0_FTP_password_label, self.SoC0_FTP_password_input
             ],
             self.SoC1_checkbox: [
-                self.SoC1_IP_label, self.SoC1_IP_input,
+                self.SoC1_IP_label, self.soc1_ip1, self.soc1_ip2, self.soc1_ip3, self.soc1_ip4,
                 self.SoC1_telnet_username_label, self.SoC1_telnet_username_input,
                 self.SoC1_telnet_password_label, self.SoC1_telnet_password_input,
                 self.SoC1_FTP_username_label, self.SoC1_FTP_username_input,
@@ -2044,7 +2315,7 @@ class MainWindow(QMainWindow):
 
     def check_kpi_compatibility(self):
         try:
-            restricted_kpis = ["RAM Monitor", "Event Trigger RAM Monitor", "APL Communication Layout"]
+            restricted_kpis = ["Shutdown Time", "RAM Monitor", "Event Trigger RAM Monitor", "APL Communication Layout"]
 
             for label, widgets in self.kpi_widgets.items():
                 checkbox = widgets['checkbox']
@@ -2053,7 +2324,7 @@ class MainWindow(QMainWindow):
                     if not self.padas_checkbox.isChecked():
                         QMessageBox.warning(self, "Incompatible ECU and KPI Selection",
                                         f"The selected KPI '{label}' are only compatible with PADAS.\n"
-                                        "Please select either PADAS ECU or deselect KPIs from XCP sections to proceed.")
+                                        "Please select either PADAS ECU or deselect KPI to proceed.")
                         return False
             return True
         except Exception as e:
@@ -2078,7 +2349,9 @@ class MainWindow(QMainWindow):
         self.worker.finished.connect(self.worker_finished)
         self.thread.finished.connect(self.thread.deleteLater)
 
-        # Connect signals
+        # Connect signals        
+        self.worker.start_kpi_logging.connect(self.start_kpi_logging)
+        self.worker.stop_kpi_logging.connect(self.stop_kpi_logging)
         self.worker.update_status.connect(self.set_status_label_and_enable_widgets)
         self.worker.disable_widgets.connect(self.disable_all_widgets)
         self.worker.enable_widgets.connect(self.restore_widget_states)
@@ -2134,8 +2407,17 @@ class MainWindow(QMainWindow):
                 if hasattr(self, 'worker') and self.worker is not None:
                     py_logger.info("Worker Thread is alive")
 
+                    # Disable close button
+                    self.setWindowFlag(Qt.WindowCloseButtonHint, False)                                    
+                    self.setWindowFlags(self.windowFlags())
+                    self.show()
+
+                    # Show spinner dialog
+                    self.spinner_dialog = SpinnerDialog(self)
+                    self.spinner_dialog.show()
+
                     # To create the stop.flag file
-                    self.manage_stop_flag(create=True)
+                    self.manage_stop_flag(is_create=True)
 
                     # Request the worker thread to stop (custom method in your thread class)
                     self.worker.request_stop()
@@ -2149,7 +2431,7 @@ class MainWindow(QMainWindow):
                     py_logger.info("Worker Thread has stopped")  # Log thread shutdown
                
                 # To remove the stop.flag file
-                self.manage_stop_flag(create=False)
+                self.manage_stop_flag(is_create=False)
 
                 # Final log before closing the application
                 py_logger.info("Gen2 PF Validation Tester Tool Closed Successfully.")
@@ -2175,7 +2457,7 @@ class MainWindow(QMainWindow):
 
         if self.padas_checkbox.isChecked():
             ecu_input_fields['RCAR'] = {
-                'IP': self.Rcar_IP_input.text(),
+                'IP': self.get_RCAR_ip_address(),
                 'telnet_username': self.Rcar_telnet_username_input.text(),
                 'telnet_password': self.Rcar_telnet_password_input.text(),
                 'FTP_username': self.Rcar_FTP_username_input.text(),
@@ -2184,7 +2466,7 @@ class MainWindow(QMainWindow):
            
         if self.RCar_checkbox.isChecked():
             ecu_input_fields['RCAR'] = {
-                'IP': self.Rcar_IP_input.text(),
+                'IP': self.get_RCAR_ip_address(),
                 'telnet_username': self.Rcar_telnet_username_input.text(),
                 'telnet_password': self.Rcar_telnet_password_input.text(),
                 'FTP_username': self.Rcar_FTP_username_input.text(),
@@ -2193,7 +2475,7 @@ class MainWindow(QMainWindow):
            
         if self.SoC0_checkbox.isChecked():
             ecu_input_fields['SoC0'] = {
-                'IP': self.SoC0_IP_input.text(),
+                'IP': self.get_SoC0_ip_address(),
                 'telnet_username': self.SoC0_telnet_username_input.text(),
                 'telnet_password': self.SoC0_telnet_password_input.text(),
                 'FTP_username': self.SoC0_FTP_username_input.text(),
@@ -2202,7 +2484,7 @@ class MainWindow(QMainWindow):
            
         if self.SoC1_checkbox.isChecked():
             ecu_input_fields['SoC1'] = {
-                'IP': self.SoC1_IP_input.text(),
+                'IP': self.get_SoC1_ip_address(),
                 'telnet_username': self.SoC1_telnet_username_input.text(),
                 'telnet_password': self.SoC1_telnet_password_input.text(),
                 'FTP_username': self.SoC1_FTP_username_input.text(),
@@ -2309,8 +2591,24 @@ class MainWindow(QMainWindow):
 
                 elif label in diag_labels:
                     try:
-                        with open('DIAG_KPI_Config.json', 'r') as f:
-                            data = json.load(f)
+                        if label == "Positive Response":
+                            with open('Positive_Response_Config.json', 'r') as f:
+                                data = json.load(f)
+                        elif label == "Negative Response":
+                            with open('Negative_Response_Config.json', 'r') as f:
+                                 data = json.load(f)
+                        elif label == "Diagnostic Trouble Code (DTC)":
+                            with open('DTC_Config.json', 'r') as f:
+                                 data = json.load(f)
+                        elif label == "Reprogramming_FOTA":
+                            with open('Reprogramming_FOTA_Config.json', 'r') as f:
+                                 data = json.load(f)
+                        elif label == "Reprogramming_Wired":
+                            with open('Reprogramming_Wired_Config.json', 'r') as f:
+                                 data = json.load(f)
+                        elif label == "Diag_All_KPIs":
+                            with open('Diag_All_KPIs_Config.json', 'r') as f:
+                                 data = json.load(f)
 
                         data["Current_Timestamp"] = datetime.now().strftime("%Y%m%d_%H-%M-%S")
 
@@ -2358,8 +2656,8 @@ class MainWindow(QMainWindow):
         self.run_button.setEnabled(False)
         self.IG_OFF_button.setEnabled(False)
         self.IG_ON_button.setEnabled(False)
-        self.clear_logs_button.setEnabled(False)
-        self.download_button.setEnabled(False)
+        # self.clear_logs_button.setEnabled(False)
+        # self.download_button.setEnabled(False)
 
         for widget in self.findChildren((QCheckBox, QLineEdit)):
             widget.setEnabled(False)        
@@ -2383,19 +2681,28 @@ class MainWindow(QMainWindow):
         self.SoC1_checkbox.setEnabled(not self.padas_checkbox.isChecked())
 
         # Enable or disable input fields based on checkboxes
-        self.Rcar_IP_input.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
+        self.rcar_ip1.setEnabled(self.RCar_checkbox.isChecked())
+        self.rcar_ip2.setEnabled(self.RCar_checkbox.isChecked())
+        self.rcar_ip3.setEnabled(self.RCar_checkbox.isChecked())
+        self.rcar_ip4.setEnabled(self.RCar_checkbox.isChecked())
         self.Rcar_telnet_username_input.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
         self.Rcar_telnet_password_input.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
         self.Rcar_FTP_username_input.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
         self.Rcar_FTP_password_input.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
 
-        self.SoC0_IP_input.setEnabled(self.SoC0_checkbox.isChecked())
+        self.soc0_ip1.setEnabled(self.SoC0_checkbox.isChecked())
+        self.soc0_ip2.setEnabled(self.SoC0_checkbox.isChecked())
+        self.soc0_ip3.setEnabled(self.SoC0_checkbox.isChecked())
+        self.soc0_ip4.setEnabled(self.SoC0_checkbox.isChecked())
         self.SoC0_telnet_username_input.setEnabled(self.SoC0_checkbox.isChecked())
         self.SoC0_telnet_password_input.setEnabled(self.SoC0_checkbox.isChecked())
         self.SoC0_FTP_username_input.setEnabled(self.SoC0_checkbox.isChecked())
         self.SoC0_FTP_password_input.setEnabled(self.SoC0_checkbox.isChecked())
 
-        self.SoC1_IP_input.setEnabled(self.SoC1_checkbox.isChecked())
+        self.soc1_ip1.setEnabled(self.SoC1_checkbox.isChecked())
+        self.soc1_ip2.setEnabled(self.SoC1_checkbox.isChecked())
+        self.soc1_ip3.setEnabled(self.SoC1_checkbox.isChecked())
+        self.soc1_ip4.setEnabled(self.SoC1_checkbox.isChecked())
         self.SoC1_telnet_username_input.setEnabled(self.SoC1_checkbox.isChecked())
         self.SoC1_telnet_password_input.setEnabled(self.SoC1_checkbox.isChecked())
         self.SoC1_FTP_username_input.setEnabled(self.SoC1_checkbox.isChecked())
