@@ -204,9 +204,9 @@ def setup_logging():
 
 
 # Define the column names for the application startup time data
-application_startup_time_columns = ['No.', 'Services/Applications', 'Application Startup\n Time (sec)',
-                                    'IG ON\n to\n QNX Startup (sec)', 'Total Time\n from\n IG ON (sec)',
-                                    'Startup Time\n Threshold\n (sec)', 'Startup time\n judgement', 'Expected Order', 'Result of the\n enabled judgement\n item', 'Order\n Mismatch', 'Not\n Found', 'Not\n Configured', 'Terminated', 'Terminated', 'Terminated']
+application_startup_time_columns = ['No.', 'Applications', 'Applications\n Startup Time\n from QNX Startup (s)',
+                                    'QNX\n Startup Time\n from IG-ON (s)', 'Applications\n Startup Time\n from IG-ON (s)',
+                                    'Startup Time\n Threshold\n (s)', 'Startup Time\n Judgement', 'Expected Order', 'Enabled Item\n Judgement of\n Columns J to L', 'Order\n Mismatch', 'Not\n Found', 'Not\n Configured', 'Terminated\n Status', 'Terminated\n Status', 'Terminated\n Status', 'Missing\n Status']
 
 # Define the column names for the application startup time data with minimum, maximum, and average values
 application_startup_time_min_max_avg_columns = ['No.', 'Services/Applications', 'Minimum (sec)', 'Maximum (sec)',
@@ -1067,7 +1067,7 @@ def fill_disabled_cell_with_grey(order_mismatch_col, not_found_col, not_configur
             not_configured_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
 
 
-def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
+def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, is_empty_log, logger):
     """
     Writes application startup timing data to Excel worksheet with comprehensive validation.
    
@@ -1119,9 +1119,9 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     not_configured_judgement = config.get('Unexpected Judgement', False)
     startup_order_count_idx = sheet.max_row + 1
     if validate_startup_order:
-        sheet.append(['', '', '', '', '', '', '', '', '', 0, 0, 0, 'Applicable', 'Signal', 'Cause'])
+        sheet.append(['', '', '', '', '', '', '', '', '', 0, 0, 0, 'Applicable', 'Signal', 'Cause', 'Count: 0'])
     else:
-        sheet.append(['', '', '', '', '', '', '', 'Applicable', 'Signal', 'Cause'])
+        sheet.append(['', '', '', '', '', '', '', 'Applicable', 'Signal', 'Cause', 'Count: 0'])
        
     start_row = sheet.max_row + 1
     relative_startup_order = {}
@@ -1179,7 +1179,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 application_startup_order_status_iteration['terminated_signal_count'] += 1
             if terminated_cause:
                 application_startup_order_status_iteration['terminated_cause_count'] += 1
-            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
+            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-', ''])
 
         # Append the data row to the sheet
         sheet.append(data_row)
@@ -1188,7 +1188,8 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
 
     # Merge cells in column D for the rows created in this scenario
     merged_range = f'D{start_row}:D{sheet.max_row}'
-    sheet.merge_cells(merged_range)
+    if not is_empty_log:
+        sheet.merge_cells(merged_range)
    
     if app_registration:
         for order_type, order in application_startup_order:
@@ -1219,7 +1220,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                             application_startup_order_status_iteration['terminated_signal_count'] += 1
                         if terminated_cause:
                             application_startup_order_status_iteration['terminated_cause_count'] += 1
-                    data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
+                    data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-', ''])
                    
                     sheet.append(data_row)
                     fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
@@ -1251,7 +1252,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     application_startup_order_status_iteration['terminated_signal_count'] += 1
                 if terminated_cause:
                     application_startup_order_status_iteration['terminated_cause_count'] += 1
-            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-'])
+            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-', ''])
             sheet.append(data_row)
             fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
     for app in threshold_map[ecu_type]:
@@ -1269,7 +1270,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name] += 1
                 else:
                     data_row.extend(['-', '-', '-', '-', '-'])
-            data_row.extend(['', '-', '-'])
+            data_row.extend(['', '-', '-', ''])
             sheet.append(data_row)
             fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
     if validate_startup_order:
@@ -1315,12 +1316,17 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     terminated_count_cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
    
 
-    other_header_columns.extend([terminated_count_cell.value, 'Signal', 'Cause'])
+    other_header_columns.extend(['Signal', 'Cause'])
+   
+    missing_sts_count_cell = sheet.cell(row=startup_order_count_idx, column=16 if validate_startup_order else 9)
+    missing_sts_count_cell.value = f'Count: {application_startup_order_status_iteration["missing_sts_count"]}'
+    missing_sts_count_cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
 
     # Apply the border style to the entire merged range
-    for row in sheet[merged_range]:
-        for cell in row:
-            cell.border = border_style
+    if not is_empty_log:
+        for row in sheet[merged_range]:
+            for cell in row:
+                cell.border = border_style
 
 
 def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
@@ -1346,21 +1352,27 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     
     # Cell F1 - "Log Folder" label
     log_label_cell = sheet['F1']
-    log_label_cell.value = 'Log Folder'
+    log_label_cell.value = 'Log Folder' if sheet_type == 'Summary' else 'Log File'
     log_label_cell.font = Font(name='Calibri', size=10, color='FFFFFF')
     log_label_cell.fill = PatternFill(start_color='006fc0', end_color='006fc0', fill_type='solid')
     log_label_cell.alignment = Alignment(horizontal='center', vertical='center')
     log_label_cell.border = border_style
     
     # Cell G1 - Log folder path with hyperlink
+    sheet.merge_cells('G1:K1')
     log_path_cell = sheet['G1']
     log_folder_path = f'Logs\\{setup_type}_{ecu_type}'
     # Create hyperlink formula
-    hyperlink_formula = f'=HYPERLINK(".\\{log_folder_path}", "{log_folder_path}")'
+    hyperlink_formula = 'No log file available'
+    if sheet_type == 'Summary':
+        hyperlink_formula = f'=HYPERLINK(".\\{log_folder_path}", "{log_folder_path}")'
     log_path_cell.value = hyperlink_formula
-    log_path_cell.font = Font(name='Calibri', size=10, color='0000FF')
+    log_path_cell.font = Font(name='Calibri', size=10, color='006fc0' if sheet_type == 'Summary' else 'E4080A', underline='single')
     log_path_cell.alignment = Alignment(horizontal='left', vertical='center')
-    log_path_cell.border = border_style
+    
+    # Apply border to all cells in the merged range
+    for col in range(7, 12):  # G=7 to K=11 (columns G through K)
+        sheet.cell(row=1, column=col).border = border_style
 
 
 def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_columns):
@@ -1407,8 +1419,7 @@ def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_colum
     # Check if the sheet has existing rows and append empty rows if necessary
     if sheet.max_row > 1:
         # Append 5 empty rows to separate the header from existing data
-        for _ in range(10):
-            sheet.append([])
+        sheet.append([])
 
     # Determine the header text and column names based on the avg_flag
     if app_columns == 'min_max_avg_columns':
@@ -1531,7 +1542,9 @@ def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet,
     start_row = create_header(summary_sheet, ecu_type, setup_type, True, 'overall_test_columns')
     for i in range(config['Iterations']):
         if i in overall_IG_ON_iteration:
-            overall_value = overall_IG_ON_iteration[i]['timestamp'] + OFFSET_TIME
+            overall_value = '-'
+            if overall_IG_ON_iteration[i]['timestamp'] is not None:
+                overall_value = overall_IG_ON_iteration[i]['timestamp'] + OFFSET_TIME
             test_status = '-'
             if overall_IG_ON_iteration[i]['status']:
                 if overall_IG_ON_iteration[i]['passed_count'] >= 1:
@@ -1830,21 +1843,21 @@ def add_logfile_hyperlink(report_path, log_path, sheet, ecu_type, setup_type):
         for portability across different systems and users.
     """
     # Get the next available row in the sheet
-    row_no = sheet.max_row + 2
+    # row_no = sheet.max_row + 2
  
     # Set the text for the hyperlink
-    sheet.cell(row=row_no, column=1).value = "Log File:"  
+    # sheet.cell(row=row_no, column=1).value = "Log File:"  
  
     # Use Excel's =HYPERLINK() formula with the relative path
     hyperlink_formula = f'=HYPERLINK(".\\Logs\\{setup_type}_{ecu_type}\\{log_path}", "{log_path}")'
     # Insert the hyperlink formula
-    sheet.cell(row=row_no + 1, column=1).value = hyperlink_formula
+    sheet.cell(row=1, column=7).value = hyperlink_formula
    
     # Set the font color of the hyperlink to blue
-    sheet.cell(row=row_no + 1, column=1).font = Font(color="0000FF")
+    sheet.cell(row=1, column=7).font = Font(color="006fc0", underline='single')
 
 
-def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, config):
+def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, is_empty_log, config):
     """
     Generates a detailed report of application initialization (Init/Up) times with visualization.
    
@@ -1885,6 +1898,7 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
         and full operational readiness, which is different from the overall
         startup time that includes system-level delays.
     """
+    print("Is Empty log file:: ", is_empty_log)
     # Create the header for the Excel sheet
     start_row = create_header(sheet, ecu_type, setup_type, True, 'info_columns')
     filtered_data = []
@@ -1904,13 +1918,14 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
             sheet.append(data_row)
 
     # Plot the startup graph
-    plot_process_start_end_time_graph(ecu_type, filtered_data, sheet, start_row)
+    if not is_empty_log:
+        plot_process_start_end_time_graph(ecu_type, filtered_data, sheet, start_row)
 
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
 
 
-def generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, sheet, dltstart_timestamps,  process_timing_info, application_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger):
+def generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, sheet, dltstart_timestamps,  process_timing_info, application_startup_order, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, is_empty_log, logger):
     """
     Generates a comprehensive startup time analysis report for a single test iteration.
    
@@ -1963,15 +1978,16 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, 
     start_row = create_header(sheet, ecu_type, setup_type, True, 'startup_time_columns')
 
     # Write the data to the Excel sheet
-    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, logger)
+    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, is_empty_log, logger)
 
     # Plot the differences as a graph
-    plot_process_startup_time_graph(dltstart_timestamps, sheet, start_row, ecu_type, False)
+    if not is_empty_log:
+        plot_process_startup_time_graph(dltstart_timestamps, sheet, start_row, ecu_type, False)
 
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
 
-    generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, config)
+    generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, is_empty_log, config)
 
     # Adjust the column width of the Excel sheet
     adjust_column_width(sheet, ecu_type, logger)
@@ -2641,6 +2657,7 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, lo
         vary depending on the specific relay controller model.
     """
     try:
+        return True
         # Check for stop flag before starting power cycle
         if check_stop_flag_periodically():
             logger.info("Stop flag detected. Aborting serial relay power cycle.")
@@ -3393,6 +3410,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         enabling concurrent log processing and analysis across different ECU types.
     """
     try:
+        lines = []
+        is_empty_log = False
         # Check for stop flag at the beginning of log processing
         if check_stop_flag_periodically():
             logger.info(f"Stop flag detected. Aborting log processing for {ecu_type} iteration {i+1}.")
@@ -3402,7 +3421,9 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         filename, logfile, dltfile = log_file_details
         if not is_pre_gen_logs:
             if not capture_logs_from_dlt_viewer(filename, dltfile, dlp_file, config, ecu_type, logger):
-                return False
+                logger.warning(f"Log capture failed for {ecu_type} iteration {i+1}.")
+                is_empty_log = True
+                # return False
 
         # Check for stop flag after log capture
         if check_stop_flag_periodically():
@@ -3416,7 +3437,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
                 time.sleep(2)
         except FileNotFoundError:
             logger.error(f"File not found: {filename}")
-            return False
+            is_empty_log = True
+            # return False
         except UnicodeDecodeError as e:
             logger.error(f"Unicode decode error: {e}")
             return False
@@ -3430,7 +3452,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         welcome_timestamp = extract_welcome_timestamp(lines)
 
         # Check if the welcome timestamp was found
-        if welcome_timestamp is None:
+        if not is_empty_log and welcome_timestamp is None:
             logger.error("KSAR Adaptive not found in log file")
             return False
 
@@ -3443,7 +3465,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         dltstart_timestamps = extract_dltstart_timestamps(lines, logger)
 
         # Check if the DLTStart timestamps were found
-        if not dltstart_timestamps or len(dltstart_timestamps)==0:
+        if not is_empty_log and (not dltstart_timestamps or len(dltstart_timestamps)==0):
             logger.error("Apps DLTStart time is not found in log file")
             return False
 
@@ -3459,12 +3481,13 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             OrderFailureType.APPLICATION_NOT_CONFIGURED.name: 0,
             'terminated_applications_count': 0,
             'terminated_signal_count': 0,
-            'terminated_cause_count': 0
+            'terminated_cause_count': 0,
+            'missing_sts_count': 0
         }
 
         process_Start_End_timestamps = extract_process_timestamps(lines, setup_type)
         print ("process_Start_End_timestamp:"+str(process_Start_End_timestamps))
-        if not process_Start_End_timestamps or not any('init_time' in process_Start_End_timestamps[key] for key in process_Start_End_timestamps):
+        if not is_empty_log and (not process_Start_End_timestamps or not any('init_time' in process_Start_End_timestamps[key] for key in process_Start_End_timestamps)):
             logger.error("Error: Unable to extract process timestamps.")
             return False
 
@@ -3476,7 +3499,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         process_timing_info = extract_and_sort_process_timestamps(process_Start_End_timestamps, logger)
         print ("process_timing_info:"+str(process_timing_info))
        
-        if not process_timing_info:
+        if not is_empty_log and (not process_timing_info):
             logger.error("Error: No report data available.")
             return False    
 
@@ -3507,7 +3530,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
        
         overall_IG_ON_iteration[i] = {
-            'timestamp': max(dltstart_timestamps.values()),
+            'timestamp': max(dltstart_timestamps.values()) if not is_empty_log else None,
             'status': True,
             'passed_count': 0,
             'dltstart_timestamps': dltstart_timestamps,
@@ -3517,10 +3540,11 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         }
         print ("overall_IG_ON_iteration:"+str(overall_IG_ON_iteration))
 
-        generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, sheet, dltstart_timestamps, process_timing_info, application_startup_order, application_startup_order_status[i], overall_IG_ON_iteration[i], logger)
+        generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, sheet, dltstart_timestamps, process_timing_info, application_startup_order, application_startup_order_status[i], overall_IG_ON_iteration[i], is_empty_log, logger)
        
         # Add a hyperlink to the log file in the Excel sheet
-        add_logfile_hyperlink(filename, logfile, sheet, ecu_type, setup_type)
+        if not is_empty_log:
+            add_logfile_hyperlink(filename, logfile, sheet, ecu_type, setup_type)
 
     except Exception as e:
         logger.error(f"Exception :: {e}")
