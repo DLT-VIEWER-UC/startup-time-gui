@@ -31,6 +31,14 @@ import pandas as pd
 from decimal import Decimal, ROUND_HALF_UP
 import signal
 
+class OverallCounts:
+    def __init__(self):
+        self.startup_time_judgement_fail_count = 0
+        self.order_mismatch_count = 0
+        self.not_found_count = 0
+        self.not_configured_count = 0
+        self.terminated_count = 0
+        self.missing_count = 0
 
 plot_lock = threading.Lock()
 
@@ -163,6 +171,9 @@ workbook_map = None
 threshold_map = None
 current_timestamp = None
 is_pre_gen_logs = None
+ecu_failed_iterations_map = None
+ecu_encountered_apps_map = None
+ecu_app_info_counts_map = None
 table_headers = None
 max_log_files_count = None
 
@@ -209,16 +220,16 @@ application_startup_time_columns = ['No.', 'Applications', 'Applications\n Start
                                     'Startup Time\n Threshold\n (s)', 'Startup Time\n Judgement', 'Expected Order', 'Enabled Item\n Judgement of\n Columns J to L', 'Order\n Mismatch', 'Not\n Found', 'Not\n Configured', 'Terminated\n Status', 'Terminated\n Status', 'Terminated\n Status', 'Missing\n Status']
 
 # Define the column names for the application startup time data with minimum, maximum, and average values
-application_startup_time_min_max_avg_columns = ['No.', 'Services/Applications', 'Minimum (sec)', 'Maximum (sec)',
-                                                'Average (sec)', 'Average\n from\n IG ON (sec)', 'Startup Time\n Threshold\n (sec)', 'Number of\n measurements', 'Terminated\n Count']
+application_startup_time_min_max_avg_columns = ['No.', 'Applications', 'Minimum (s)', 'Maximum (s)',
+                                                'Average (s)', 'Startup Time\n Threshold (s)', 'Startup Time\n Judgement\n FAIL Count', 'Order\n Mismatch\n Count', 'Not\n Found\n Count', 'Not\n Configured\n Count', 'Terminated\n Count', 'Missing\n Count']
 
 application_info_columns = ['No.', 'Services/Applications', 'Init(Up) Time (us)', 'Init(Up) Time (ms)']
 
 application_start_end_time_min_max_avg_columns = ['No.', 'Services/Applications', 'Minimum (ms)', 'Maximum (ms)',
                                                   'Average (ms)']
 
-applications_overall_status_columns = ['No. of Iterations', 'Total Time\n to Startup\n Last Application\n from IG ON (sec)',
-                                        'Startup time\n judgement', 'Result of the\n enabled judgement\n item', 'Order\n Mismatch\n Count', 'Not\n Found\n Count', 'Not\n Configured\n Count', 'Missing\n Application\n Judgement', 'Terminated\n Count']
+applications_overall_status_columns = ['Iterations No.', 'Total Applications\n Startup Time from IG-ON (s)',
+                                        'Startup time\n judgement', 'Enabled Item\n Judgement of\n Columns E to G', 'Order\n Mismatch\n Count', 'Not\n Found\n Count', 'Not\n Configured\n Count', 'Terminated\n Judgement', 'Data\n Completeness\n Judgement']
 
 appendix_columns = ['Column Name', 'Description']
 startup_field_descriptions = [
@@ -475,11 +486,12 @@ def format_excel_cells(sheet, start_row):
             elif cell.value == "PASS":
                 # If the cell value is "PASS", fill it with a light green color.
                 cell.fill = PatternFill(start_color = "92D050", end_color = "92D050", fill_type = "solid")
+                cell.font = Font(color="000000", bold=True)
 
             elif cell.value == "FAIL":
                 # If the cell value is "FAIL", fill it with a light red color.
                 cell.fill = PatternFill(start_color = "FF0000", end_color = "FF0000", fill_type = "solid")
-                cell.font = Font(color="FFFFFF")
+                cell.font = Font(color="FFFFFF", bold=True)
             elif cell.value == '⬤':
                 cell.font = Font(bold=True)
                
@@ -1129,6 +1141,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     encountered_apps.add('Non-Configured Applications')
     # Iterate over the DLTStart timestamps and differences in parallel using zip
     for position, (process, dltstart_line) in enumerate(dltstart_timestamps.items()):
+        ecu_app_info_counts_map[ecu_type].setdefault(process, OverallCounts())
         # Check if the process names match
         result = '-'
         if process in threshold_map[ecu_type] or 'Non-Configured Applications' in threshold_map[ecu_type]:
@@ -1137,6 +1150,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 overall_IG_ON_cur_iteration['passed_count'] += 1
             else:
                 result = 'FAIL'
+                ecu_app_info_counts_map[ecu_type][process].startup_time_judgement_fail_count += 1
                 overall_IG_ON_cur_iteration['status'] = False
 
         data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', result]
@@ -1153,6 +1167,10 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                             (OrderFailureType.ORDER_MISMATCH.name == OrderFailureType(order_failure_type).name and not order_mismatch_judgement) or
                             (OrderFailureType.APPLICATION_NOT_CONFIGURED.name == OrderFailureType(order_failure_type).name and not not_configured_judgement)
                         )
+                    if OrderFailureType.ORDER_MISMATCH.name == OrderFailureType(order_failure_type).name:
+                        ecu_app_info_counts_map[ecu_type][process].order_mismatch_count += 1
+                    elif OrderFailureType.APPLICATION_NOT_CONFIGURED.name == OrderFailureType(order_failure_type).name:
+                        ecu_app_info_counts_map[ecu_type][process].not_configured_count += 1
                     status = '-'
                     if any((order_mismatch_judgement, not_found_judgement, not_configured_judgement)):
                         status = 'PASS' if (
@@ -1174,6 +1192,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             terminated_signal = process_timing_info[process]['terminated_signal']
             terminated_cause = process_timing_info[process]['terminated_cause']
             if terminated_signal or terminated_cause:
+                ecu_app_info_counts_map[ecu_type][process].terminated_count += 1
                 application_startup_order_status_iteration['terminated_applications_count'] += 1
             if terminated_signal:
                 application_startup_order_status_iteration['terminated_signal_count'] += 1
@@ -1190,17 +1209,59 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     merged_range = f'D{start_row}:D{sheet.max_row}'
     if not is_empty_log:
         sheet.merge_cells(merged_range)
+        
+    if is_empty_log:
+        for app in ecu_encountered_apps_map[ecu_type]:
+            ecu_app_info_counts_map[ecu_type].setdefault(app, OverallCounts())
+            is_app_configured = app in [app for _, order in application_startup_order for app in order]
+            is_app_configured = is_app_configured or app in [app for app in threshold_map[ecu_type]]
+            
+            if app not in encountered_apps:
+                encountered_apps.add(app)
+                data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
+                if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
+                    overall_IG_ON_cur_iteration['status'] = False
+                    ecu_app_info_counts_map[ecu_type][app].startup_time_judgement_fail_count += 1
+                if is_app_configured:
+                    ecu_app_info_counts_map[ecu_type][app].not_found_count += 1
+                else:
+                    ecu_app_info_counts_map[ecu_type][app].not_configured_count += 1
+                if validate_startup_order:
+                    if app_registration:
+                        if application_startup_order_status_iteration['startup_order_status']:
+                            application_startup_order_status_iteration['startup_order_status'] = (is_app_configured and not not_found_judgement) or (not is_app_configured and not not_configured_judgement)
+                        status = '-'
+                        if (is_app_configured and not not_found_judgement) or (not is_app_configured and not not_configured_judgement):
+                            status = 'PASS'
+                        else:
+                            status = 'FAIL'
+                        odr_type, expected_order, grp_len = get_expected_startup_order(app, application_startup_order, logger)
+                        data_row.extend([get_expected_startup_order_str(odr_type, expected_order, grp_len), status, '', '⬤' if is_app_configured else '', '⬤' if not is_app_configured else ''])
+                        if is_app_configured:
+                            application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
+                        else:
+                            application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name] += 1
+                    else:
+                        data_row.extend(['-', '-', '-', '-', '-'])
+                else:
+                    data_row.extend(['-', '-', '-', '-', '-'])
+                application_startup_order_status_iteration["missing_sts_count"]+=1
+                data_row.extend(['-', '-', '-', '⬤'])
+                sheet.append(data_row)
+                fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
    
     if app_registration:
         for order_type, order in application_startup_order:
             for app in order:
+                ecu_app_info_counts_map[ecu_type].setdefault(app, OverallCounts())
                 overall_IG_ON_cur_iteration['configured_applications'].add(app)
                 if app not in dltstart_timestamps:
                     encountered_apps.add(app)
                     data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
                     if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
                         overall_IG_ON_cur_iteration['status'] = False
-
+                        ecu_app_info_counts_map[ecu_type][app].startup_time_judgement_fail_count += 1
+                    ecu_app_info_counts_map[ecu_type][app].not_found_count += 1
                     if app_registration:
                         if application_startup_order_status_iteration['startup_order_status']:
                             application_startup_order_status_iteration['startup_order_status'] = not not_found_judgement
@@ -1215,6 +1276,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     terminated_signal = process_timing_info[app]['terminated_signal'] if app in process_timing_info else None
                     terminated_cause = process_timing_info[app]['terminated_cause'] if app in process_timing_info else None
                     if terminated_signal or terminated_cause:
+                        ecu_app_info_counts_map[ecu_type][app].terminated_count += 1
                         application_startup_order_status_iteration['terminated_applications_count'] += 1
                         if terminated_signal:
                             application_startup_order_status_iteration['terminated_signal_count'] += 1
@@ -1226,6 +1288,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
                
     for process, process_data in process_timing_info.items():
+        ecu_app_info_counts_map[ecu_type].setdefault(process, OverallCounts())
         if process_data['terminated_signal'] or process_data['terminated_cause']:
             overall_IG_ON_cur_iteration['terminated_applications'].add(process)
         if process not in encountered_apps:
@@ -1233,6 +1296,8 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             data_row = ['-', process, '-', '-', '-', threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
             if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
                 overall_IG_ON_cur_iteration['status'] = False
+                ecu_app_info_counts_map[ecu_type][process].startup_time_judgement_fail_count += 1
+            ecu_app_info_counts_map[ecu_type][process].not_configured_count += 1
             if validate_startup_order:
                 if app_registration:
                     if application_startup_order_status_iteration['startup_order_status']:
@@ -1247,6 +1312,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             terminated_signal = process_data['terminated_signal']
             terminated_cause = process_data['terminated_cause']
             if terminated_signal or terminated_cause:
+                ecu_app_info_counts_map[ecu_type][process].terminated_count += 1
                 application_startup_order_status_iteration['terminated_applications_count'] += 1
                 if terminated_signal:
                     application_startup_order_status_iteration['terminated_signal_count'] += 1
@@ -1256,9 +1322,12 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             sheet.append(data_row)
             fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
     for app in threshold_map[ecu_type]:
+        ecu_app_info_counts_map[ecu_type].setdefault(app, OverallCounts())
         if app not in encountered_apps:
             data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type][app], 'FAIL']
             overall_IG_ON_cur_iteration['status'] = False
+            ecu_app_info_counts_map[ecu_type][app].startup_time_judgement_fail_count += 1
+            ecu_app_info_counts_map[ecu_type][app].not_configured_count += 1
             if validate_startup_order:
                 if app_registration:
                     if application_startup_order_status_iteration['startup_order_status']:
@@ -1424,7 +1493,7 @@ def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_colum
     # Determine the header text and column names based on the avg_flag
     if app_columns == 'min_max_avg_columns':
         # If avg_flag is True, include Min, Max, and Avg in the header
-        header = f'Services/Applications Startup Time from QNX Startup on {ecu_type} (Min, Max, Avg)'
+        header = f'Summary of Applications Startup Time from IG-ON on {setup_type} {ecu_type}'
         columns = application_startup_time_min_max_avg_columns
    
     elif app_columns == 'min_max_avg_individual':
@@ -1444,7 +1513,7 @@ def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_colum
         columns = application_info_columns
    
     elif app_columns == 'overall_test_columns':
-        header = f'Overall Test Case Status for each Iteration on {ecu_type}'
+        header = f'Summary of Each Iteration Status on {setup_type} {ecu_type}'
         columns = applications_overall_status_columns
         if not validate_startup_order:
             columns=columns[:3]+ columns[-2:]  # Remove startup order validation columns if not enabled
@@ -1540,7 +1609,7 @@ def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet,
     not_found_judgement = config.get('Missing Judgement', False)
     not_configured_judgement = config.get('Unexpected Judgement', False)
     start_row = create_header(summary_sheet, ecu_type, setup_type, True, 'overall_test_columns')
-    for i in range(config['Iterations']):
+    for i in range(max(overall_IG_ON_iteration.keys()) + 1):
         if i in overall_IG_ON_iteration:
             overall_value = '-'
             if overall_IG_ON_iteration[i]['timestamp'] is not None:
@@ -1551,7 +1620,7 @@ def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet,
                     test_status = 'PASS'
             else:
                 test_status = 'FAIL'
-            data_row = ['=HYPERLINK("'+('./'+os.path.basename(report_file) if isSummaryReport else '')+f'#\'GEN3_StartupTime_{(i + 1):02d}\'!A1", "{i + 1}")', overall_value, test_status]
+            data_row = ['=HYPERLINK("'+('./'+os.path.basename(report_file) if isSummaryReport else '')+f'#\'N{i + 1}\'!A1", "{i + 1}")', overall_value, test_status]
             if i in application_startup_order_status: # config['Startup Order Judgement'] and
                 if app_registration:
                     startup_order_status = '-'
@@ -1566,18 +1635,18 @@ def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet,
                 else:
                     data_row.extend(['-', '-', '-', '-'])
             # Check if the process names match in dltstart_timestamps and process_timing_info
+            if i in application_startup_order_status:
+                data_row.append('FAIL' if application_startup_order_status[i]['terminated_applications_count'] > 0 else 'PASS')
             # TODO: Modify Missing Application Judgement logic.
             data_row.append('PASS' if len(set(process_times.keys()).difference(set(overall_IG_ON_iteration[i]['dltstart_timestamps'].keys()))) == 0 else 'FAIL')
-            if i in application_startup_order_status:
-                data_row.append(application_startup_order_status[i]['terminated_applications_count'])
             summary_sheet.append(data_row)
            
             # Apply hyperlink formatting to the first cell in the last row
             cell = summary_sheet.cell(row=summary_sheet.max_row, column=1)
             cell.font = Font(bold=True, underline='single', color='0000FF')
             # Apply red fill to terminated count if greater than 0
-            terminated_count_cell = summary_sheet.cell(row=summary_sheet.max_row, column=len(data_row))  # Column 9 is the terminated count column
-            if data_row[-1] > 0:
+            terminated_count_cell = summary_sheet.cell(row=summary_sheet.max_row, column=9)  # Column 9 is the terminated count column
+            if application_startup_order_status[i]['terminated_applications_count'] > 0:
                 terminated_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
                 terminated_count_cell.font = Font(color="FFFFFF")  # White font for contrast
             # Apply grey fill to disabled cells
@@ -1724,25 +1793,40 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
             data_row['min_time'],
             data_row['max_time'],
             data_row['avg_time'],
-            float(data_row['avg_time']) + OFFSET_TIME if data_row['avg_time'] != '-' else '-',
             threshold_map[ecu_type].get(data_row['process'], threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((data_row['process'] in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-',
-            data_row['count'],
-            data_row['terminated_count']
+            ecu_app_info_counts_map[ecu_type][data_row['process']].startup_time_judgement_fail_count,
+            ecu_app_info_counts_map[ecu_type][data_row['process']].order_mismatch_count,
+            ecu_app_info_counts_map[ecu_type][data_row['process']].not_found_count,
+            ecu_app_info_counts_map[ecu_type][data_row['process']].not_configured_count,
+            ecu_app_info_counts_map[ecu_type][data_row['process']].terminated_count,
+            len(overall_IG_ON_iteration) - len(process_times.get(data_row['process'], []))
         ])
 
-        # Apply color formatting to the count cell (last column)
-        count_cell = sheet.cell(row=sheet.max_row, column=8)  # Column 8 is the count column
-        if data_row['count'] != '-':
-            if data_row['count'] == config['Iterations']:
-                count_cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Green
-            else:
-                count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
-                count_cell.font = Font(color="FFFFFF")  # White font for contrast
         # Apply color formatting to the terminated count cell (last column)
-        terminated_count_cell = sheet.cell(row=sheet.max_row, column=9)  # Column 9 is the terminated count column
-        if data_row['terminated_count'] > 0:
+        if ecu_app_info_counts_map[ecu_type][data_row['process']].startup_time_judgement_fail_count > 0:
+            startup_time_judgement_fail_cell = sheet.cell(row=sheet.max_row, column=7)  # Column 9 is the terminated count column
+            startup_time_judgement_fail_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+            startup_time_judgement_fail_cell.font = Font(color="FFFFFF")  # White font for contrast
+        if ecu_app_info_counts_map[ecu_type][data_row['process']].order_mismatch_count > 0:
+            order_mismatch_count_cell = sheet.cell(row=sheet.max_row, column=8)  # Column 9 is the terminated count column
+            order_mismatch_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+            order_mismatch_count_cell.font = Font(color="FFFFFF")  # White font for contrast
+        if ecu_app_info_counts_map[ecu_type][data_row['process']].not_found_count > 0:
+            not_found_count_cell = sheet.cell(row=sheet.max_row, column=9)  # Column 9 is the terminated count column
+            not_found_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+            not_found_count_cell.font = Font(color="FFFFFF")  # White font for contrast
+        if ecu_app_info_counts_map[ecu_type][data_row['process']].not_configured_count > 0:
+            not_configured_count_cell = sheet.cell(row=sheet.max_row, column=10)  # Column 10 is the not configured count column
+            not_configured_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+            not_configured_count_cell.font = Font(color="FFFFFF")  # White font for contrast
+        if ecu_app_info_counts_map[ecu_type][data_row['process']].terminated_count > 0:
+            terminated_count_cell = sheet.cell(row=sheet.max_row, column=11)
             terminated_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
             terminated_count_cell.font = Font(color="FFFFFF")  # White font for contrast
+        if len(overall_IG_ON_iteration) - len(process_times.get(data_row['process'], [])) > 0:
+            missing_count_cell = sheet.cell(row=sheet.max_row, column=12)  # Column 12 is the missing count column
+            missing_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+            missing_count_cell.font = Font(color="FFFFFF")  # White font for contrast
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             differences[data_row['process']] = float(data_row['avg_time'])
@@ -1911,6 +1995,11 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
         else:
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
+    if not is_empty_log:
+        for app in ecu_encountered_apps_map[ecu_type]:
+            if app not in process_timing_info:
+                data_row = ['-', app, '-', '-']
+                sheet.append(data_row)
     ind_app_configured_and_terminated_list = get_ind_app_configured_and_terminated_list(ecu_type, overall_IG_ON_cur_iteration)
     for process in ind_app_configured_and_terminated_list:
         if process not in process_timing_info:
@@ -3345,7 +3434,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
         return False
 
        
-def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config, sheet, overall_IG_ON_iteration, process_start_times, process_times, application_startup_order, application_startup_order_status, logger):
+def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config, sheet, overall_IG_ON_iteration, process_start_times, process_times, application_startup_order, application_startup_order_status, is_empty_mode, logger):
     """
     Processes a single ECU log file for one test iteration, extracting timing data and generating reports.
    
@@ -3411,7 +3500,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
     """
     try:
         lines = []
-        is_empty_log = False
+        is_empty_log = is_empty_mode
         # Check for stop flag at the beginning of log processing
         if check_stop_flag_periodically():
             logger.info(f"Stop flag detected. Aborting log processing for {ecu_type} iteration {i+1}.")
@@ -3419,7 +3508,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
            
         # Get the log file path and name for the specified ECU type and timestamp
         filename, logfile, dltfile = log_file_details
-        if not is_pre_gen_logs:
+        if not is_empty_mode and not is_pre_gen_logs:
             if not capture_logs_from_dlt_viewer(filename, dltfile, dlp_file, config, ecu_type, logger):
                 logger.warning(f"Log capture failed for {ecu_type} iteration {i+1}.")
                 is_empty_log = True
@@ -3431,21 +3520,25 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
 
         # Attempt to open the log file in read mode with error handling for encoding issues
-        try:
-            with open(filename, 'r', encoding='utf-8', errors='ignore') as file:
-                lines = file.readlines()
-                time.sleep(2)
-        except FileNotFoundError:
-            logger.error(f"File not found: {filename}")
-            is_empty_log = True
-            # return False
-        except UnicodeDecodeError as e:
-            logger.error(f"Unicode decode error: {e}")
-            return False
+        if not is_empty_mode:
+            try:
+                with open(filename, 'r', encoding='utf-8', errors='ignore') as file:
+                    lines = file.readlines()
+                    time.sleep(2)
+            except FileNotFoundError:
+                logger.error(f"File not found: {filename}")
+                is_empty_log = True
+                # return False
+            except UnicodeDecodeError as e:
+                logger.error(f"Unicode decode error: {e}")
+                return False
 
         # Check for stop flag after reading file
         if check_stop_flag_periodically():
             logger.info(f"Stop flag detected after reading log file for {ecu_type} iteration {i+1}.")
+            return False
+        if is_empty_log and not is_empty_mode:
+            ecu_failed_iterations_map.setdefault(ecu_type, []).append(i)
             return False
 
         # Extract the welcome timestamp from the log fil
@@ -3538,6 +3631,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             'configured_applications': set(),
             'terminated_applications': set()
         }
+        ecu_encountered_apps_map.setdefault(ecu_type, set()).update(set(dltstart_timestamps.keys()))
         print ("overall_IG_ON_iteration:"+str(overall_IG_ON_iteration))
 
         generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, sheet, dltstart_timestamps, process_timing_info, application_startup_order, application_startup_order_status[i], overall_IG_ON_iteration[i], is_empty_log, logger)
@@ -3733,10 +3827,16 @@ def start_startup_time_measurement(logger):
     global current_timestamp
     global max_log_files_count
     max_log_files_count = 0
+    global ecu_failed_iterations_map
+    ecu_failed_iterations_map = {}
+    global ecu_encountered_apps_map
+    ecu_encountered_apps_map = {}
+    global ecu_app_info_counts_map
+    ecu_app_info_counts_map = {}
     # current_timestamp = '20250630_175500'
     current_timestamp = cur_dt_time_obj.strftime("%Y%m%d_%H%M%S")
 
-    # Start stop flag monitoring thread
+    # Start stop flag monitoring thread 
     stop_monitor_thread = threading.Thread(target=check_stop_flag, daemon=True)
     stop_monitor_thread.start()
     register_thread(stop_monitor_thread)
@@ -3844,6 +3944,7 @@ def start_startup_time_measurement(logger):
             process_start_times_map[ecu['ecu-type']] = {}
             overall_IG_ON_iteration_map[ecu['ecu-type']] = {}
             application_startup_order_status_map[ecu['ecu-type']] = {}
+            ecu_app_info_counts_map[ecu['ecu-type']] = {}
             application_startup_order = []
             for block in ecu['startup-order']:
                 if not block.get('enabled', True):
@@ -3941,6 +4042,7 @@ def start_startup_time_measurement(logger):
                         process_times_map[ecu_type],
                         application_startup_order_map[ecu_type],
                         application_startup_order_status_map[ecu_type],
+                        False,
                         logger
                      )
                 )
@@ -3966,6 +4068,26 @@ def start_startup_time_measurement(logger):
             if check_stop_flag_periodically():
                 logger.info(f"Stop flag detected after completing iteration {i+1}/{iterations}.")
                 return False
+        
+        for ecu_type, failed_iteration_list in ecu_failed_iterations_map.items():
+            logger.warning(f"ECU Type: {ecu_type} - Failed Iterations: {failed_iteration_list}")
+            for failed_iteration in failed_iteration_list:
+                process_log_file(
+                    failed_iteration,
+                    ecu_type,
+                    setup_type,
+                    tuple([None, None, None]),
+                    None,
+                    config,
+                    workbook_map[ecu_type][2][failed_iteration],
+                    overall_IG_ON_iteration_map[ecu_type],
+                    process_start_times_map[ecu_type],
+                    process_times_map[ecu_type],
+                    application_startup_order_map[ecu_type],
+                    application_startup_order_status_map[ecu_type],
+                    True,
+                    logger
+                )
                
         print('anySheet:', anySheet)
         if not any(anySheet):
@@ -4024,9 +4146,9 @@ def start_startup_time_measurement(logger):
         logger.error(f"Error: Missing expected key in ECU input fields: {e}")
         isSuccess = False
     except Exception as e:
+        raise e
         logger.error(f"An error occurred: {e}")
         isSuccess = False
-        raise e
     finally:
         # Set stop flag to ensure all monitoring stops
         stop_requested.clear()
