@@ -677,7 +677,7 @@ class StartupTimeConfig(QDialog):
                     self.isSOC1 = False
 
         # Initialize file system watcher for logs folder
-        self.logs_path = Path(__file__).parent.joinpath('Startup_Time_Scripts/Pre-Generated_Logs/Logs')
+        self.logs_path = Path(__file__).parent.joinpath('Startup_Time_Scripts/Pre-Generated_Logs')
         self.setup_file_watcher()
 
         # Initialize application list from Excel file

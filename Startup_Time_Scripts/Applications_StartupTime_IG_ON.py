@@ -49,6 +49,58 @@ stop_requested = threading.Event()
 script_directory = Path(__file__).parent.parent
 stop_flag_path = script_directory / "stop.flag"
 
+def get_signal_name_with_fallback(signum):
+    """
+    Get signal name with comprehensive fallback for all platforms.
+    Returns signal name even if it doesn't exist on current platform.
+    
+    Args:
+        signum (int): Signal number
+        
+    Returns:
+        str: Signal name or empty string if unknown
+    """
+    signum = str(signum).strip()
+    # Common signal mappings across all platforms
+    signal_map = {
+        '0': 'CTRL_C_EVENT',
+        '1': 'SIGHUP',
+        '2': 'SIGINT',
+        '3': 'SIGQUIT',
+        '4': 'SIGILL',
+        '5': 'SIGTRAP',
+        '6': 'SIGABRT',  # also SIGIOT
+        '7': 'SIGBUS',
+        '8': 'SIGFPE',
+        '9': 'SIGKILL',
+        '10': 'SIGUSR1',
+        '11': 'SIGSEGV',
+        '12': 'SIGUSR2',
+        '13': 'SIGPIPE',
+        '14': 'SIGALRM',
+        '15': 'SIGTERM',
+        '16': 'SIGSTKFLT',
+        '17': 'SIGCHLD',  # also SIGCLD
+        '18': 'SIGCONT',
+        '19': 'SIGSTOP',
+        '20': 'SIGTSTP',
+        '21': 'SIGTTIN',
+        '22': 'SIGTTOU',
+        '23': 'SIGURG',
+        '24': 'SIGXCPU',
+        '25': 'SIGXFSZ',
+        '26': 'SIGVTALRM',
+        '27': 'SIGPROF',
+        '28': 'SIGWINCH',
+        '29': 'SIGIO',  # also SIGPOLL
+        '30': 'SIGPWR',
+        '31': 'SIGSYS',
+        '34': 'SIGRTMIN',
+        '64': 'SIGRTMAX',
+    }
+    
+    return signal_map.get(signum, '')
+
 def check_stop_flag():
     """
     Continuously monitors for the stop.flag file and sets the stop event if found.
@@ -1198,7 +1250,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                 application_startup_order_status_iteration['terminated_signal_count'] += 1
             if terminated_cause:
                 application_startup_order_status_iteration['terminated_cause_count'] += 1
-            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-', ''])
+            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', f'{terminated_signal}: {get_signal_name_with_fallback(terminated_signal)}' if terminated_signal else '-', terminated_cause if terminated_cause else '-', ''])
 
         # Append the data row to the sheet
         sheet.append(data_row)
@@ -1282,7 +1334,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                             application_startup_order_status_iteration['terminated_signal_count'] += 1
                         if terminated_cause:
                             application_startup_order_status_iteration['terminated_cause_count'] += 1
-                    data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-', ''])
+                    data_row.extend(['⬤' if terminated_signal or terminated_cause else '', f'{terminated_signal}: {get_signal_name_with_fallback(terminated_signal)}' if terminated_signal else '-', terminated_cause if terminated_cause else '-', ''])
                    
                     sheet.append(data_row)
                     fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
@@ -1318,7 +1370,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
                     application_startup_order_status_iteration['terminated_signal_count'] += 1
                 if terminated_cause:
                     application_startup_order_status_iteration['terminated_cause_count'] += 1
-            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', terminated_signal if terminated_signal else '-', terminated_cause if terminated_cause else '-', ''])
+            data_row.extend(['⬤' if terminated_signal or terminated_cause else '', f'{terminated_signal}: {get_signal_name_with_fallback(terminated_signal)}' if terminated_signal else '-', terminated_cause if terminated_cause else '-', ''])
             sheet.append(data_row)
             fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
     for app in threshold_map[ecu_type]:
@@ -3867,7 +3919,7 @@ def start_startup_time_measurement(logger):
             print(f"Using pre-generated logs from: {pre_gen_logs_folder_path}")
         #     local_save_path = Path(pre_gen_logs_folder_path)
         # else:
-        local_save_path = Path(__file__).parents[1].joinpath("Reports", "03_Startup_Time", cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S"))
+        local_save_path = Path(__file__).parents[2].joinpath("Reports", "03_Startup_Time", config.get('Current_Timestamp', cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S")))
         local_save_path.mkdir(parents=True, exist_ok=True)
        
         if not is_pre_gen_logs and config['windows']['DLT-Viewer Installed Path'] and not os.path.isfile(config['windows']['DLT-Viewer Installed Path']):
