@@ -3922,7 +3922,7 @@ def start_startup_time_measurement(logger):
             logger.error("No enabled ECU found in the configuration.")
             return False
 
-        ecu_config_list = [ecu for ecu in config['ecu-config'] if ecu['ecu-type'] in enabled_ecu_list]
+        ecu_config_list = [ecu for ecu in config['ecu-config'] if ecu['ecu-type'] in enabled_ecu_list and ecu.get('enabled', True)]
         workbook_map['ECU_Summary'] = tuple(create_workBook('ECU_Summary', setup_type, enabled_ecu_list, iterations, config, is_pre_gen_logs, logger))
         for ecu in ecu_config_list:
             if ecu['ecu-type'] == ECUType.PADAS.value:

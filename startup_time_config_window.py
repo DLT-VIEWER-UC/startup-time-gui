@@ -511,8 +511,8 @@ class ApplicationSelectorWidget(QWidget):
             self.update_select_all_visual_state()
             
             # Trigger validation update on parent dialog
-            if hasattr(self.parent_dialog, 'on_change_update_ok_btn_state'):
-                self.parent_dialog.on_change_update_ok_btn_state()
+            if hasattr(self.parent_dialog, 'validate_all_fields'):
+                self.parent_dialog.validate_all_fields()
        
     def on_application_checkbox_changed(self):
         """Handle individual application checkbox changes"""
@@ -531,8 +531,8 @@ class ApplicationSelectorWidget(QWidget):
         self.update_select_all_visual_state()
                
         # Trigger validation update on parent dialog
-        if hasattr(self.parent_dialog, 'on_change_update_ok_btn_state'):
-            self.parent_dialog.on_change_update_ok_btn_state()
+        if hasattr(self.parent_dialog, 'validate_all_fields'):
+            self.parent_dialog.validate_all_fields()
        
         self.updating_from_checkboxes = False
        
@@ -584,8 +584,8 @@ class ApplicationSelectorWidget(QWidget):
         self.update_all_cross_group_disabling()
        
         # Trigger validation update on parent dialog
-        if hasattr(self.parent_dialog, 'on_change_update_ok_btn_state'):
-            self.parent_dialog.on_change_update_ok_btn_state()
+        if hasattr(self.parent_dialog, 'validate_all_fields'):
+            self.parent_dialog.validate_all_fields()
        
         self.updating_from_checkboxes = False
        
@@ -873,7 +873,7 @@ class StartupTimeConfig(QDialog):
         ]:
             widgets_lst = list()
             le = QLineEdit(str(self.config_data.get(key, '')))
-            le.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
+            le.textChanged.connect(lambda text: [self.validate_all_fields()])
             le.setValidator(validator)
             le.setFixedWidth(150)
             widgets_lst.append(le)
@@ -1019,7 +1019,7 @@ class StartupTimeConfig(QDialog):
 
         # Path line edit with char count
         path_le = QLineEdit(win.get('DLT-Viewer Installed Path', ''))
-        path_le.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
+        path_le.textChanged.connect(lambda text: [self.validate_all_fields()])
         path_le.setMaxLength(250)
         count_lbl = QLabel(f"{len(path_le.text())} / {path_le.maxLength()}")
         path_le.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {path_le.maxLength()}"), self.update_border('windows.DLT-Viewer Installed Path')])
@@ -1042,7 +1042,7 @@ class StartupTimeConfig(QDialog):
         browse_btn.setDisabled(path_cb.isChecked())
         count_lbl.setDisabled(path_cb.isChecked())
 
-        path_cb.toggled.connect(lambda checked: [dlt_path_lbl.setDisabled(checked), path_le.setDisabled(checked), browse_btn.setDisabled(checked), count_lbl.setDisabled(checked), self.on_change_update_ok_btn_state(), self.update_border('windows.DLT-Viewer Installed Path')])
+        path_cb.toggled.connect(lambda checked: [dlt_path_lbl.setDisabled(checked), path_le.setDisabled(checked), browse_btn.setDisabled(checked), count_lbl.setDisabled(checked), self.validate_all_fields(), self.update_border('windows.DLT-Viewer Installed Path')])
 
         # ECU Configurations
         self.ec_group = QGroupBox('ECU Configurations')
@@ -1085,7 +1085,7 @@ class StartupTimeConfig(QDialog):
         # Enable/disable the dependent checkboxes based on 'Startup Order Application Registration'
         # Note: Startup groups remain enabled regardless of this checkbox state
         def toggle_startup_order_dependent_controls(checked):
-            self.on_change_update_ok_btn_state()
+            self.validate_all_fields()
             # Startup groups should always remain enabled
             # Only enable/disable the three judgement checkboxes inside the group box
             order_mismatch_cb.setEnabled(checked)
@@ -1103,7 +1103,7 @@ class StartupTimeConfig(QDialog):
        
         startup_order_group.toggled.connect(toggle_startup_order_dependent_controls)
         self.pre_gen_logs_cb.toggled.connect(lambda checked: [
-            self.on_change_update_ok_btn_state(),
+            self.validate_all_fields(),
             win_group.setDisabled(checked),
             self.open_logs_btn.setEnabled(checked)] + [  # Enable/disable the logs folder button
             w.setDisabled(checked) for w in self.widgets['DLT-Viewer Log Capture Time'] + self.widgets['Power ON-OFF Delay']
@@ -1154,10 +1154,10 @@ class StartupTimeConfig(QDialog):
         # Set initial state for Application Input List button
         self.update_app_input_button()
        
-        self.on_change_update_ok_btn_state()
+        self.validate_all_fields()
         for ecu_widgets in self.widgets['ecu-config']:
             apply_checkbox = ecu_widgets['apply_checkbox']
-            apply_checkbox.toggled.connect(self.on_change_update_ok_btn_state)
+            apply_checkbox.toggled.connect(self.validate_all_fields)
 
     def update_border(self, key):
        
@@ -1209,14 +1209,14 @@ class StartupTimeConfig(QDialog):
             restore_button = removed_group.create_restore_button()
            
             # Connect the restore button to update OK button state when clicked
-            restore_button.clicked.connect(self.on_change_update_ok_btn_state)
+            restore_button.clicked.connect(self.validate_all_fields)
            
             # Add the restore button to the same layout position
             if removed_group.parent_layout and removed_group.layout_index >= 0:
                 removed_group.parent_layout.insertWidget(removed_group.layout_index, restore_button)
            
         # Update the OK button state when a group is removed
-        self.on_change_update_ok_btn_state()
+        self.validate_all_fields()
 
     def ok_clicked(self):
         self.save_config()
@@ -1256,7 +1256,7 @@ class StartupTimeConfig(QDialog):
             startup_entries.append((row, tp, apps, rem, enable_cb))
         add_startup_btn = QPushButton('Add Startup Order')
         add_startup_btn.setFocusPolicy(Qt.NoFocus)
-        add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(data.get('ecu-type'), i), self.on_change_update_ok_btn_state(), gb.content_changed()])
+        add_startup_btn.clicked.connect(lambda _, i=idx: [self.add_startup_row(data.get('ecu-type'), i), self.validate_all_fields(), gb.content_changed()])
         startup_vbox.addLayout(startup_fl)
         startup_vbox.addWidget(add_startup_btn, alignment=Qt.AlignLeft)
         startup_group.setLayout(startup_vbox)
@@ -1287,7 +1287,7 @@ class StartupTimeConfig(QDialog):
         threshold_input = QLineEdit(str(threshold_value))
         threshold_input.setValidator(CustomIntValidator(1))
         threshold_input.setFixedWidth(80)
-        threshold_input.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
+        threshold_input.textChanged.connect(lambda text: self.validate_all_fields())
         sec_label = QLabel('[Int: 1~ (sec)]')
        
         # Enable/disable threshold row based on checkbox selection
@@ -1327,7 +1327,7 @@ class StartupTimeConfig(QDialog):
             threshold_entries.append((row, apps, thresh, enable_cb))
         add_threshold_btn = QPushButton('Add Threshold Config')
         add_threshold_btn.setFocusPolicy(Qt.NoFocus)
-        add_threshold_btn.clicked.connect(lambda _, i=idx: [self.add_threshold_row(data.get('ecu-type'), i), self.on_change_update_ok_btn_state(), gb.content_changed()])
+        add_threshold_btn.clicked.connect(lambda _, i=idx: [self.add_threshold_row(data.get('ecu-type'), i), self.validate_all_fields(), gb.content_changed()])
         threshold_vbox.addLayout(threshold_fl)
         threshold_vbox.addWidget(add_threshold_btn, alignment=Qt.AlignLeft)
         self.threshold_group.setLayout(threshold_vbox)
@@ -1427,7 +1427,7 @@ class StartupTimeConfig(QDialog):
         def update_count_and_validation(text):
             count = count_applications(text)
             count_label.setText(f"Configured Application Count: {count}")
-            self.on_change_update_ok_btn_state()
+            self.validate_all_fields()
            
         apps.set_text(apps_val)
         apps.text_field.textChanged.connect(update_count_and_validation)
@@ -1455,13 +1455,13 @@ class StartupTimeConfig(QDialog):
 
         rem = QPushButton('Remove')
         rem.setFocusPolicy(Qt.NoFocus)
-        rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_startup_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
+        rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_startup_row(i, r), self.validate_all_fields(), self._notify_content_changed(i)])
        
         main_layout.addWidget(enable_cb, alignment=Qt.AlignVCenter)
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
        
-        enable_cb.clicked.connect(lambda: [self.on_change_update_ok_btn_state(), left_widget.setEnabled(enable_cb.isChecked())])
+        enable_cb.clicked.connect(lambda: [self.validate_all_fields(), left_widget.setEnabled(enable_cb.isChecked())])
        
         # Set initial enabled state
         left_widget.setEnabled(enabled)
@@ -1475,7 +1475,7 @@ class StartupTimeConfig(QDialog):
         # Enable/Disable checkbox at the start
         enable_cb = QCheckBox()
         enable_cb.setChecked(enabled)
-        enable_cb.clicked.connect(lambda: self.on_change_update_ok_btn_state())
+        enable_cb.clicked.connect(lambda: self.validate_all_fields())
        
         # Left side - form layout for apps and threshold
         left_widget = QWidget()
@@ -1507,7 +1507,7 @@ class StartupTimeConfig(QDialog):
         def update_count_and_validation(text):
             count = count_applications(text)
             count_label.setText(f"Configured Application Count: {count}")
-            self.on_change_update_ok_btn_state()
+            self.validate_all_fields()
            
         apps.set_text(apps_val)
         apps.text_field.textChanged.connect(update_count_and_validation)
@@ -1522,7 +1522,7 @@ class StartupTimeConfig(QDialog):
         thresh.setPlaceholderText('5')
         thresh.setValidator(CustomIntValidator(1))
         thresh.setFixedWidth(80)
-        thresh.textChanged.connect(lambda text: self.on_change_update_ok_btn_state())
+        thresh.textChanged.connect(lambda text: self.validate_all_fields())
        
         thresh_row = QWidget()
         thresh_hl = QHBoxLayout(thresh_row)
@@ -1538,39 +1538,31 @@ class StartupTimeConfig(QDialog):
         # Right side - Remove button (centered vertically)
         rem = QPushButton('Remove')
         rem.setFocusPolicy(Qt.NoFocus)
-        rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_threshold_row(i, r), self.on_change_update_ok_btn_state(), self._notify_content_changed(i)])
+        rem.clicked.connect(lambda _, i=ecu_idx, r=row: [self.remove_threshold_row(i, r), self.validate_all_fields(), self._notify_content_changed(i)])
        
         main_layout.addWidget(enable_cb, alignment=Qt.AlignVCenter)
         main_layout.addWidget(left_widget)
         main_layout.addWidget(rem, alignment=Qt.AlignVCenter)
        
-        enable_cb.clicked.connect(lambda: [self.on_change_update_ok_btn_state(), left_widget.setEnabled(enable_cb.isChecked())])
+        enable_cb.clicked.connect(lambda: [self.validate_all_fields(), left_widget.setEnabled(enable_cb.isChecked())])
        
         # Set initial enabled state
         left_widget.setEnabled(enabled)
        
         return row, apps, thresh, enable_cb
 
-    def on_change_update_ok_btn_state(self):
+    def validate_all_fields(self):
         enabled = True
         ecu_error_list = [False, False, False, False]
-        if self.is_any_ecu_selected_flag and self.is_checked:
-            if self.isPadas:
-                for i in range(1, 4):
-                    if not self.ecu_block_list[i].disabled:
-                        enabled = False
-            elif self.isElite:
-                if not self.ecu_block_list[0].disabled:
-                    enabled = False
-                if not self.isRCAR and not self.ecu_block_list[1].disabled:
-                    enabled = False
-                if not self.isSOC0 and not self.ecu_block_list[2].disabled:
-                    enabled = False
-                if not self.isSOC1 and not self.ecu_block_list[3].disabled:
-                    enabled = False
+        ecu_block_list_map = {
+            0: self.isPadas and self.isRCAR,
+            1: self.isElite and self.isRCAR,
+            2: self.isElite and self.isSOC0,
+            3: self.isElite and self.isSOC1
+        }
        
         for i in range(4):
-            if self.ecu_block_list[i].disabled:
+            if self.ecu_block_list[i].disabled or not ecu_block_list_map[i]:
                 continue
             enable_checkbox=self.widgets['ecu-config'][i]['apply_checkbox']
             threshold_input=self.widgets['ecu-config'][i]['nc_threshold_input']
@@ -1723,7 +1715,8 @@ class StartupTimeConfig(QDialog):
         for i in range(4):
             self.update_ecu_block_styles(self.ecu_block_list[i], ecu_error_list[i])
 
-        self.ok_btn.setEnabled(enabled)
+        self.ok_btn.setEnabled(False if self.main_window.is_test_in_progress and self.is_KPI_selected else True)
+        return enabled
        
     def update_ecu_block_styles(self, ecu_gb, has_error):
         """Update the styles of the ECU block based on error state."""
@@ -2068,11 +2061,8 @@ class StartupTimeConfig(QDialog):
         ec = []
         for idx, item in enumerate(self.widgets['ecu-config']):
             title = self.ecu_map.get(self.ecu_block_list[idx].title, self.ecu_block_list[idx].title)
-            ec_item = {'ecu-type': title, 'startup-order': [], 'threshold-config': []}
-            if self.ecu_block_list[idx].disabled or ((title == 'PADAS' and not (self.isRCAR and self.isPadas)) or
-               (title == 'RCAR' and not (self.isRCAR and self.isElite)) or
-               (title == 'SoC0' and not (self.isSOC0 and self.isElite)) or
-               (title == 'SoC1' and not (self.isSOC1 and self.isElite))):
+            ec_item = {'ecu-type': title, 'startup-order': [], 'threshold-config': [], 'enabled': not self.ecu_block_list[idx].disabled}
+            if self.ecu_block_list[idx].disabled:
                 continue
             for entry in item['startup']:
                 # entry is (row, dd, apps, rem, enable_cb)
