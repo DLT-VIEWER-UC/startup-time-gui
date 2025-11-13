@@ -1,5 +1,5 @@
 from imports_utils import *
-from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
+# from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
 
 class CustomIntValidator(QIntValidator):
     def __init__(self, min_value, max_value, parent=None):
@@ -360,7 +360,9 @@ class Worker(QObject):
                     self.update_status.emit(label, color)
                     time.sleep(0.1)
                 except Exception as e:
-                    py_logger.error(f"Error in run_function: {e}")  
+                    import traceback
+                    py_logger.error(f"Error in run_function: {e}")
+                    py_logger.error(f"Full traceback:\n{traceback.format_exc()}")
                     self.update_status.emit(label, "#E51400")
 
     def print_ecu_input_fields(self):
@@ -382,6 +384,7 @@ class MainWindow(QMainWindow):
         self.configuration_flag = False    
         self.msg_box = None      
         self.is_any_ecu_selected_flag = False
+        self.is_KPI_selected = True
         self.is_test_in_progress = False
         self.current_kpi_label = None
         self.kpi_log_file = None  
