@@ -73,6 +73,10 @@ class ApplicationSelectorWidget(QWidget):
         self.text_field = QLineEdit()
         self.text_field.setPlaceholderText(placeholder_text)
         self.text_field.textChanged.connect(self.on_text_changed)
+        self.text_field.editingFinished.connect(self.on_editing_finished)
+        
+        # Track if there are duplicates
+        self.has_duplicates = False
        
         # Dropdown button
         self.dropdown_btn = QPushButton("▼")
@@ -351,31 +355,65 @@ class ApplicationSelectorWidget(QWidget):
         self.select_all_checkbox.clicked.connect(self.on_select_all_clicked)
        
     def merge_checkbox_and_manual_apps(self):
-        """Merge checkbox selections with manually entered applications, preserving manual entries"""
+        """Merge checkbox selections with manually entered applications, preserving order of entry"""
         # Get current text and parse all applications
         current_text = self.text_field.text()
         all_current_apps = [app.strip() for app in current_text.split(',') if app.strip()]
        
-        # Get applications from checkboxes
-        checkbox_apps = [app for app, checkbox in self.application_checkboxes.items()
-                        if checkbox.isChecked()]
+        # Get applications from checkboxes that are checked
+        checked_apps = {app for app, checkbox in self.application_checkboxes.items()
+                       if checkbox.isChecked()}
        
-        # Get manually entered applications (those not in dropdown)
-        manual_apps = [app for app in all_current_apps
-                      if app not in self.application_checkboxes]
-       
-        # Combine checkbox selections with manual entries
-        combined_apps = checkbox_apps + manual_apps
-       
-        # Remove duplicates while preserving order
+        # Build final list preserving the order from text field
         final_apps = []
         seen = set()
-        for app in combined_apps:
+        
+        # First, add all apps from current text that are still valid (either checked or manual)
+        for app in all_current_apps:
+            if app not in seen:
+                # Keep if it's either checked or a manual entry (not in dropdown)
+                if app in checked_apps or app not in self.application_checkboxes:
+                    final_apps.append(app)
+                    seen.add(app)
+        
+        # Then add any newly checked apps that weren't in the text field yet
+        for app in checked_apps:
             if app not in seen:
                 final_apps.append(app)
                 seen.add(app)
        
         return final_apps
+    
+    def check_for_duplicates(self):
+        """Check if there are duplicate applications in the text field"""
+        text = self.text_field.text()
+        apps = [app.strip() for app in text.split(',') if app.strip()]
+        
+        # Check for duplicates
+        seen = set()
+        has_duplicates = False
+        for app in apps:
+            if app in seen:
+                has_duplicates = True
+                break
+            seen.add(app)
+        
+        return has_duplicates
+    
+    def remove_duplicates_from_text(self):
+        """Remove duplicate applications, keeping only the first occurrence"""
+        text = self.text_field.text()
+        apps = [app.strip() for app in text.split(',') if app.strip()]
+        
+        # Remove duplicates while preserving order
+        unique_apps = []
+        seen = set()
+        for app in apps:
+            if app not in seen:
+                unique_apps.append(app)
+                seen.add(app)
+        
+        return unique_apps
            
     def update_all_cross_group_disabling(self):
         """Update cross-group disabling for all widgets in the same ECU and same group type"""
@@ -429,6 +467,9 @@ class ApplicationSelectorWidget(QWidget):
         text = self.text_field.text()
         selected_apps = [app.strip() for app in text.split(',') if app.strip()]
        
+        # Check for duplicates and update border
+        self.has_duplicates = self.check_for_duplicates()
+       
         # Temporarily disconnect checkbox signals to avoid recursive calls
         for app, checkbox in self.application_checkboxes.items():
             checkbox.clicked.disconnect()
@@ -443,6 +484,35 @@ class ApplicationSelectorWidget(QWidget):
             self.parent_dialog.update_all_disabled_states_delayed()
        
         self.updating_from_text = False
+    
+    def on_editing_finished(self):
+        """Handle when user finishes editing the text field (loses focus or presses Enter)"""
+        if self.has_duplicates:
+            # Remove duplicates keeping first occurrence
+            unique_apps = self.remove_duplicates_from_text()
+            
+            # Update the text field with deduplicated list
+            self.updating_from_checkboxes = True
+            self.text_field.setText(', '.join(unique_apps))
+            self.updating_from_checkboxes = False
+            
+            # Update checkboxes to match the deduplicated list
+            self.updating_from_text = True
+            for app, checkbox in self.application_checkboxes.items():
+                checkbox.clicked.disconnect()
+                checkbox.setChecked(app in unique_apps)
+                checkbox.clicked.connect(self.on_application_checkbox_changed)
+            self.updating_from_text = False
+            
+            # Clear duplicate flag and border
+            self.has_duplicates = False
+            
+            # Update Select All state
+            self.update_select_all_visual_state()
+            
+            # Trigger validation update on parent dialog
+            if hasattr(self.parent_dialog, 'on_change_update_ok_btn_state'):
+                self.parent_dialog.on_change_update_ok_btn_state()
        
     def on_application_checkbox_changed(self):
         """Handle individual application checkbox changes"""
@@ -847,7 +917,7 @@ class StartupTimeConfig(QDialog):
         judgement_hlayout.setContentsMargins(10, 10, 10, 10)
        
         # Order Mismatch Judgement
-        order_mismatch_label = QLabel('Startup Order Judgement')
+        order_mismatch_label = QLabel('Startup Order Judgement')  
         order_mismatch_cb = QCheckBox()
         order_mismatch_cb.setChecked(self.config_data.get('Startup Order Judgement', False))
         self.widgets['Startup Order Judgement'] = order_mismatch_cb
@@ -1004,21 +1074,20 @@ class StartupTimeConfig(QDialog):
                 block.disableRemoveButton(valid_gb)
             # print(f"ECU: {ecu_type}, Valid: {valid_gb}")
             block.setStyleSheet(block.styleSheet()+f"CollapsibleGroupBox{{border: {'1px solid red' if self.is_any_ecu_selected_flag and self.is_checked and not valid_gb else '1px solid #999999'};}}")  # Set border color based on validity
-            for startup_group in self.startup_group_list:
-                startup_group.setEnabled(startup_order_group.isChecked())
+            # for startup_group in self.startup_group_list:
+            #     startup_group.setEnabled(startup_order_group.isChecked())
             self.ecu_block_list.append(block)
             ec_vbox.addWidget(block)
 
         self.ec_group.setLayout(ec_vbox)
         layout.addWidget(self.ec_group)
        
-        # Enable/disable the dependent checkboxes and startup groups based on 'Startup Order Application Registration'
+        # Enable/disable the dependent checkboxes based on 'Startup Order Application Registration'
+        # Note: Startup groups remain enabled regardless of this checkbox state
         def toggle_startup_order_dependent_controls(checked):
             self.on_change_update_ok_btn_state()
-            # Enable/disable startup groups
-            for startup_group in self.startup_group_list:
-                startup_group.setEnabled(checked)
-            # Enable/disable the four dependent checkboxes inside the group box
+            # Startup groups should always remain enabled
+            # Only enable/disable the three judgement checkboxes inside the group box
             order_mismatch_cb.setEnabled(checked)
             order_mismatch_label.setEnabled(checked)
             not_found_cb.setEnabled(checked)
@@ -1160,7 +1229,19 @@ class StartupTimeConfig(QDialog):
     def _create_ecu_block(self, data, idx):
         # Create the main collapsible group box for the ECU
         gb = CollapsibleGroupBox(data.get('ecu-type'))
-        vbox = QVBoxLayout()
+        
+        # Create a scroll area for the ECU content
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QScrollArea.NoFrame)
+        scroll_area.setMaximumHeight(400)  # Set maximum height before scrolling
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        # Create a widget to hold the content
+        content_widget = QWidget()
+        vbox = QVBoxLayout(content_widget)
+        vbox.setContentsMargins(10, 10, 10, 10)
        
         # Startup Order Section
         startup_group = QGroupBox('Startup Order Configuration')
@@ -1253,9 +1334,17 @@ class StartupTimeConfig(QDialog):
 
         vbox.addWidget(self.threshold_group)
         vbox.addWidget(startup_group)
+        
+        # Set the content widget to the scroll area
+        scroll_area.setWidget(content_widget)
        
-        # Set the content layout for the collapsible group box
-        gb.setContentLayout(vbox)
+        # Create a container layout for the scroll area
+        container_layout = QVBoxLayout()
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.addWidget(scroll_area)
+       
+        # Set the container layout as the content layout for the collapsible group box
+        gb.setContentLayout(container_layout)
        
         # Connect the removed signal to handle restore functionality
         gb.removed.connect(self.handle_group_removed)
@@ -1491,14 +1580,30 @@ class StartupTimeConfig(QDialog):
                 ecu_error_list[i] = True
             else:
                 self._set_widget_style(threshold_input, 'border: 0px;')
-            for entry in self.widgets['ecu-config'][i]['startup']:
+            seen_apps = dict()
+            for idx, entry in enumerate(self.widgets['ecu-config'][i]['startup']):
                 text = self._get_widget_text(entry[2])
                 if entry[4].isChecked() and self.widgets['Startup Order Application Registration'].isChecked() and (not text or len(text) == 0 or text.startswith(' ') or text.endswith(' ')):
                     self._set_widget_style(entry[2], 'border: 1px solid red;')
                     enabled = False
                     ecu_error_list[i] = True
+                elif len([app.strip() for app in text.split(',')]) != len(set([app.strip() for app in text.split(',')])):
+                    self._set_widget_style(entry[2], 'border: 1px solid red;')
+                    enabled = False
+                    ecu_error_list[i] = True
+                elif entry[4].isChecked() and self.widgets['Startup Order Application Registration'].isChecked() and len(set(seen_apps.keys()).intersection(set([app.strip() for app in text.split(',')]))) > 0:
+                    self._set_widget_style(entry[2], 'border: 1px solid red;')
+                    for app in set(seen_apps.keys()).intersection(set([app.strip() for app in text.split(',')])):
+                        conflict_idx = seen_apps[app]
+                        conflict_entry = self.widgets['ecu-config'][i]['startup'][conflict_idx]
+                        self._set_widget_style(conflict_entry[2], 'border: 1px solid red;')
+                    enabled = False
+                    ecu_error_list[i] = True
                 else:
                     self._set_widget_style(entry[2], 'border: 0px;')
+                for app in text.split(','):
+                    if app.strip() and app.strip() not in seen_apps:
+                        seen_apps[app.strip()] = idx
             for entry in self.widgets['ecu-config'][i]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
                 if entry[3].isChecked() and (not apps_text or len(apps_text) == 0 or apps_text.startswith(' ') or apps_text.endswith(' ')):
