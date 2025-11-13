@@ -1,5 +1,39 @@
+import importlib
 from imports_utils import *
-# from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
+from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
+
+# Dictionary mapping KPI labels to their config file paths
+switch_dict = {
+    'CPU and Memory Utilization': './CPU_Memory_Utilization_Scripts/cpu_memory_utilization_config.json',
+    'Heap Memory': './Heap_Memory_Scripts/heap_memory_config.json',
+    'Startup Time': './Startup_Time_Scripts/startup_time_config.json',
+    'Cyclic and Turnaround Time': './Cyclic_Turnaround_Time_Scripts/cyclic_turnaround_config.json',
+    'Execution Time': './Execution_Time_Scripts/Execution_Time_Config.json',
+    'Throughput and Fault Injection': './Throughput_Scripts/throughput_faultinjection_config.json',
+    'Shutdown Time': './Shutdown_Time_Scripts/shutdown_time_config.json',
+    'Continuous KEV': './Continuous_KEV_Scripts/kev_gen_and_logMover_config.json',
+    'Event Trigger KEV': './Event_Trigger_KEV_Scripts/kev_gen_and_logMover_config.json',
+    'RAM Monitor': './RAM_Measurement_Scripts/XCP_RAM_Measurement_Config.json',
+    'Event Trigger RAM Monitor': './Event_Trigger_RAM_Measurement_Scripts/XCP_RAM_Event_Trigger_Config.json',
+    'APL Communication Layout': './APL_Communication_Layout_Scripts/XCP_APL_Config.json'
+}
+
+# Mapping of labels to their module and class names
+config_dialogs = {
+    "CPU and Memory Utilization": ("cpu_memory_utilization_config_window", "CpuMemoryConfig"),
+    "Heap Memory": ("heap_memory_config_window", "HeapMemoryConfig"),
+    "Startup Time": ("startup_time_config_window", "StartupTimeConfig"),
+    "Cyclic and Turnaround Time": ("cyclic_turnaround_time_config_window", "CyclicTurnaroundConfig"),
+    "Throughput and Fault Injection": ("throughput_config_window", "ThroughputConfig"),
+    "Execution Time": ("execution_time_config_window", "ExecutionTimeConfig"),
+    "Shutdown Time": ("shutdown_time_config_window", "ShutdownTimeConfig"),
+    "Event Trigger KEV": ("event_trigger_KEV_config_window", "EventTriggerKEVConfig"),
+    "Continuous KEV": ("Continous_KEV_config_window", "ContinuousKEVConfig"),
+    "RAM Monitor": ("XCP_RAM_measurment_config_window", "XcpRAMMonitoringConfig"),
+    "Event Trigger RAM Monitor": ("XCP_RAM_measurement_event_trigger_config_window", "XCPRAMMonitorEventTriggerConfig"),
+    "APL Communication Layout": ("XCP_APL_communication_layout_config_window", "XCPAPLCommConfig"),
+    "Diag": ("diag_config_window", "DiagConfig")  # Optional fallback for diag labels
+}
 
 class CustomIntValidator(QIntValidator):
     def __init__(self, min_value, max_value, parent=None):
@@ -47,11 +81,11 @@ class CustomIntValidator(QIntValidator):
             return (QIntValidator.Invalid, input_str, pos)
 
 class SpinnerDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, title="Processing..."):
         super().__init__(parent)
 
         # Set a clean and user-friendly window title
-        self.setWindowTitle("Closing the Application...")
+        self.setWindowTitle(title)
 
         # Customize window flags (no minimize/maximize/close buttons)
         self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint | Qt.Tool)
@@ -100,7 +134,7 @@ class Worker(QObject):
     update_status = pyqtSignal(str, str)
     disable_widgets = pyqtSignal()
     enable_widgets = pyqtSignal()
-    start_kpi_logging = pyqtSignal(str)  # Signal to start logging with KPI label
+    start_kpi_logging = pyqtSignal(str, str)  # Signal to start logging with KPI label
     stop_kpi_logging = pyqtSignal()      # Signal to stop logging
 
     def __init__(self, ecu_input_fields, kpi_widgets):
@@ -184,8 +218,8 @@ class Worker(QObject):
                 subprocess.run(["chmod", "+x", exe_path])
 
             self.process = subprocess.Popen([exe_path])
-            time.sleep(1)
-            # py_logger.info("Diag High Level ECU Tester is Successfully Launched.")
+            time.sleep(3)
+            py_logger.info("Diag High Level ECU Tester is Successfully Launched.")
            
             # Wait for the process to complete or be forcefully stopped
             while self.process.poll() is None:
@@ -202,168 +236,140 @@ class Worker(QObject):
             return False
 
     def run_function(self):
+        """
+        Description:
+            Executes KPI measurement tasks based on selected labels and updates their status.
+            Handles dynamic imports, subprocess execution, and diagnostic checks.
+            Also updates configuration files with the current timestamp before running each KPI.
+
+        Inputs:
+            - self: Instance of the class containing KPI widgets, signals, and helper methods.
+
+        Outputs:
+            - emits signals to update UI and logs status.
+        """
+
+        # ---------------- Helper Functions ---------------- #
+
+        def update_config_file(label):
+            """
+            Description:
+                Updates the configuration file for the given KPI label with the current timestamp.
+                If the label belongs to diagnostic KPIs, uses a default config file.
+
+            Inputs:
+                - label (str): KPI label for which the config file needs to be updated.
+
+            Outputs:
+                - Current_Timestamp (str): Timestamp in 'YYYYMMDD_HH-MM-SS' format.
+            """
+            try:
+                config_path = switch_dict.get(label)
+                if label in diag_labels:
+                    config_path = "DIAG_KPI_Config.json"
+
+                if config_path:
+                    try:
+                        with open(config_path, 'r') as f:
+                            data = json.load(f)
+
+                        Current_Timestamp = datetime.now().strftime("%Y%m%d_%H-%M-%S")
+                        data["Current_Timestamp"] = Current_Timestamp
+
+                        with open(config_path, 'w') as f:
+                            json.dump(data, f, indent=4)
+
+                        return Current_Timestamp
+
+                    except FileNotFoundError:
+                        py_logger.error(f"Error: Configuration file '{config_path}' not found.")
+                    except json.JSONDecodeError:
+                        py_logger.error(f"Error: Configuration file '{config_path}' is not a valid JSON.")
+                    except KeyError as e:
+                        py_logger.error(f"Error: Missing expected key in ECU input fields: {e}")
+            except Exception as e:
+                py_logger.error(f"Unexpected error while updating '{config_path}': {e}")
+
+            # Fallback timestamp if update fails
+            return datetime.now().strftime("%Y%m%d_%H-%M-%S")
+
+        def get_color(status):
+            """Returns green if status is True, else red."""
+            return "#60A917" if status else "#E51400"
+
+        def run_subprocess(script_path):
+            """
+            Runs a Python script as a subprocess and checks flags for success.
+            """
+            flag_manager = FlagManager()
+            process = subprocess.Popen(
+                ["python", "-u", script_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                universal_newlines=True,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            )
+            for line in process.stdout:
+                print(line, end="")
+            process.wait()
+            return flag_manager.get_event_trigger_status_flag() and flag_manager.get_log_mover_status_flag()
+
+        # ---------------- Label Actions Mapping ---------------- #
+        label_actions = {
+            'CPU and Memory Utilization': lambda: CPU_Memory_measurement(),
+            'Heap Memory': lambda: __import__('Heap_Memory_Scripts.Heap_Memory_Utilization', fromlist=['RUN_HEAP_MEMORY_SCRIPT']).RUN_HEAP_MEMORY_SCRIPT(),
+            'Startup Time': lambda: __import__('Startup_Time_Scripts.Applications_StartupTime_IG_ON', fromlist=['start_startup_time_measurement']).start_startup_time_measurement(py_logger),
+            'Cyclic and Turnaround Time': lambda: __import__('Cyclic_Turnaround_Time_Scripts.cyclic_turnaround_time_measurement', fromlist=['start_cyclic_turnaround_time_measurement']).start_cyclic_turnaround_time_measurement(),
+            'Throughput and Fault Injection': lambda: __import__('Throughput_Scripts.Integrated_Throughput', fromlist=['start_throughput']).start_throughput(),
+            'Execution Time': lambda: __import__('Execution_Time_Scripts.Execution_Time_Measurement_Script', fromlist=['start_execution_time_measurement']).start_execution_time_measurement(),
+            'Shutdown Time': lambda: __import__('Shutdown_Time_Scripts.Applications_ShutdownTime_IG_ON', fromlist=['start_shutdown_time_measurement']).start_shutdown_time_measurement(py_logger),
+            'Continuous KEV': lambda: run_subprocess("./Continuous_KEV_Scripts/main.py"),
+            'Event Trigger KEV': lambda: run_subprocess("./Event_Trigger_KEV_Scripts/main.py"),
+            'RAM Monitor': lambda: __import__('RAM_Measurement_Scripts.test_executor', fromlist=['start_RAM_measurement']).start_RAM_measurement(),
+            'Event Trigger RAM Monitor': lambda: __import__('Event_Trigger_RAM_Measurement_Scripts.test_executor', fromlist=['start_event_trigger_RAM_measurement']).start_event_trigger_RAM_measurement(),
+            'APL Communication Layout': lambda: __import__('APL_Communication_Layout_Scripts.test_executor', fromlist=['start_APL_Communication']).start_APL_Communication()
+        }
+
+        # ---------------- Main Execution Loop ---------------- #
         for label in labels:
             if self._stop_requested:
                 return
-           
+
             widgets = self.kpi_widgets.get(label)
+            if not (widgets and widgets['checkbox'].isChecked()):
+                continue
 
-            if widgets and widgets['checkbox'].isChecked():                
-                try:
-                    self.start_kpi_logging.emit(label)
-                   
-                    if label == 'CPU and Memory Utilization':
-                        status = CPU_Memory_measurement()
-                        color = "#60A917" if status else "#E51400"
-                   
-                    elif label == 'Heap Memory':
-                        from Heap_Memory_Scripts.Heap_Memory_Utilization import RUN_HEAP_MEMORY_SCRIPT
-                        status = RUN_HEAP_MEMORY_SCRIPT()
-                        color = "#60A917" if status else "#E51400"
+            try:
+                # Update config file and get timestamp
+                current_timestamp = update_config_file(label)
+                self.start_kpi_logging.emit(label, current_timestamp)
 
-                    elif label == 'Startup Time':
-                        from Startup_Time_Scripts.Applications_StartupTime_IG_ON import start_startup_time_measurement
-                        status = start_startup_time_measurement(py_logger)
-                        color = "#60A917" if status else "#E51400"
-                   
-                    elif label == 'Cyclic and Turnaround Time':
-                        from Cyclic_Turnaround_Time_Scripts.cyclic_turnaround_time_measurement import start_cyclic_turnaround_time_measurement
-                        status = start_cyclic_turnaround_time_measurement()
-                        color = "#60A917" if status else "#E51400"
-                   
-                    elif label == 'Throughput and Fault Injection':
-                        from Throughput_Scripts.Integrated_Throughput import start_throughput
-                        status = start_throughput()
-                        color = "#60A917" if status else "#E51400"
-                   
-                    elif label == 'Execution Time':
-                        from Execution_Time_Scripts.Execution_Time_Measurement_Script import start_execution_time_measurement
-                        status = start_execution_time_measurement()
-                        color = "#60A917" if status else "#E51400"
-                   
-                    elif label == 'Shutdown Time':
-                        from Shutdown_Time_Scripts.Applications_ShutdownTime_IG_ON import  start_shutdown_time_measurement
-                        status = start_shutdown_time_measurement(py_logger)
-                        color = "#60A917" if status else "#E51400"
-                   
-                    # elif label == 'Continuous_KEV':
-                    #     flagManagerObject = FlagManager()
-                    #     subprocess.run(["python", "./Continuous_KEV_Scripts/main.py"])
+                # Execute KPI logic
+                if label in label_actions:
+                    # Access the function mapped to the label and call it
+                    status = status = label_actions[label]()
 
-                    #     eventTriggerScriptRunStatus = flagManagerObject.get_event_trigger_status_flag()
-                    #     eventLogMoverRunStatus = flagManagerObject.get_log_mover_status_flag()
-                       
-                    #     status = False
-                    #     if eventTriggerScriptRunStatus and eventLogMoverRunStatus:
-                    #         status = True
-                       
-                    #     color = "#60A917" if status else "#E51400"
-                   
-                    elif label == 'Continuous KEV':
-                        flagManagerObject = FlagManager()
+                elif label in diag_labels:
+                    status = self.launch_diag_application()
+                    if status:
+                        parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+                        report_path = os.path.join(parent_dir, 'Reports', folder_names.get(label, ''), current_timestamp)
+                        status = os.path.isdir(report_path) and any(file.lower().endswith('.xlsx') for file in os.listdir(report_path))
+                        if not status:
+                            py_logger.warning(f"File path not found or no .xlsx files: {report_path}")
+                else:
+                    status = False
 
-                        process = subprocess.Popen(
-                            ["python", "-u", "./Continuous_KEV_Scripts/main.py"],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            bufsize=1,           # Line-buffered
-                            universal_newlines=True,  # Text mode
-                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-                        )
+                # Update UI with status color
+                color = get_color(status)
+                self.stop_kpi_logging.emit()
+                self.update_status.emit(label, color)
+                time.sleep(0.1)
 
-                        # Print each line as it's received
-                        for line in process.stdout:
-                            print(line, end="")  # Avoid double newlines
-
-                        process.wait()
-
-                        # Check flags after script execution
-                        eventTriggerScriptRunStatus = flagManagerObject.get_event_trigger_status_flag()
-                        eventLogMoverRunStatus = flagManagerObject.get_log_mover_status_flag()
-
-                        status = False
-                        if eventTriggerScriptRunStatus and eventLogMoverRunStatus:
-                            status = True
-
-                        color = "#60A917" if status else "#E51400"
-                   
-                    elif label == 'Event Trigger KEV':
-                        flagManagerObject = FlagManager()
-                       
-                        process = subprocess.Popen(
-                            ["python", "-u", "./Event_Trigger_KEV_Scripts/main.py"],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            bufsize=1,           # Line-buffered
-                            universal_newlines=True,  # Text mode
-                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-                        )
-
-                        # Print each line as it's received
-                        for line in process.stdout:
-                            print(line, end="")  # Avoid double newlines
-
-                        process.wait()
-
-                        eventTriggerScriptRunStatus = flagManagerObject.get_event_trigger_status_flag()
-                        eventLogMoverRunStatus = flagManagerObject.get_log_mover_status_flag()
-                       
-                        status = False
-                        if eventTriggerScriptRunStatus and eventLogMoverRunStatus:
-                            status = True                            
-                       
-                        color = "#60A917" if status else "#E51400"
-                   
-                    elif label == "RAM Monitor":
-                        from RAM_Measurement_Scripts.test_executor import start_RAM_measurement
-                        status = start_RAM_measurement()
-                        color = "#60A917" if status else "#E51400"
-
-                    elif label == "Event Trigger RAM Monitor":
-                        from Event_Trigger_RAM_Measurement_Scripts.test_executor import start_event_trigger_RAM_measurement
-                        status = start_event_trigger_RAM_measurement()
-                        color = "#60A917" if status else "#E51400"
-                   
-                    elif label == "APL Communication Layout":
-                        from APL_Communication_Layout_Scripts.test_executor import start_APL_Communication
-                        status = start_APL_Communication()
-                        color = "#60A917" if status else "#E51400"
-
-                    elif label in diag_labels:
-                        status = self.launch_diag_application()
-       
-                        if status:
-                            with open('DIAG_KPI_Config.json', 'r') as f:
-                                data = json.load(f)
-
-                            # Construct the full path
-                            report_path = os.path.join(
-                                'Reports',
-                                folder_names.get(label, ''),
-                                data.get("Current_Timestamp", '')
-                            )
-
-                            # Check if path exists and contains at least one .xlsx file
-                            if os.path.isdir(report_path):
-                                status = any(
-                                    file.lower().endswith('.xlsx') for file in os.listdir(report_path)
-                                )
-                            else:
-                                status = False  # Path is invalid
-                                py_logger.warning(f"file path not found {report_path}")
-
-                        color = "#60A917" if status else "#E51400"    
-                    else:
-                        color = "#E51400"        
-
-                    self.stop_kpi_logging.emit()
-                    self.update_status.emit(label, color)
-                    time.sleep(0.1)
-                except Exception as e:
-                    import traceback
-                    py_logger.error(f"Error in run_function: {e}")
-                    py_logger.error(f"Full traceback:\n{traceback.format_exc()}")
-                    self.update_status.emit(label, "#E51400")
+            except Exception as e:
+                py_logger.error(f"Error in run_function for label '{label}': {e}")
+                self.update_status.emit(label, "#E51400")
 
     def print_ecu_input_fields(self):
         for ecu, fields in self.ecu_input_fields.items():
@@ -384,7 +390,6 @@ class MainWindow(QMainWindow):
         self.configuration_flag = False    
         self.msg_box = None      
         self.is_any_ecu_selected_flag = False
-        self.is_KPI_selected = True
         self.is_test_in_progress = False
         self.current_kpi_label = None
         self.kpi_log_file = None  
@@ -457,17 +462,11 @@ class MainWindow(QMainWindow):
         self.clear_logs_button = QPushButton("Clear Logs!")
         self.clear_logs_button.setFixedSize(100, 35)
         self.clear_logs_button.setStyleSheet(common_enabled_style + common_hover_style)
-        self.clear_logs_button.clicked.connect(self.console_output.clear)
-
-        self.download_button = QPushButton("Open KPI Logs!")
-        self.download_button.setFixedSize(150, 35)
-        self.download_button.setStyleSheet(common_enabled_style + common_hover_style)
-        self.download_button.clicked.connect(self.open_log_folder)
+        self.clear_logs_button.clicked.connect(self.console_output.clear)        
 
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         button_layout.addWidget(self.clear_logs_button)
-        button_layout.addWidget(self.download_button)
 
         layout.addWidget(self.console_output)
         layout.addLayout(button_layout)
@@ -487,8 +486,6 @@ class MainWindow(QMainWindow):
         # Update logger stream to GUI
         update_logger_stream(stdout_stream)
 
-        py_logger.info("Gen2 PF GUI Tester Tool is Successfully Launched.")
-
     def write_to_console(self, text):
         self.console_output.moveCursor(self.console_output.textCursor().End)
         self.console_output.insertPlainText(text)
@@ -498,26 +495,25 @@ class MainWindow(QMainWindow):
             self.kpi_log_file.write(text)
             self.kpi_log_file.flush()
    
-    def start_kpi_logging(self, kpi_label):
+    def start_kpi_logging(self, kpi_label, Current_Timestamp):
         try:
             self.current_kpi_label = kpi_label
 
             if kpi_label in diag_labels:
                 return
 
-            current_dir = os.getcwd()
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")  # Safe for folder names
             folder_name = folder_names.get(kpi_label)
             if not folder_name:
                 raise ValueError(f"Invalid KPI label: {kpi_label}")
 
-            log_dir = os.path.join(current_dir, 'RUN_Time_Logs', folder_name, timestamp)
+            parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+            log_dir = os.path.join(parent_dir, 'Reports', folder_name, Current_Timestamp, 'Console_Log')
             os.makedirs(log_dir, exist_ok=True)
 
             log_file_path = os.path.join(log_dir, f"{folder_name}.log")
             self.kpi_log_file = open(log_file_path, "a", encoding="utf-8")
 
-            separator = f"\n{'#' * 60}\n# KPI Logging Started at {timestamp}\n{'#' * 60}\n"
+            separator = f"\n{'#' * 60}\n# KPI Logging Started at {Current_Timestamp}\n{'#' * 60}\n"
             self.kpi_log_file.write(separator)
             self.kpi_log_file.flush()
 
@@ -528,28 +524,13 @@ class MainWindow(QMainWindow):
             raise
 
     def stop_kpi_logging(self):
-        if self.kpi_log_file:
-            py_logger.info(f"Stopped logging for KPI: {self.current_kpi_label}")
+        if self.kpi_log_file:            
             self.kpi_log_file.close()
             self.kpi_log_file = None
-        self.current_kpi_label = None
 
-    def open_log_folder(self):
-        py_logger.info("log_folder")
-        log_folder_path = os.path.join(os.getcwd(), "RUN_Time_Logs")
-        py_logger.info(log_folder_path)
-
-        # Create folder if it doesn't exist
-        os.makedirs(log_folder_path, exist_ok=True)
-
-        # Open folder based on OS
-        if platform.system() == "Windows":
-            py_logger.info("Windows")
-            os.startfile(log_folder_path)
-        elif platform.system() == "Darwin":  # macOS
-            subprocess.Popen(["open", log_folder_path])
-        else:  # Linux
-            subprocess.Popen(["xdg-open", log_folder_path])
+        py_logger.info(f"Completed execution for {self.current_kpi_label} KPI. Logging stopped.")
+        print(f"{'='*35} END OF KPI EXECUTION {'='*35}")
+        self.current_kpi_label = None    
 
     def set_window_properties(self) -> None:
         """
@@ -601,8 +582,7 @@ class MainWindow(QMainWindow):
         # Set the geometry and fixed size of the window
         self.setGeometry(x, y, window_width, window_height)
 
-        # Remove the maximize button
-        # self.setWindowFlags(self.windowFlags() & ~Qt.WindowMaximizeButtonHint)
+        py_logger.info("Gen2 PF GUI Tester Tool is Successfully Launched.")
 
     def create_tester_tab(self):
         layout = QVBoxLayout()
@@ -1354,8 +1334,17 @@ class MainWindow(QMainWindow):
         self.run_button.clicked.connect(self.on_run_button_click)
         self.run_button.setEnabled(False)
 
+        self.stop_KPIs_execution_button = QPushButton()
+        self.stop_KPIs_execution_button.setFixedSize(48, 48)
+        self.stop_KPIs_execution_button.setStyleSheet(common_enabled_style + common_hover_style)
+        self.stop_KPIs_execution_button.setIcon(QIcon('stop_button.ico'))
+        self.stop_KPIs_execution_button.setIconSize(QSize(41, 41))
+        self.stop_KPIs_execution_button.clicked.connect(lambda: self.stop_worker_thread("Stopping the KPIs execution..."))
+        self.stop_KPIs_execution_button.setEnabled(False)
+
         run_button_layout.addStretch()
         run_button_layout.addWidget(self.run_button)
+        run_button_layout.addWidget(self.stop_KPIs_execution_button)
         run_button_layout.addStretch()
         return run_button_layout    
    
@@ -1473,70 +1462,47 @@ class MainWindow(QMainWindow):
                 json.dump(ecu_input_fields, file, indent=4)
         except Exception as e:
             print("Error writing to file: ", str(e))
+   
+    def get_dialog_instance(self, label, checkbox):
+        try:
+            # Determine if label is a diag type
+            is_diag = label in diag_labels
 
-    def on_button_click(self, label, edit_button, checkbox, folder_button):        
+            # Get module and class name from mapping
+            module_name, class_name = config_dialogs.get(label) if not is_diag else config_dialogs.get("Diag")
+
+            if not module_name or not class_name:
+                py_logger.warning(f"No dialog mapping found for label: '{label}'")
+                return None
+
+            # Dynamically import module and get class
+            module = importlib.import_module(module_name)
+            dialog_class = getattr(module, class_name)
+
+            # Instantiate and return dialog
+            return dialog_class(self, label, checkbox.isChecked()) if is_diag else dialog_class(self, checkbox.isChecked())
+
+        except ModuleNotFoundError:
+            py_logger.error(f"Module '{module_name}' not found for label '{label}'.")
+        except AttributeError:
+            py_logger.error(f"Class '{class_name}' not found in module '{module_name}' for label '{label}'.")
+        except Exception as e:
+            py_logger.error(f"Failed to load dialog for '{label}': {e}")
+
+        return None
+   
+    def on_button_click(self, label, edit_button, checkbox, folder_button):
         try:
             self.setEnabled(False)
 
-            if label == "CPU and Memory Utilization":
-                from cpu_memory_utilization_config_window import CpuMemoryConfig
-                dialog = CpuMemoryConfig(self, checkbox.isChecked())
+            dialog = self.get_dialog_instance(label, checkbox)
 
-            elif label == "Heap Memory":
-                from heap_memory_config_window import HeapMemoryConfig
-                dialog = HeapMemoryConfig(self, checkbox.isChecked())
-           
-            elif label == "Startup Time":
-                from startup_time_config_window import StartupTimeConfig
-                dialog = StartupTimeConfig(self, checkbox.isChecked())
-           
-            elif label == "Cyclic and Turnaround Time":
-                from cyclic_turnaround_time_config_window import CyclicTurnaroundConfig
-                dialog = CyclicTurnaroundConfig(self, checkbox.isChecked())
-           
-            elif label=='Throughput and Fault Injection':
-                from throughput_config_window import ThroughputConfig
-                dialog= ThroughputConfig(self, checkbox.isChecked())
-           
-            elif label == "Execution Time":
-                from execution_time_config_window import ExecutionTimeConfig
-                dialog = ExecutionTimeConfig(self, checkbox.isChecked())
-
-            elif label == "Shutdown Time":
-                from shutdown_time_config_window import ShutdownTimeConfig
-                dialog = ShutdownTimeConfig(self, checkbox.isChecked())
-           
-            elif label == "Event Trigger KEV":
-                from event_trigger_KEV_config_window import EventTriggerKEVConfig
-                dialog = EventTriggerKEVConfig(self, checkbox.isChecked())
-           
-            elif label == "Continuous KEV":
-                from Continous_KEV_config_window import ContinuousKEVConfig
-                dialog = ContinuousKEVConfig(self, checkbox.isChecked())
-               
-            elif label == "RAM Monitor":
-                from XCP_RAM_measurment_config_window import XcpRAMMonitoringConfig
-                dialog = XcpRAMMonitoringConfig(self, checkbox.isChecked())
-           
-            elif label == "Event Trigger RAM Monitor":
-                from XCP_RAM_measurement_event_trigger_config_window import XCPRAMMonitorEventTriggerConfig
-                dialog = XCPRAMMonitorEventTriggerConfig(self, checkbox.isChecked())
-           
-            elif label == "APL Communication Layout":
-                from XCP_APL_communication_layout_config_window import XCPAPLCommConfig
-                dialog = XCPAPLCommConfig(self, checkbox.isChecked())
-
-            elif label in diag_labels:
-                from diag_config_window import DiagConfig
-                dialog = DiagConfig(self, label, checkbox.isChecked())
-
-            else:
-                QMessageBox.information(self, f"{label}", "Configuration Dialog implementation is in progress.")
-                self.setEnabled(True)
-                return
             if dialog:
                 dialog.setModal(True)
                 dialog.exec_()
+            else:
+                self.setEnabled(True)
+                return
 
             self.setEnabled(True)
             self.is_any_ecu_selected()
@@ -1551,8 +1517,8 @@ class MainWindow(QMainWindow):
 
     def open_file_manager(self, label):
         try:
-            current_dir = os.getcwd()
-            path = os.path.join(current_dir, 'Reports', folder_names[label])
+            parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+            path = os.path.join(parent_dir, 'Reports', folder_names[label])
             os.makedirs(path, exist_ok=True)
 
             if os.path.exists(path):
@@ -1576,42 +1542,21 @@ class MainWindow(QMainWindow):
                     for checkbox in checkbox_list:
                         if checkbox != current_checkbox:
                             checkbox.setEnabled(False)
-                # self.check_KPIs_config(label, edit_button)
-            else:  
-                # edit_button.setEnabled(enabled)    
-                # edit_button.setStyleSheet("")
-
+            else:
                 if checkbox_list is not None:
                     for checkbox in checkbox_list:
                         checkbox.setEnabled(True)
         except Exception as e:
             py_logger.error(f"Error in toggle_buttons: {e}")
 
-    def show_warning_once(self, label):
-        # Check if a message box is already open
-        if hasattr(self, 'msg_box') and self.msg_box is not None and self.msg_box.isVisible():
-            return  # Don't show again if already visible
-
-        # Create and show the message box
-        self.msg_box = QMessageBox(self)
-        self.msg_box.setIcon(QMessageBox.Warning)
-        self.msg_box.setWindowTitle(f'{label} Configuration Mismatch')
-        self.msg_box.setText(f"'ECU Selection' in the main window does not match the '{label}' configuration in the config window.\n Please also check other KPIs configuration highlighted in red.")
-        self.msg_box.setStandardButtons(QMessageBox.Ok)
-        self.msg_box.show()
-
-        # from PyQt5.QtCore import QTimer
-        # Auto-close after 3 seconds
-        # QTimer.singleShot(3000, msg_box.close)
-
     # Function to check if a folder with a specific date format exists
     def is_folder_with_date_format_present(self, label):
         try:
-            # Get the current working directory
-            current_dir = os.getcwd()
+            # Get the current working directory's parent directory
+            parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
            
             # Construct the path to the reports folder
-            path = os.path.join(current_dir, 'Reports', folder_names[label])
+            path = os.path.join(parent_dir, 'Reports', folder_names[label])
            
             # Check if the path exists
             if not os.path.exists(path):
@@ -1624,20 +1569,8 @@ class MainWindow(QMainWindow):
                 # Check if the filename is a directory
                 if os.path.isdir(os.path.join(path, filename)):
                     return True
-                    # Define the expected date formats
-                    # for date_format in ["%Y%m%d_%H-%M-%S", "%Y-%m-%d_%H-%M-%S", "%Y-%m-%d-%H-%M-%S"]:
-                    #     try:
-                    #         # Attempt to parse the filename as a date using the specified format
-                    #         datetime.strptime(filename, date_format)
-                    #         # py_logger.info(f"Folder found with format '{date_format}': {filename}")
-                    #         # Return True to indicate that a folder with the expected date format was found
-                    #         return True
-                    #     except ValueError:
-                    #         # If the filename does not match the date format, continue to the next iteration
-                    #         pass            
-           
-            # py_logger.info("No folders found with the expected date format.")
-            # Return False to indicate that no folders with the expected date format were found
+
+            # Return False to indicate that no folders were found
             return False
 
         except KeyError as e:
@@ -1673,9 +1606,6 @@ class MainWindow(QMainWindow):
                                 if not current_config.get(ecu_type, {}).get(key, False):
                                     set_button_style(False)
 
-                                    # if self.is_any_ecu_selected_flag:
-                                    #     self.show_warning_once(label)
-
                                     return False
 
                 set_button_style(True)
@@ -1690,138 +1620,17 @@ class MainWindow(QMainWindow):
 
         try:
             is_valid = True
-            if label == "CPU and Memory Utilization":
-                with open('./CPU_Memory_Utilization_Scripts/cpu_memory_utilization_config.json', 'r') as f:
-                    data = json.load(f)
 
-                threshold = data.get("Threshold", {})
-                required_keys = {"TotalCPU", "TotalMemory"} | {f"CPU{i}" for i in range(8)}
-
-                is_valid = (
-                    required_keys.issubset(threshold.keys()) and
-                    data.get("scriptExecutionTimeInSeconds") is not None and
-                    data.get("defaultReportFilename") and
-                    data.get("initialLoggingDelayInSeconds") is not None
-                )
-
-                set_button_style(is_valid)
-                return is_valid
-           
-            elif label == "Heap Memory":
-                with open('./Heap_Memory_Scripts/heap_memory_config.json', 'r') as f:
-                    data = json.load(f)
-                is_valid = (
-                    data.get("rcar_application_names") is not None and
-                    data.get("soc0_application_names") is not None and
-                    data.get("soc1_application_names") is not None and
-                    data.get("Test_Report_Name") and
-                    data.get("heapMemoryCaptureIntervalInSeconds") is not None and
-                    data.get("heapMonitoringTimePerAppInSeconds") is not None and
-                    data.get("QNXInstalledPath") is not None
-                )
-                if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
-                    return bool(validate_ECU_configuration(data))
-                else:
-                    set_button_style(is_valid)
-                    return is_valid
-           
-            elif label == "Startup Time":
+            if label == "Startup Time":
                 with open('./Startup_Time_Scripts/startup_time_config.json', 'r') as file:
                     data = json.load(file)
-
-                is_valid = True
  
                 if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
                     return bool(validate_ECU_configuration(data))
                 else:
                     set_button_style(is_valid)
                     return is_valid
-           
-            elif label == 'Cyclic and Turnaround Time':
-                with open('./Cyclic_Turnaround_Time_Scripts/cyclic_turnaround_config.json', 'r') as file:
-                    data = json.load(file)
 
-                is_valid = (
-                    isinstance(data.get("QNXInstalledPath"), str) and
-                    data.get("QNXInstalledPath") and
-                    isinstance(data.get("GenerateKEVFile"), bool) and
-                    isinstance(data.get("project_name"), str) and
-                    data.get("project_name") and
-                    isinstance(data.get("project"), str) and
-                    isinstance(data.get("Application_Settings"), list) and
-                    data.get("Application_Settings") and
-                    all(
-                        isinstance(app.get("Application"), str) and
-                        isinstance(app.get("CyclicThreshold"), int) and
-                        isinstance(app.get("CyclicThresholdMargin"), int) and
-                        isinstance(app.get("TurnaroundThreshold"), int) and
-                        isinstance(app.get("Soc"), str)
-                        for app in data.get("Application_Settings", [])
-                    )
-                )
-
-                if data.get("GenerateKEVFile"):
-                    is_valid = is_valid and (
-                        isinstance(data.get("Kev_duration"), int) and
-                        data.get("Kev_duration") > 0
-                    )
-
-                if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
-                    return bool(validate_ECU_configuration(data))
-                else:
-                    set_button_style(is_valid)
-                    return is_valid
-           
-            elif label =='Throughput and Fault Injection':
-                with open('./Throughput_Scripts/throughput_faultinjection_config.json','r')as file:
-                    data=json.load(file)
-                is_valid=(
-                    isinstance(data.get('scriptExecutionTimeInSeconds'),int) and
-                    isinstance(data.get('threshold_option'),int) and
-                    isinstance(data.get('ReportFileName'),str) and
-                    isinstance(data.get('power_on_off_delay'),int)
-                )                
-               
-                if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
-                    return bool(validate_ECU_configuration(data))
-                else:
-                    set_button_style(is_valid)
-                    return is_valid
-           
-            elif label == "Execution Time":
-                with open('./Execution_Time_Scripts/Execution_Time_Config.json', 'r') as file:
-                    data = json.load(file)
-
-                is_valid = (
-                    isinstance(data.get("QNXInstalledPath"), str) and
-                    data.get("QNXInstalledPath") and
-                    isinstance(data.get("workspacePath"), str) and
-                    data.get("workspacePath") and
-                    isinstance(data.get("test_report_name"), str) and
-                    data.get("test_report_name") and
-                    isinstance(data.get("Application_Settings"), dict) and
-                    isinstance(data.get("Application_Settings", {}).get("padas_application_names"), list) and
-                    all(isinstance(app, str) for app in data.get("Application_Settings", {}).get("padas_application_names", [])) and
-                    isinstance(data.get("Application_Settings", {}).get("rcar_application_names"), list) and
-                    all(isinstance(app, str) for app in data.get("Application_Settings", {}).get("rcar_application_names", [])) and
-                    isinstance(data.get("Application_Settings", {}).get("soc0_application_names"), list) and
-                    all(isinstance(app, str) for app in data.get("Application_Settings", {}).get("soc0_application_names", [])) and
-                    isinstance(data.get("Application_Settings", {}).get("soc1_application_names"), list) and
-                    all(isinstance(app, str) for app in data.get("Application_Settings", {}).get("soc1_application_names", []))
-                )
-
-                if data.get("kev_generation"):
-                    is_valid = is_valid and (
-                        isinstance(data.get("kev_duration"), int) and
-                        data.get("kev_duration") > 0
-                    )
-
-                if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
-                    return bool(validate_ECU_configuration(data))
-                else:
-                    set_button_style(is_valid)
-                    return is_valid
-           
             elif label == "Shutdown Time":
                 with open('./Shutdown_Time_Scripts/shutdown_time_config.json', 'r') as file:
                     data = json.load(file)
@@ -1835,156 +1644,45 @@ class MainWindow(QMainWindow):
 
                 set_button_style(is_valid)
                 return is_valid
-            elif label == "Continuous KEV":
-                with open('./Continuous_KEV_Scripts/kev_gen_and_logMover_config.json', 'r') as file:
-                    data = json.load(file)
-               
-                is_valid = (
 
-                    isinstance(data.get("kevlogger", {}), dict) and
-                    isinstance(data.get("kevlogger", {}).get("kev_duration"), int) and
-                    data.get("kevlogger", {}).get("kev_duration") > 0 and                    
-                    data.get("kevlogger", {}).get("TerminateAllECUExecutionOnError") is not None and
-                    isinstance(data.get("logMover", {}), dict) and
-                    isinstance(data.get("logMover", {}).get("pythonScriptRunTime"), int) and
-                    data.get("logMover", {}).get("pythonScriptRunTime") > 0 and
-                    data.get("logMover", {}).get("await_file_transfer") is not None and
-                    isinstance(data.get("filterEvents", {}), dict) and
-                    all(data.get("filterEvents", {}).get(param) is not None for param in ["disableKernelcallsclass", "disableInterruptclass", "disableProcessclass", "disableThreadclass", "disableVThreadclass", "disableCommunicationclass", "disableSystemclass"])
-                )
+            # Instantiate dialog dynamically
+            dialog = self.get_dialog_instance(label, checkbox)
 
-                set_button_style(is_valid)
-                return is_valid
-           
-            elif label == "Event Trigger KEV":
-                with open('./Event_Trigger_KEV_Scripts/kev_gen_and_logMover_config.json', 'r') as file:
-                    data = json.load(file)
-               
-                is_valid = (
-                    isinstance(data.get("kevlogger", {}), dict) and
-                    isinstance(data.get("kevlogger", {}).get("kev_duration"), int) and
-                    data.get("kevlogger", {}).get("kev_duration") > 0 and
-                    isinstance(data.get("kevlogger", {}).get("reportName"), str) and
-                    data.get("kevlogger", {}).get("reportName") and
-                    isinstance(data.get("kevlogger", {}).get("cpu_stable_runin_period"), int) and
-                    data.get("kevlogger", {}).get("cpu_stable_runin_period") >= 0 and
-                    data.get("kevlogger", {}).get("TerminateAllECUExecutionOnError") is not None and
-                    isinstance(data.get("logMover", {}), dict) and
-                    isinstance(data.get("logMover", {}).get("pythonScriptRunTime"), int) and
-                    data.get("logMover", {}).get("pythonScriptRunTime") > 0 and
-                    data.get("logMover", {}).get("await_file_transfer") is not None and
-                    isinstance(data.get("filterEvents", {}), dict) and
-                    all(data.get("filterEvents", {}).get(param) is not None for param in ["disableKernelcallsclass", "disableInterruptclass", "disableProcessclass", "disableThreadclass", "disableVThreadclass", "disableCommunicationclass", "disableSystemclass"]) and
-                    isinstance(data.get("eventTriggerKEVGeneration", {}), dict) and
-                    data.get("eventTriggerKEVGeneration", {}).get("trigger_type") and
-                    isinstance(data.get("eventTriggerKEVGeneration", {}).get("parameters_enabled"), dict) and
-                    all(data.get("eventTriggerKEVGeneration", {}).get("parameters_enabled", {}).get(param) is not None for param in ["total_CPU", "CPU_0", "CPU_1", "CPU_2", "CPU_3", "CPU_4", "CPU_5", "CPU_6", "CPU_7", "total_RAM"]) and
-                    isinstance(data.get("eventTriggerKEVGeneration", {}).get("threshold_values"), dict) and
-                    all(isinstance(data.get("eventTriggerKEVGeneration", {}).get("threshold_values", {}).get(param), int) for param in ["total_CPU", "CPU_0", "CPU_1", "CPU_2", "CPU_3", "CPU_4", "CPU_5", "CPU_6", "CPU_7", "total_RAM"]) and
-                    isinstance(data.get("eventTriggerKEVGeneration", {}).get("cpu_core_monitor_selection"), dict) and
-                    all(data.get("eventTriggerKEVGeneration", {}).get("cpu_core_monitor_selection", {}).get(param) is not None for param in ["cpu_core_monitor_50ms", "cpu_core_monitor_100ms", "cpu_core_monitor_200ms", "cpu_core_monitor_500ms", "cpu_core_monitor_1s"])
-                )
-
-                set_button_style(is_valid)
-                return is_valid
-           
-            elif label == "RAM Monitor":
-                with open('./RAM_Measurement_Scripts/XCP_RAM_Measurement_Config.json', 'r') as file:
-                    data = json.load(file)
-
-                is_valid = (
-                    isinstance(data.get("SCRIPT_EXECUTION_TIME"), int) and
-                    data.get("SCRIPT_EXECUTION_TIME") > 0 and
-                    isinstance(data.get("XCP_PORT"), int) and
-                    data.get("XCP_PORT") > 0 and
-                    isinstance(data.get("ELF_FILE/A2L_FILE"), str) and
-                    data.get("ELF_FILE/A2L_FILE") and
-                    isinstance(data.get("CYCLIC_INTERVAL"), int) and
-                    data.get("CYCLIC_INTERVAL") > 0 and
-                    isinstance(data.get("VARIABLES_TO_MEASURE"), list) and
-                    all(isinstance(var, str) for var in data.get("VARIABLES_TO_MEASURE", [])) and
-                    isinstance(data.get("VARIABLE_TO_GENERATE_GRAPH"), list) and
-                    all(isinstance(var, str) for var in data.get("VARIABLE_TO_GENERATE_GRAPH", [])) and
-                    isinstance(data.get("REPORT_FILE_NAME"), str) and
-                    data.get("REPORT_FILE_NAME")
-                )
-
-                set_button_style(is_valid)
-                return is_valid
-           
-            elif label == "Event Trigger RAM Monitor":
-                with open('./Event_Trigger_RAM_Measurement_Scripts/XCP_RAM_Event_Trigger_Config.json', 'r') as file:
-                    data = json.load(file)
-
-                is_valid = (
-                    isinstance(data.get("SCRIPT_EXECUTION_TIME"), int) and
-                    data.get("SCRIPT_EXECUTION_TIME") > 0 and
-                    isinstance(data.get("XCP_PORT"), int) and
-                    data.get("XCP_PORT") > 0 and
-                    isinstance(data.get("ELF_FILE/A2L_FILE"), str) and
-                    data.get("ELF_FILE/A2L_FILE") and
-                    isinstance(data.get("CYCLIC_INTERVAL"), int) and
-                    data.get("CYCLIC_INTERVAL") > 0 and
-                    isinstance(data.get("CPU_THRESHOLD_VALUE_PERCENT"), int) and
-                    0 <= data.get("CPU_THRESHOLD_VALUE_PERCENT") <= 100 and
-                    isinstance(data.get("MEMORY_THRESHOLD_VALUE_PERCENT"), int) and
-                    0 <= data.get("MEMORY_THRESHOLD_VALUE_PERCENT") <= 100 and
-                    isinstance(data.get("RAM_THRESHOLD"), int) and
-                    data.get("RAM_THRESHOLD") > 0 and
-                    isinstance(data.get("BEFORE_AFTER_MEASUREMENT"), int) and
-                    data.get("BEFORE_AFTER_MEASUREMENT") > 0 and
-                    isinstance(data.get("VARIABLES_TO_MEASURE"), list) and
-                    all(isinstance(var, str) for var in data.get("VARIABLES_TO_MEASURE", [])) and
-                    isinstance(data.get("VARIABLE_TO_CHECK_THRESHOLD"), list) and
-                    all(isinstance(var, str) for var in data.get("VARIABLE_TO_CHECK_THRESHOLD", [])) and
-                    isinstance(data.get("VARIABLE_TO_GENERATE_GRAPH"), list) and
-                    all(isinstance(var, str) for var in data.get("VARIABLE_TO_GENERATE_GRAPH", [])) and
-                    isinstance(data.get("XCP_REPORT_FILE_NAME"), str) and
-                    data.get("XCP_REPORT_FILE_NAME")
-                )
-
-                set_button_style(is_valid)
-                return is_valid
-           
-            elif label == "APL Communication Layout":
-                with open('./APL_Communication_Layout_Scripts/XCP_APL_Config.json', 'r') as file:
-                    data = json.load(file)
-               
-                is_valid = (
-                    isinstance(data.get("SCRIPT_EXECUTION_TIME"), int) and
-                    data.get("SCRIPT_EXECUTION_TIME") > 0 and
-                    isinstance(data.get("VARIABLE_TO_GENERATE_GRAPH"), list) and
-                    all(isinstance(var, str) for var in data.get("VARIABLE_TO_GENERATE_GRAPH", [])) and
-                    isinstance(data.get("REPORT_FILE_NAME"), str) and
-                    data.get("REPORT_FILE_NAME")
-                )
-
-                set_button_style(is_valid)
-                return is_valid
-
-            elif label in diag_labels:
-                with open('DIAG_KPI_Config.json', 'r') as f:
-                    data = json.load(f)
-               
-                is_valid = (
-                    bool(data.get("excel_name")) and
-                    isinstance(data.get("No. of Selected Files"), list) and
-                    len(data.get("No. of Selected Files", [])) > 0 and
-                    all(isinstance(sheet, str) and sheet.endswith('.xlsx') for sheet in data.get("No. of Selected Files", []))
-                )
-
-                set_button_style(is_valid)
-                return is_valid
-
+            # Validate dialog fields if method exists, else log and mark invalid            
+            if dialog:
+                if hasattr(dialog, "validate_all_fields"):
+                    is_valid = dialog.validate_all_fields()
+                    del dialog
+                else:
+                    # py_logger.warning(f"Dialog for '{label}' does not implement 'validate_all_fields'.")
+                    is_valid = False
             else:
-                set_button_style(False)                
-                return False
-        except FileNotFoundError:
+                py_logger.warning(f"No dialog found for label: '{label}'")
+                is_valid = False            
+
+            # Labels that require ECU config validation
+            ecu_validation_labels = {
+                "Heap Memory", "Startup Time", "Cyclic and Turnaround Time",
+                "Throughput and Fault Injection", "Execution Time"
+            }
+
+            if label in ecu_validation_labels:
+                config_path = switch_dict.get(label)
+                if config_path:
+                    with open(config_path, 'r') as f:
+                        data = json.load(f)
+
+                    if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
+                        return bool(validate_ECU_configuration(data))
+
+            # Final style update and return
+            set_button_style(is_valid)
+            return is_valid
+
+        except (FileNotFoundError, json.JSONDecodeError):
             pass
-        except json.JSONDecodeError as e:
-             py_logger.error(f"Error parsing JSON: {e}")
         except Exception as e:
-            py_logger.error(f"Error validating '{label}' configuration : {e}.")      
+            py_logger.error(f"Error validating '{label}' configuration: {e}")
 
         set_button_style(False)
         return False
@@ -2341,6 +2039,7 @@ class MainWindow(QMainWindow):
         ecu_input_fields = self.get_ecu_input_fields()
         self.run_and_update_config(ecu_input_fields)
         self.prepare_and_store_widget_states()
+        self.stop_KPIs_execution_button.setEnabled(True)
 
         self.thread = QThread()
         self.worker = Worker(ecu_input_fields, self.kpi_widgets)
@@ -2388,53 +2087,83 @@ class MainWindow(QMainWindow):
             action = "create" if is_create else "remove"
             py_logger.error(f"Failed to {action} stop.flag: {e}")
 
+    def stop_worker_thread(self, spinner_title):
+        """
+        Safely stops the worker thread if it exists and is active.
+        Handles UI updates, spinner dialog, stop flag creation/removal,
+        and ensures the GUI remains responsive during shutdown.
+
+        Steps:
+            1. Check if the worker thread exists and is active.
+            2. Show a spinner dialog to indicate ongoing shutdown if not already shown.
+            3. Create a stop flag file for external monitoring.
+            4. Request the worker thread to stop using its custom method.
+            5. Process GUI events in a loop until the thread stops.
+            6. Close spinner dialog if it exists.
+            7. Remove the stop flag file after shutdown completes.
+        """
+        try:
+            self.stop_KPIs_execution_button.setEnabled(False)
+
+            # Check if a worker thread exists and is active
+            if hasattr(self, 'worker') and self.worker is not None:
+                py_logger.info("Worker thread is alive. Closing it...")
+
+                # Show spinner dialog to indicate shutdown in progress only if not already shown
+                if not hasattr(self, 'spinner_dialog') or self.spinner_dialog is None:
+                    self.spinner_dialog = SpinnerDialog(self, title=spinner_title)
+                    self.spinner_dialog.show()
+
+                # Create stop.flag file for external monitoring
+                self.manage_stop_flag(is_create=True)
+
+                # Request the worker thread to stop
+                self.worker.request_stop()
+
+                # Keep processing GUI events while waiting for the thread to stop
+                from PyQt5.QtCore import QCoreApplication
+                while self.worker is not None:
+                    QCoreApplication.processEvents()  # Prevent GUI freeze
+                    time.sleep(0.1)  # Brief pause before checking again
+
+                py_logger.info("Worker thread has stopped successfully.")
+
+                # Close spinner dialog if it exists
+                if hasattr(self, 'spinner_dialog') and self.spinner_dialog:
+                    self.spinner_dialog.close()
+                    self.spinner_dialog = None
+
+            # Remove stop.flag file after shutdown
+            self.manage_stop_flag(is_create=False)
+
+        except Exception as e:
+            py_logger.error(f"Error while stopping worker thread: {e}")
+
     def closeEvent(self, event):
-        # Show a confirmation dialog when the user tries to close the GUI
-        # Input: User clicks the window close button
-        # Output: QMessageBox with Ok/Cancel options
+        """
+        Handles the window close event.
+        Shows a confirmation dialog and performs cleanup before closing the application.
+        """
         reply = QMessageBox.question(
             self,
-            'Close Gen2 PF Validation Tester Tool',  # Title of the dialog
-            'Are you sure you want to close the tool?',  # Message shown to the user
-            QMessageBox.Ok | QMessageBox.Cancel,  # Buttons available
-            QMessageBox.Cancel  # Default selected button
+            'Close Gen2 PF Validation Tester Tool',  # Dialog title
+            'Are you sure you want to close the tool?',  # Confirmation message
+            QMessageBox.Ok | QMessageBox.Cancel,  # Buttons
+            QMessageBox.Cancel  # Default button
         )
 
-        # If user confirms closure
         if reply == QMessageBox.Ok:
             try:
                 # Log the start of the shutdown process
-                py_logger.info("Closing Gen2 PF Validation Tester Tool, please wait!...")                
+                py_logger.info("Closing Gen2 PF Validation Tester Tool, please wait!...")
 
-                # Check if a worker thread exists and is active
-                if hasattr(self, 'worker') and self.worker is not None:
-                    py_logger.info("Worker Thread is alive")
+                # Disable close button to prevent repeated close attempts
+                self.setWindowFlag(Qt.WindowCloseButtonHint, False)
+                self.setWindowFlags(self.windowFlags())
+                self.show()
 
-                    # Disable close button
-                    self.setWindowFlag(Qt.WindowCloseButtonHint, False)                                    
-                    self.setWindowFlags(self.windowFlags())
-                    self.show()
-
-                    # Show spinner dialog
-                    self.spinner_dialog = SpinnerDialog(self)
-                    self.spinner_dialog.show()
-
-                    # To create the stop.flag file
-                    self.manage_stop_flag(is_create=True)
-
-                    # Request the worker thread to stop (custom method in your thread class)
-                    self.worker.request_stop()
-
-                    # Keep processing GUI events while waiting for the thread to stop
-                    from PyQt5.QtCore import QCoreApplication
-                    while self.worker is not None:
-                        QCoreApplication.processEvents()  # Prevent GUI from freezing
-                        time.sleep(0.1)  # Wait briefly before checking again
-
-                    py_logger.info("Worker Thread has stopped")  # Log thread shutdown
-               
-                # To remove the stop.flag file
-                self.manage_stop_flag(is_create=False)
+                # Call to stop the worker thread safely
+                self.stop_worker_thread("Closing the GUI application...")
 
                 # Final log before closing the application
                 py_logger.info("Gen2 PF Validation Tester Tool Closed Successfully.")
@@ -2444,12 +2173,12 @@ class MainWindow(QMainWindow):
 
             except Exception as e:
                 # Log any unexpected error during shutdown
-                py_logger.error(f"Error While Closing Gen PF Validation Tester Tool: {e}")
+                py_logger.error(f"Error While Closing Gen2 PF Validation Tester Tool: {e}")
                 event.accept()  # Still close the window to avoid hanging
         else:
             # If user cancels the close action, ignore the event and keep the GUI open
-            event.ignore()    
-   
+            event.ignore()
+
     def worker_finished(self):
         # py_logger.info("Successfully closed Worker Thread.")
         self.worker = None
@@ -2557,40 +2286,9 @@ class MainWindow(QMainWindow):
 
         for label, widgets in self.kpi_widgets.items():
             if widgets['checkbox'].isChecked():
-                if label == 'CPU and Memory Utilization':
-                    update_config_file('./CPU_Memory_Utilization_Scripts/cpu_memory_utilization_config.json', label)
-               
-                elif label == 'Heap Memory':
-                    update_config_file('./Heap_Memory_Scripts/heap_memory_config.json', label)
-               
-                elif label == 'Startup Time':
-                    update_config_file('./Startup_Time_Scripts/startup_time_config.json', label)
-               
-                elif label == 'Cyclic and Turnaround Time':
-                    update_config_file('./Cyclic_Turnaround_Time_Scripts/cyclic_turnaround_config.json', label)
-
-                elif label == 'Execution Time':
-                    update_config_file('./Execution_Time_Scripts/Execution_Time_Config.json', label)
-               
-                elif label == 'Throughput and Fault Injection':
-                    update_config_file('./Throughput_Scripts/throughput_faultinjection_config.json', label)
-               
-                elif label == 'Shutdown Time':
-                    update_config_file('./Shutdown_Time_Scripts/shutdown_time_config.json', label)
-                elif label == "Continuous KEV":
-                    update_config_file('./Continuous_KEV_Scripts/kev_gen_and_logMover_config.json', label)
-
-                elif label == "Event Trigger KEV":
-                    update_config_file('./Event_Trigger_KEV_Scripts/kev_gen_and_logMover_config.json', label)
-               
-                elif label == "RAM Monitor":
-                    update_config_file('./RAM_Measurement_Scripts/XCP_RAM_Measurement_Config.json', label)
-
-                elif label == "Event Trigger RAM Monitor":
-                    update_config_file('./Event_Trigger_RAM_Measurement_Scripts/XCP_RAM_Event_Trigger_Config.json', label)              
-
-                elif label == "APL Communication Layout":
-                    update_config_file('./APL_Communication_Layout_Scripts/XCP_APL_Config.json', label)
+                config_path = switch_dict.get(label)
+                if config_path:
+                    update_config_file(config_path, label)                
 
                 elif label in diag_labels:
                     try:
@@ -2613,8 +2311,6 @@ class MainWindow(QMainWindow):
                             with open('Diag_All_KPIs_Config.json', 'r') as f:
                                  data = json.load(f)
 
-                        data["Current_Timestamp"] = datetime.now().strftime("%Y%m%d_%H-%M-%S")
-
                         # Update KPI checkbox states
                         for key in diag_labels:
                             data[key] = self.kpi_widgets[key]['checkbox'].isChecked()
@@ -2633,8 +2329,6 @@ class MainWindow(QMainWindow):
         for label, widgets in self.kpi_widgets.items():
             checkbox = widgets['checkbox']
             status_label = widgets['status_label']
-            edit_button = widgets['edit_button']
-            folder_button = widgets['folder_button']
 
             status_label.setStyleSheet("background-color: #D0CEE2; border: 0.5px solid #999999;")
             if checkbox.isChecked():
@@ -2642,8 +2336,6 @@ class MainWindow(QMainWindow):
 
             self.kpi_widgets_status[label] = {
                 'checkbox': checkbox.isEnabled(),
-                # 'edit_button': edit_button.isEnabled(),
-                # 'folder_button': folder_button.isEnabled()
             }
 
     def set_status_label_and_enable_widgets(self, label, color):
@@ -2653,14 +2345,11 @@ class MainWindow(QMainWindow):
                 f"background-color: {color}; border: 0.5px solid #999999;"
             )
             widgets['checkbox'].setEnabled(True)
-            # widgets['folder_button'].setEnabled(True)
 
     def disable_all_widgets(self):
         self.run_button.setEnabled(False)
         self.IG_OFF_button.setEnabled(False)
         self.IG_ON_button.setEnabled(False)
-        # self.clear_logs_button.setEnabled(False)
-        # self.download_button.setEnabled(False)
 
         for widget in self.findChildren((QCheckBox, QLineEdit)):
             widget.setEnabled(False)        
@@ -2669,8 +2358,6 @@ class MainWindow(QMainWindow):
         for label, widgets in self.kpi_widgets.items():
             if label in self.kpi_widgets_status:
                 widgets['checkbox'].setEnabled(self.kpi_widgets_status[label]['checkbox'])
-                # widgets['edit_button'].setEnabled(self.kpi_widgets_status[label]['edit_button'])
-                # widgets['folder_button'].setEnabled(self.kpi_widgets_status[label]['folder_button'])
 
         self.enable_input_fields_based_on_checkboxes()
         self.update_button_states()
@@ -2684,10 +2371,10 @@ class MainWindow(QMainWindow):
         self.SoC1_checkbox.setEnabled(not self.padas_checkbox.isChecked())
 
         # Enable or disable input fields based on checkboxes
-        self.rcar_ip1.setEnabled(self.RCar_checkbox.isChecked())
-        self.rcar_ip2.setEnabled(self.RCar_checkbox.isChecked())
-        self.rcar_ip3.setEnabled(self.RCar_checkbox.isChecked())
-        self.rcar_ip4.setEnabled(self.RCar_checkbox.isChecked())
+        self.rcar_ip1.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
+        self.rcar_ip2.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
+        self.rcar_ip3.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
+        self.rcar_ip4.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
         self.Rcar_telnet_username_input.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
         self.Rcar_telnet_password_input.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
         self.Rcar_FTP_username_input.setEnabled(self.padas_checkbox.isChecked() or self.RCar_checkbox.isChecked())
@@ -2714,8 +2401,7 @@ class MainWindow(QMainWindow):
         # Enable buttons
         self.relay_port_input.setEnabled(True)
         self.relay_baudrate_input.setEnabled(True)
-        self.download_button.setEnabled(True)
-        self.clear_logs_button.setEnabled(True)      
+        self.stop_KPIs_execution_button.setEnabled(False)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
