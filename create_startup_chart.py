@@ -40,10 +40,10 @@ num_bars = max(0, len(data) - 1)
 max_value = max([r[3] for r in data[1:]]) if num_bars else 0  # Use Total column for max
 x_axis_max = math.ceil(max_value) + 1
 
-# create and configure chart as combo
+# create and configure chart
 chart = BarChart()
-chart.type = "col"  # Change to combo chart type
-chart.grouping = "stacked"  # Enable stacked bars for first two series
+chart.type = "bar"
+chart.grouping = "stacked"  # Enable stacked bars
 chart.style = None  # Remove style to prevent default shadows
 chart.title = "Applications Startup Time from IG-ON on ELITE SoC1"
 chart.y_axis.title = "Startup Time (s)  *The first 1.5 seconds is the QNX startup time"
@@ -73,8 +73,7 @@ chart.x_axis.delete = False
 chart.y_axis.delete = False
 
 # data refs
-# First chart gets only the first two series (QNX Startup and App Startup)
-data_ref = Reference(ws, min_col=2, min_row=1, max_row=len(data), max_col=3)
+data_ref = Reference(ws, min_col=2, min_row=1, max_row=len(data), max_col=4)
 cats_ref = Reference(ws, min_col=1, min_row=2, max_row=len(data))
 chart.add_data(data_ref, titles_from_data=True)
 chart.set_categories(cats_ref)
@@ -106,12 +105,7 @@ gp2.shadow = None
 gp2.effectLst = EffectList()  # Empty effect list instead of None
 series2.graphicalProperties = gp2
 
-# Series 3: Total - Add as clustered bar to the same chart
-# Add the Total column data (column 4) separately
-data_ref_total = Reference(ws, min_col=4, min_row=1, max_row=len(data))
-chart.add_data(data_ref_total, titles_from_data=True)
-
-# Style the third series with transparency
+# Series 3: Total - Completely transparent (no fill, no border, no shadow)
 series3 = chart.series[2]
 gp3 = GraphicalProperties()
 gp3.noFill = True  # No fill
@@ -123,9 +117,6 @@ gp3.ln = no_line3
 gp3.shadow = None
 gp3.effectLst = EffectList()  # Empty effect list instead of None
 series3.graphicalProperties = gp3
-
-# Make the third series clustered (not stacked)
-series3.overlap = 0  # No overlap for clustered effect
 
 # set fixed size
 chart.width = FIXED_CHART_WIDTH
