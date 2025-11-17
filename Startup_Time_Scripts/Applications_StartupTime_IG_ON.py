@@ -18,6 +18,14 @@ import numpy as np
 import shutil
 from openpyxl.drawing.image import Image
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
+from openpyxl import Workbook
+from openpyxl.chart import BarChart, Reference
+from openpyxl.chart.label import DataLabelList
+from openpyxl.chart.shapes import GraphicalProperties
+from openpyxl.drawing.colors import ColorChoice
+from openpyxl.chart.axis import ChartLines
+from openpyxl.drawing.line import LineProperties
+from openpyxl.chart.layout import Layout, ManualLayout
 from openpyxl.utils import get_column_letter
 from pathlib import Path
 from datetime import datetime
@@ -54,6 +62,170 @@ tab_color_map = {
     'SoC1': 'ADD8E6',
     'ECU_Summary': 'FFA500',
 }
+
+def create_data_references(ws, cats_mcol, cats_mrow, cats_mxrow, sd_mcol, sd_mxcol, sd_mrow, sd_mxrow, cd_mcol, cd_mxcol, cd_mrow, cd_mxrow):
+    """Create references for chart data."""
+    cats = Reference(ws, min_col=cats_mcol, min_row=cats_mrow, max_row=cats_mxrow)
+    stacked_data = Reference(ws, min_col=sd_mcol, max_col=sd_mxcol, min_row=sd_mrow, max_row=sd_mxrow)
+    clustered_data = Reference(ws, min_col=cd_mcol, max_col=cd_mxcol, min_row=cd_mrow, max_row=cd_mxrow)
+    
+    return cats, stacked_data, clustered_data
+
+def create_stacked_chart(stacked_data, cats, title, y_title, x_title):
+    """Create and configure the stacked bar chart."""
+    stacked = BarChart()
+    stacked.type = "bar"
+    stacked.grouping = "stacked"
+    stacked.overlap = 100
+    stacked.add_data(stacked_data, titles_from_data=True)
+    stacked.set_categories(cats)
+    stacked.title = title
+    stacked.y_axis.title = y_title
+    stacked.x_axis.title = x_title
+    stacked.legend = None
+    
+    # Reverse the order of series so Col2 (1.5) appears first, then Col1 (3.567)
+    stacked.series = list(reversed(stacked.series))
+    
+    # Ensure axes are visible
+    stacked.y_axis.delete = False
+    stacked.x_axis.delete = False
+    
+    # Position category axis at the bottom
+    stacked.y_axis.tickLblPos = "low"
+    stacked.x_axis.crosses = "min"
+    
+    return stacked
+
+
+def create_clustered_chart(clustered_data, cats, gap_width=100):
+    """Create and configure the clustered bar chart for secondary axis."""
+    clustered = BarChart()
+    clustered.type = "bar"
+    clustered.grouping = "clustered"
+    clustered.overlap = 0
+    clustered.add_data(clustered_data, titles_from_data=True)
+    clustered.set_categories(cats)
+    
+    # Configure secondary axis
+    clustered.y_axis.axId = 200
+    clustered.y_axis.tickLblPos = "low"
+    clustered.x_axis.crosses = "min"
+    clustered.gapWidth = gap_width
+    
+    # Disable major gridlines for secondary axis
+    clustered.y_axis.majorGridlines = None
+    
+    return clustered
+
+def add_gridlines(chart, color="D3D3D3"):
+    """Add gridlines to the chart."""
+    grey_line = LineProperties(solidFill=ColorChoice(srgbClr=color))
+    grey_props = GraphicalProperties(ln=grey_line)
+    chart.y_axis.majorGridlines = ChartLines()
+    chart.y_axis.majorGridlines.spPr = grey_props
+    chart.x_axis.majorGridlines = ChartLines()
+    chart.x_axis.majorGridlines.spPr = grey_props
+
+
+def configure_chart_layout(chart, width=18, height=10, gap_width=100, major_unit=1):
+    """Configure chart size, layout, and axis settings."""
+    # Set axis major unit
+    chart.y_axis.majorUnit = major_unit
+    
+    # Set chart sizing
+    chart.gapWidth = gap_width
+    chart.width = width
+    chart.height = height
+    
+    # Set manual layout with padding
+    ml = ManualLayout()
+    ml.x = 0.10
+    ml.y = 0.08
+    ml.w = 0.87
+    ml.h = 0.87
+    ml.xMode = "edge"
+    ml.yMode = "edge"
+    ml.wMode = "edge"
+    ml.hMode = "edge"
+    chart.layout = Layout(manualLayout=ml)
+
+def customize_stacked_series(chart, colors=["deebf7", "ffbf00"], is_combo=True):
+    """Customize appearance and data labels for stacked series."""
+    for i, ser in enumerate(chart.series):
+        # Data labels - show only values
+        ser.dLbls = DataLabelList()
+        ser.dLbls.showVal = is_combo
+        ser.dLbls.showCatName = False
+        ser.dLbls.showSerName = False
+        ser.dLbls.showLegendKey = False
+
+        if i < len(colors):
+            # Apply colors to series
+            gp = GraphicalProperties()
+            gp.solidFill = ColorChoice(srgbClr=colors[i])
+            ser.graphicalProperties = gp
+
+
+def customize_clustered_series(chart, transparent=True, label_position="outEnd"):
+    """Customize appearance and data labels for clustered series."""
+    for i, ser in enumerate(chart.series):
+        # Data labels - show only values
+        ser.dLbls = DataLabelList()
+        ser.dLbls.showVal = True
+        ser.dLbls.showCatName = False
+        ser.dLbls.showSerName = False
+        ser.dLbls.showLegendKey = False
+        ser.dLbls.dLblPos = label_position
+        
+        if transparent:
+            # Make series completely transparent
+            gp = GraphicalProperties()
+            gp.noFill = True
+            
+            # Remove border
+            no_line = LineProperties()
+            no_line.noFill = True
+            gp.ln = no_line
+            
+            ser.graphicalProperties = gp
+
+def create_combo_chart(ws, width, height, position, cats_mcol, cats_mrow, cats_mxrow, sd_mcol, sd_mxcol, sd_mrow, sd_mxrow, cd_mcol, cd_mxcol, cd_mrow, cd_mxrow, chart_title, x_title, y_title, is_combo=True):
+    """Main function to create the combo chart with all configurations."""
+    # Create data references
+    cats, stacked_data, clustered_data = create_data_references(
+            ws,
+            cats_mcol=cats_mcol, cats_mrow=cats_mrow, cats_mxrow=cats_mxrow,
+            sd_mcol=sd_mcol, sd_mxcol=sd_mxcol, sd_mrow=sd_mrow, sd_mxrow=sd_mxrow,
+            cd_mcol=cd_mcol, cd_mxcol=cd_mxcol, cd_mrow=cd_mrow, cd_mxrow=cd_mxrow
+        )
+    
+    # Create charts
+    stacked = create_stacked_chart(
+        stacked_data, cats,
+        title=chart_title,
+        y_title=y_title,
+        x_title=x_title
+    )
+    
+    clustered = create_clustered_chart(clustered_data, cats, gap_width=100)
+    
+    # Combine charts
+    stacked += clustered
+    
+    # Add gridlines and configure layout
+    add_gridlines(stacked)
+    configure_chart_layout(stacked, width=width, height=height, gap_width=100, major_unit=(1 if is_combo else 500))
+    
+    # Customize series
+    customize_stacked_series(stacked, colors=["deebf7", "ffbf00"] if is_combo else ["c5e0b4"], is_combo=is_combo)
+    customize_clustered_series(clustered, transparent=True, label_position="outEnd")
+    
+    # Place chart on worksheet
+    ws.add_chart(stacked, position)
+    
+    return stacked
+
 
 def get_signal_name_with_fallback(signum):
     """
@@ -1137,7 +1309,7 @@ def fill_disabled_cell_with_grey(order_mismatch_col, not_found_col, not_configur
             not_configured_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
 
 
-def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, is_empty_log, logger):
+def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, is_empty_log, logger):
     """
     Writes application startup timing data to Excel worksheet with comprehensive validation.
    
@@ -1264,9 +1436,9 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
         fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
 
     # Merge cells in column D for the rows created in this scenario
-    merged_range = f'D{start_row}:D{sheet.max_row}'
-    if not is_empty_log:
-        sheet.merge_cells(merged_range)
+    # merged_range = f'D{start_row}:D{sheet.max_row}'
+    # if not is_empty_log:
+    #     sheet.merge_cells(merged_range)
         
     if is_empty_log:
         for app in ecu_encountered_apps_map[ecu_type]:
@@ -1453,10 +1625,22 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     missing_sts_count_cell.font = Font(bold=True)
 
     # Apply the border style to the entire merged range
-    if not is_empty_log:
-        for row in sheet[merged_range]:
-            for cell in row:
-                cell.border = border_style
+    # if not is_empty_log:
+    #     for row in sheet[merged_range]:
+    #         for cell in row:
+    #             cell.border = border_style
+    if len(dltstart_timestamps)>0:            
+        create_combo_chart(
+            ws=sheet, position="Q4",
+            width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2 + 2,
+            cats_mcol=2, cats_mrow=7, cats_mxrow=len(dltstart_timestamps) + 7,
+            sd_mcol=3, sd_mxcol=4, sd_mrow=6, sd_mxrow=len(dltstart_timestamps) + 6,
+            cd_mcol=5, cd_mxcol=5, cd_mrow=6, cd_mxrow=len(dltstart_timestamps) + 6,
+            chart_title=f"Applications Startup Time from IG-ON on {setup_type} {ecu_type}",
+            x_title="Applications",
+            y_title="Startup Time (s)  *The first 1.5 seconds is the QNX startup time",
+            is_combo=True
+        )
 
 
 def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
@@ -2066,10 +2250,21 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
         if process not in process_timing_info:
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
-
+    if len(process_timing_info) > 0:
+        create_combo_chart(
+            ws=sheet, position=f"E{start_row}",
+            width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2,
+            cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_timing_info) + start_row + 1,
+            sd_mcol=4, sd_mxcol=4, sd_mrow=start_row + 1, sd_mxrow=len(process_timing_info) + start_row + 1,
+            cd_mcol=4, cd_mxcol=4, cd_mrow=start_row + 1, cd_mxrow=len(process_timing_info) + start_row + 1,
+            chart_title=f"Applications Init Up Time on {setup_type} {ecu_type}",
+            y_title="Init Up Time (ms)",
+            x_title="Applications",
+            is_combo=False
+        )
     # Plot the startup graph
-    if not is_empty_log:
-        plot_process_start_end_time_graph(ecu_type, filtered_data, sheet, start_row)
+    # if not is_empty_log:
+    #     plot_process_start_end_time_graph(ecu_type, filtered_data, sheet, start_row)
 
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
@@ -2128,11 +2323,11 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, 
     start_row = create_header(sheet, ecu_type, setup_type, True, 'startup_time_columns')
 
     # Write the data to the Excel sheet
-    write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, is_empty_log, logger)
+    write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, is_empty_log, logger)
 
     # Plot the differences as a graph
-    if not is_empty_log:
-        plot_process_startup_time_graph(dltstart_timestamps, sheet, start_row, ecu_type, False)
+    # if not is_empty_log:
+    #     plot_process_startup_time_graph(dltstart_timestamps, sheet, start_row, ecu_type, False)
 
     # Format the Excel cells
     format_excel_cells(sheet, start_row)

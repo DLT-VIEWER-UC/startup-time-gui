@@ -20,11 +20,11 @@ def create_workbook_with_data(data, sheet_title="Startup Time Data"):
     return wb, ws
 
 
-def create_data_references(ws, data):
+def create_data_references(ws, cats_mcol, cats_mrow, cats_mxrow, sd_mcol, sd_mxcol, sd_mrow, sd_mxrow, cd_mcol, cd_mxcol, cd_mrow, cd_mxrow):
     """Create references for chart data."""
-    cats = Reference(ws, min_col=1, min_row=2, max_row=len(data))
-    stacked_data = Reference(ws, min_col=2, max_col=3, min_row=1, max_row=len(data))
-    clustered_data = Reference(ws, min_col=4, max_col=4, min_row=1, max_row=len(data))
+    cats = Reference(ws, min_col=cats_mcol, min_row=cats_mrow, max_row=cats_mxrow)
+    stacked_data = Reference(ws, min_col=sd_mcol, max_col=sd_mxcol, min_row=sd_mrow, max_row=sd_mxrow)
+    clustered_data = Reference(ws, min_col=cd_mcol, max_col=cd_mxcol, min_row=cd_mrow, max_row=cd_mxrow)
     
     return cats, stacked_data, clustered_data
 
@@ -145,10 +145,15 @@ def customize_clustered_series(chart, transparent=True, label_position="outEnd")
             ser.graphicalProperties = gp
 
 
-def create_combo_chart(ws, data, output_file="Ramesh_combo_chart_secondary_axis.xlsx"):
+def create_combo_chart(ws, data):
     """Main function to create the combo chart with all configurations."""
     # Create data references
-    cats, stacked_data, clustered_data = create_data_references(ws, data)
+    cats, stacked_data, clustered_data = create_data_references(
+            ws,
+            cats_mcol=1, cats_mrow=2, cats_mxrow=len(data),
+            sd_mcol=2, sd_mxcol=3, sd_mrow=1, sd_mxrow=len(data),
+            cd_mcol=4, cd_mxcol=4, cd_mrow=1, cd_mxrow=len(data)
+        )
     
     # Create charts
     stacked = create_stacked_chart(
