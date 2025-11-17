@@ -3191,7 +3191,6 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
     except Exception as e:
         # If any exception occurs while creating the workbook or sheet, logger. the error message and return None
         logger.error(f"An error occurred while creating the workbook or sheet: {e}")
-        raise e
         # return None, None, None, None
 
 
@@ -3903,7 +3902,6 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
 
     except Exception as e:
         logger.error(f"Exception :: {e}")
-        raise e
         return False
     return True
 
@@ -4407,7 +4405,6 @@ def start_startup_time_measurement(logger):
         logger.error(f"Error: Missing expected key in ECU input fields: {e}")
         isSuccess = False
     except Exception as e:
-        raise e
         logger.error(f"An error occurred: {e}")
         isSuccess = False
     finally:
