@@ -12,6 +12,8 @@ common_groupbox_style = """
         border: 1px solid #999999;
         border-radius: 5px;
         margin-top: 10px;
+        font-size: 14px;
+        font-weight: 300;
     }
     QGroupBox::title {
         subcontrol-origin: margin;
