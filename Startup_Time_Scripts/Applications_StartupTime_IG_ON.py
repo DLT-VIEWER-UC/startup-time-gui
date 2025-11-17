@@ -1667,7 +1667,7 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     # Cell F1 - "Log Folder" label
     log_label_cell = sheet['F1']
     log_label_cell.value = 'Log Folder' if sheet_type == 'Summary' else 'Log File'
-    log_label_cell.font = Font(name='Calibri', size=10, color='FFFFFF')
+    log_label_cell.font = Font(name='Calibri', size=10, color='FFFFFF', bold=True)
     log_label_cell.fill = PatternFill(start_color='006fc0', end_color='006fc0', fill_type='solid')
     log_label_cell.alignment = Alignment(horizontal='center', vertical='center')
     log_label_cell.border = border_style
@@ -1681,7 +1681,7 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     if sheet_type == 'Summary':
         hyperlink_formula = f'=HYPERLINK(".\\{log_folder_path}", "{log_folder_path}")'
     log_path_cell.value = hyperlink_formula
-    log_path_cell.font = Font(name='Calibri', size=10, color='006fc0' if sheet_type == 'Summary' else 'E4080A', underline='single')
+    log_path_cell.font = Font(name='Calibri', size=10, color='006fc0' if sheet_type == 'Summary' else 'E4080A', underline='single', bold=True)
     log_path_cell.alignment = Alignment(horizontal='left', vertical='center')
     
     # Apply border to all cells in the merged range
@@ -2183,7 +2183,7 @@ def add_logfile_hyperlink(report_path, log_path, sheet, ecu_type, setup_type):
     sheet.cell(row=1, column=7).value = hyperlink_formula
    
     # Set the font color of the hyperlink to blue
-    sheet.cell(row=1, column=7).font = Font(color="006fc0", underline='single')
+    sheet.cell(row=1, column=7).font = Font(color="006fc0", underline='single', bold=True)
 
 
 def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, is_empty_log, config):
@@ -4417,3 +4417,7 @@ def start_startup_time_measurement(logger):
         logger.info(f"Total script execution time: {(script_end_time-script_start_time):.3f} seconds")
     print("Final response :: ", isSuccess)
     return isSuccess
+
+if __name__ == "__main__":
+    # Start the startup time measurement process
+    start_startup_time_measurement(setup_logging())
