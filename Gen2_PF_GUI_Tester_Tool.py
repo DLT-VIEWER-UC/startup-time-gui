@@ -1,6 +1,6 @@
 import importlib
 from imports_utils import *
-from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
+# from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
 
 # Dictionary mapping KPI labels to their config file paths
 switch_dict = {
@@ -98,7 +98,7 @@ class SpinnerDialog(QDialog):
 
         # Spinner GIF label with light gray background
         spinner_label = QLabel(self)
-        spinner_movie = QMovie("Hourglass.gif")  # Update path if needed
+        spinner_movie = QMovie("./GUI_Icons/Hourglass.gif")  # Update path if needed
         spinner_label.setMovie(spinner_movie)
         spinner_movie.start()
 
@@ -540,7 +540,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Gen2 Platform Validation GUI Tester Tool")
        
         # Set the icon of the window
-        self.setWindowIcon(QIcon('KPIT_logo.ico'))
+        self.setWindowIcon(QIcon('./GUI_Icons/KPIT_logo.ico'))
 
         # Get the current position of the cursor
         cursor_pos = QApplication.desktop().cursor().pos()
@@ -735,7 +735,7 @@ class MainWindow(QMainWindow):
 
         edit_button = QPushButton()
         edit_button.setFixedSize(30, 30)
-        edit_button.setIcon(QIcon('pencil_write_icon.ico'))
+        edit_button.setIcon(QIcon('./GUI_Icons/Edit_icon.ico'))
         edit_button.setIconSize(QSize(23, 23))        
 
         folder_button = QPushButton()
@@ -1328,17 +1328,21 @@ class MainWindow(QMainWindow):
     def create_run_button_layout(self):
         run_button_layout = QHBoxLayout()
 
-        self.run_button = QPushButton('RUN')
-        self.run_button.setFixedSize(250, 50)
-        self.run_button.setStyleSheet("QPushButton:enabled {font-size: 25px;} " + common_enabled_style + common_hover_style)
+        self.run_button = QPushButton(' RUN')
+        self.run_button.setFixedSize(180, 50)
+        self.run_button.setIcon(QIcon('./GUI_Icons/RUN_icon.ico'))
+        self.run_button.setIconSize(QSize(30, 30))
+        self.run_button.setWindowIconText(None)  # Icon beside text
+        self.run_button.setStyleSheet("QPushButton:enabled { font-size: 30px; }" + common_enabled_style + common_hover_style)
         self.run_button.clicked.connect(self.on_run_button_click)
         self.run_button.setEnabled(False)
 
-        self.stop_KPIs_execution_button = QPushButton()
-        self.stop_KPIs_execution_button.setFixedSize(48, 48)
-        self.stop_KPIs_execution_button.setStyleSheet(common_enabled_style + common_hover_style)
-        self.stop_KPIs_execution_button.setIcon(QIcon('stop_button.ico'))
-        self.stop_KPIs_execution_button.setIconSize(QSize(41, 41))
+        self.stop_KPIs_execution_button = QPushButton(' STOP')
+        self.stop_KPIs_execution_button.setFixedSize(180, 50)
+        self.stop_KPIs_execution_button.setStyleSheet("QPushButton:enabled { font-size: 30px; }" + common_enabled_style + common_hover_style)
+        self.stop_KPIs_execution_button.setIcon(QIcon('./GUI_Icons/STOP_icon.ico'))
+        self.stop_KPIs_execution_button.setIconSize(QSize(30, 30))
+        self.stop_KPIs_execution_button.setWindowIconText(None)  # Icon beside text
         self.stop_KPIs_execution_button.clicked.connect(lambda: self.stop_worker_thread("Stopping the KPIs execution..."))
         self.stop_KPIs_execution_button.setEnabled(False)
 
@@ -1549,43 +1553,37 @@ class MainWindow(QMainWindow):
         except Exception as e:
             py_logger.error(f"Error in toggle_buttons: {e}")
 
-    # Function to check if a folder with a specific date format exists
-    def is_folder_with_date_format_present(self, label):
+    def is_folder_present(self, label):
+        """
+        Description:
+            Checks if the Reports/<folder_name> path exists and contains at least one subfolder.
+
+        Inputs:
+            - label (str): KPI label used to find the corresponding folder name.
+
+        Outputs:
+            - bool: True if at least one subfolder exists, False otherwise.
+        """
         try:
-            # Get the current working directory's parent directory
-            parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-           
             # Construct the path to the reports folder
-            path = os.path.join(parent_dir, 'Reports', folder_names[label])
-           
-            # Check if the path exists
-            if not os.path.exists(path):
-                # py_logger.info(f"The path {path} does not exist.")
-                # Return False to indicate that the path does not exist
+            parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+            path = os.path.join(parent_dir, 'Reports', folder_names.get(label, ''))
+
+            # If path doesn't exist or isn't a directory, return False
+            if not os.path.isdir(path):
                 return False
 
-            # Check for folders with the specified date format
-            for filename in os.listdir(path):
-                # Check if the filename is a directory
-                if os.path.isdir(os.path.join(path, filename)):
-                    return True
+            # Check if any subfolder exists using a generator expression
+            return any(os.path.isdir(os.path.join(path, item)) for item in os.listdir(path))
 
-            # Return False to indicate that no folders were found
-            return False
-
-        except KeyError as e:
-            # Handle the exception if the label is not found in the folder_names dictionary
+        except KeyError:
             py_logger.error(f"Error: Label '{label}' not found in folder_names dictionary.")
             return False
-
         except OSError as e:
-            # Handle the exception if there is an error accessing the file system
-            py_logger.error(f"Error: {e}")
+            py_logger.error(f"File system error: {e}")
             return False
-
         except Exception as e:
-            # Handle any other unexpected exceptions
-            py_logger.error(f"An unexpected error occurred: {e}")
+            py_logger.error(f"Unexpected error: {e}")
             return False
 
     def check_KPIs_config(self, label, edit_button, checkbox, folder_button):
@@ -1598,40 +1596,41 @@ class MainWindow(QMainWindow):
                 # Flatten both dictionaries for easier comparison
                 expected_config = data['ECU_setting']
                 current_config = self.ecu_selection_status
+                print("validate_ECU_configuration :: ", expected_config, current_config)
 
                 for ecu_type, settings in expected_config.items():
                     if isinstance(settings, dict):  # Only process nested ECU sections
                         for key, value in settings.items():
                             if value:  # If expected is True
-                                if not current_config.get(ecu_type, {}).get(key, False):
-                                    set_button_style(False)
+                                if current_config.get(ecu_type, {}).get(key, False):
+                                    set_button_style(True)
 
-                                    return False
+                                    return True
 
-                set_button_style(True)
-                return True  # All required True values are matched
+                set_button_style(False)
+                return False  # All required True values are matched
 
             except Exception as e:
                 py_logger.error(f"Error validating ECU configuration '{label}': {e}")
                 set_button_style(False)
                 return False
 
-        folder_button.setEnabled(self.is_folder_with_date_format_present(label))    
+        folder_button.setEnabled(self.is_folder_present(label))
 
         try:
             is_valid = True
 
-            if label == "Startup Time":
-                with open('./Startup_Time_Scripts/startup_time_config.json', 'r') as file:
-                    data = json.load(file)
+            # if label == "Startup Time":
+            #     with open('./Startup_Time_Scripts/startup_time_config.json', 'r') as file:
+            #         data = json.load(file)
  
-                if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
-                    return bool(validate_ECU_configuration(data))
-                else:
-                    set_button_style(is_valid)
-                    return is_valid
+            #     if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
+            #         return bool(validate_ECU_configuration(data))
+            #     else:
+            #         set_button_style(is_valid)
+            #         return is_valid
 
-            elif label == "Shutdown Time":
+            if label == "Shutdown Time":
                 with open('./Shutdown_Time_Scripts/shutdown_time_config.json', 'r') as file:
                     data = json.load(file)
                
