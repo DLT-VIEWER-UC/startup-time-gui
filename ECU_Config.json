@@ -1,0 +1,27 @@
+{
+    "RCAR": {
+        "IP": "1.1.1.1",
+        "telnet_username": "1",
+        "telnet_password": "1",
+        "FTP_username": "1",
+        "FTP_password": "1"
+    },
+    "SoC0": {
+        "IP": "1.11.1.1",
+        "telnet_username": "1",
+        "telnet_password": "11",
+        "FTP_username": "1",
+        "FTP_password": ""
+    },
+    "SoC1": {
+        "IP": "1.1.1.1",
+        "telnet_username": "1",
+        "telnet_password": "1",
+        "FTP_username": "1",
+        "FTP_password": "11"
+    },
+    "Relay": {
+        "relay_port": "COM1",
+        "relay_baudrate": 123
+    }
+}
