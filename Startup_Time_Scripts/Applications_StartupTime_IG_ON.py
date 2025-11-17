@@ -48,6 +48,12 @@ running_threads = []
 stop_requested = threading.Event()
 script_directory = Path(__file__).parent.parent
 stop_flag_path = script_directory / "stop.flag"
+tab_color_map = {
+    'RCAR': 'ECF000',
+    'SoC0': '90EE90',
+    'SoC1': 'ADD8E6',
+    'ECU_Summary': 'FFA500',
+}
 
 def get_signal_name_with_fallback(signum):
     """
@@ -1407,6 +1413,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
             cell.value = f'Count: {count}'
             cell.fill = yellow_fill
             cell.border = border_style
+            cell.font = Font(bold=True)
    
     # Merge cells from column 1 to 9 in the current row with the above row
     for col in range(1, 10 if validate_startup_order else 8):
@@ -1435,6 +1442,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     terminated_count_cell = sheet.cell(row=startup_order_count_idx, column=13 if validate_startup_order else 8)
     terminated_count_cell.value = f'Count: {application_startup_order_status_iteration["terminated_applications_count"]}'
     terminated_count_cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+    terminated_count_cell.font = Font(bold=True)
    
 
     other_header_columns.extend(['Signal', 'Cause'])
@@ -1442,6 +1450,7 @@ def write_data_to_excel(ecu_type, dltstart_timestamps, process_timing_info, shee
     missing_sts_count_cell = sheet.cell(row=startup_order_count_idx, column=16 if validate_startup_order else 9)
     missing_sts_count_cell.value = f'Count: {application_startup_order_status_iteration["missing_sts_count"]}'
     missing_sts_count_cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+    missing_sts_count_cell.font = Font(bold=True)
 
     # Apply the border style to the entire merged range
     if not is_empty_log:
@@ -2943,6 +2952,9 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
 
         # Set the title of the sheet
         summary_sheet.title = f'{setup_type}_{ecu_type}_Summary' if ecu_type != 'ECU_Summary' else f'{setup_type}_Summary'
+        
+        # Set tab color for summary sheet (light blue)
+        summary_sheet.sheet_properties.tabColor = tab_color_map.get(ecu_type, '0070C0')
 
         # Create a list to store the sheets
         sheets = []
@@ -2963,6 +2975,8 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
                     enabled_ecu = 'RCAR'
                 sheet_title = f"{setup_type}_{enabled_ecu}_Summary"
                 sheet = workbook.create_sheet(title=sheet_title)
+                # Set tab color for ECU summary sheets (light green)
+                sheet.sheet_properties.tabColor = tab_color_map.get(enabled_ecu, '00B050')
                 sheets.append(sheet)
 
 
