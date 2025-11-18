@@ -1718,13 +1718,13 @@ class StartupTimeConfig(QDialog):
         for i in range(4):
             self.update_ecu_block_styles(self.ecu_block_list[i], self.ecu_error_list[i])
 
-        self.ok_btn.setEnabled(False if self.main_window.is_test_in_progress and self.is_KPI_selected else True)
-        return not is_partially_filled and any(
-            self.ecu_block_list[0] and ecu_block_list_map[0], 
-            self.ecu_block_list[1] and ecu_block_list_map[1],
-            self.ecu_block_list[2] and ecu_block_list_map[2],
-            self.ecu_block_list[3] and ecu_block_list_map[3]
-        )
+        self.ok_btn.setEnabled(False if self.main_window.is_test_in_progress and self.main_window.is_KPI_selected else True)
+        return not is_partially_filled and any((
+            not self.ecu_error_list[0] and ecu_block_list_map[0], 
+            not self.ecu_error_list[1] and ecu_block_list_map[1],
+            not self.ecu_error_list[2] and ecu_block_list_map[2],
+            not self.ecu_error_list[3] and ecu_block_list_map[3]
+        ))
        
     def update_ecu_block_styles(self, ecu_gb, has_error):
         """Update the styles of the ECU block based on error state."""

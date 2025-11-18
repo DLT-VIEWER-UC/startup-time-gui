@@ -1619,7 +1619,45 @@ class MainWindow(QMainWindow):
         try:
             is_valid = True
 
-           
+            # if label == "Startup Time":
+            #     with open('./Startup_Time_Scripts/startup_time_config.json', 'r') as file:
+            #         data = json.load(file)
+ 
+            #     if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
+            #         return bool(validate_ECU_configuration(data))
+            #     else:
+            #         set_button_style(is_valid)
+            #         return is_valid
+
+            # elif label == "Shutdown Time":
+            #     with open('./Shutdown_Time_Scripts/shutdown_time_config.json', 'r') as file:
+            #         data = json.load(file)
+               
+            #     is_valid = (
+            #         isinstance(data.get("DLT-Viewer Log Capture Time"), int) and
+            #         isinstance(data.get("Iterations"), int) and
+            #         data.get("windows", {}).get("Is Environment Path Set") is not None and
+            #         isinstance(data.get("windows", {}).get("DLT-Viewer Installed Path"), str)                    
+            #     )                
+
+            #     set_button_style(is_valid)
+            #     return is_valid
+
+            # Instantiate dialog dynamically
+            dialog = self.get_dialog_instance(label, checkbox)
+
+            # Validate dialog fields if method exists, else log and mark invalid            
+            if dialog:
+                if hasattr(dialog, "validate_all_fields"):
+                    is_valid = dialog.validate_all_fields()
+                    del dialog
+                else:
+                    # py_logger.warning(f"Dialog for '{label}' does not implement 'validate_all_fields'.")
+                    is_valid = False
+            else:
+                py_logger.warning(f"No dialog found for label: '{label}'")
+                is_valid = False            
+
             # Labels that require ECU config validation
             ecu_validation_labels = {
                 "Heap Memory",
