@@ -1109,7 +1109,7 @@ class StartupTimeConfig(QDialog):
             self.validate_all_fields(),
             win_group.setDisabled(checked),
             self.open_logs_btn.setEnabled(checked)] + [  # Enable/disable the logs folder button
-            w.setDisabled(checked) for w in self.widgets['DLT-Viewer Log Capture Time'] + self.widgets['Power ON-OFF Delay']
+            w.setDisabled(checked) for w in self.widgets['DLT-Viewer Log Capture Time'] + self.widgets['Power ON-OFF Delay'] + self.widgets['Iterations']
         ] + [
             self.update_border('DLT-Viewer Log Capture Time'),
             self.update_border('Power ON-OFF Delay'),
@@ -1178,7 +1178,7 @@ class StartupTimeConfig(QDialog):
                 self.widgets[key][0].setStyleSheet('border: 1px solid red;')
         elif key == 'Iterations':
             text = self.widgets[key][0].text()
-            if (text and 1 <= int(text)):
+            if self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text)):
                 self.widgets[key][0].setStyleSheet('border: 0px;')
             else:
                 self.widgets[key][0].setStyleSheet('border: 1px solid red;')
@@ -1613,7 +1613,7 @@ class StartupTimeConfig(QDialog):
                 else:
                     self._set_widget_style(entry[2], 'border: 0px;')
         for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Power ON-OFF Delay']:
-            if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay'] and self.widgets['Pre-Generated Logs'].isChecked():
+            if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay', 'Iterations'] and self.widgets['Pre-Generated Logs'].isChecked():
                 continue
             text = self.widgets[key][0].text()
             if not text or len(text) == 0:
@@ -1626,7 +1626,7 @@ class StartupTimeConfig(QDialog):
                 if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
                     enabled = False
             elif key == 'Iterations':
-                if not (text and 1 <= int(text)):
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
                     enabled = False
         if not self.widgets['Pre-Generated Logs'].isChecked():
             path_cb = self.widgets['windows.Is Environment Path Set']
