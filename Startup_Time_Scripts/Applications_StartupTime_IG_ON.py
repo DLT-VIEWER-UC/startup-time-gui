@@ -140,10 +140,10 @@ def configure_chart_layout(chart, width=18, height=10, gap_width=100, major_unit
     
     # Set manual layout with padding
     ml = ManualLayout()
-    ml.x = 0.10
-    ml.y = 0.08
-    ml.w = 0.87
-    ml.h = 0.87
+    ml.x = 0.05
+    ml.y = 0.04
+    ml.w = 0.95
+    ml.h = 0.95
     ml.xMode = "edge"
     ml.yMode = "edge"
     ml.wMode = "edge"
@@ -190,7 +190,7 @@ def customize_clustered_series(chart, transparent=True, label_position="outEnd")
             
             ser.graphicalProperties = gp
 
-def create_combo_chart(ws, width, height, position, cats_mcol, cats_mrow, cats_mxrow, sd_mcol, sd_mxcol, sd_mrow, sd_mxrow, cd_mcol, cd_mxcol, cd_mrow, cd_mxrow, chart_title, x_title, y_title, is_combo=True):
+def create_combo_chart(ws, width, height, step, position, cats_mcol, cats_mrow, cats_mxrow, sd_mcol, sd_mxcol, sd_mrow, sd_mxrow, cd_mcol, cd_mxcol, cd_mrow, cd_mxrow, chart_title, x_title, y_title, is_combo=True):
     """Main function to create the combo chart with all configurations."""
     # Create data references
     cats, stacked_data, clustered_data = create_data_references(
@@ -215,7 +215,7 @@ def create_combo_chart(ws, width, height, position, cats_mcol, cats_mrow, cats_m
     
     # Add gridlines and configure layout
     add_gridlines(stacked)
-    configure_chart_layout(stacked, width=width, height=height, gap_width=100, major_unit=(1 if is_combo else 500))
+    configure_chart_layout(stacked, width=width, height=height, gap_width=100, major_unit=step)
     
     # Customize series
     customize_stacked_series(stacked, colors=["deebf7", "ffbf00"] if is_combo else ["c5e0b4"], is_combo=is_combo)
@@ -1631,7 +1631,7 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
     #             cell.border = border_style
     if len(dltstart_timestamps)>0:            
         create_combo_chart(
-            ws=sheet, position="Q4",
+            ws=sheet, position="Q4", step=1,
             width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2 + 2,
             cats_mcol=2, cats_mrow=7, cats_mxrow=len(dltstart_timestamps) + 7,
             sd_mcol=3, sd_mxcol=4, sd_mrow=6, sd_mxrow=len(dltstart_timestamps) + 6,
@@ -2075,9 +2075,22 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             differences[data_row['process']] = float(data_row['avg_time'])
+    
+    if len(process_times) > 0:
+        create_combo_chart(
+            ws=sheet, position=f"M{start_row}", step=1,
+            width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2,
+            cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_times) + start_row + 1,
+            sd_mcol=5, sd_mxcol=5, sd_mrow=start_row + 1, sd_mxrow=len(process_times) + start_row + 1,
+            cd_mcol=5, cd_mxcol=5, cd_mrow=start_row + 1, cd_mxrow=len(process_times) + start_row + 1,
+            chart_title=f"Summary of Applications Startup Time from IG-ON on {setup_type} {ecu_type} (Average)",
+            y_title="Time Interval (seconds)",
+            x_title="Applications",
+            is_combo=False
+        )
 
-    # Plot the average data as a graph
-    plot_process_startup_time_graph(differences, sheet, start_row, ecu_type, True)
+    # # Plot the average data as a graph
+    # plot_process_startup_time_graph(differences, sheet, start_row, ecu_type, True)
 
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
@@ -2125,8 +2138,20 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
         if data_row['avg_time'] != '-':
             individual_differences[data_row['process']] = float(data_row['avg_time'])
    
-    # Plot the average data as a graph
-    plot_process_individual_apps_avg_graph(individual_differences, sheet, start_row, ecu_type)
+    if len(process_start_times) > 0:
+        create_combo_chart(
+            ws=sheet, position=f"F{start_row}", step=500,
+            width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2,
+            cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_start_times) + start_row + 1,
+            sd_mcol=5, sd_mxcol=5, sd_mrow=start_row + 1, sd_mxrow=len(process_start_times) + start_row + 1,
+            cd_mcol=5, cd_mxcol=5, cd_mrow=start_row + 1, cd_mxrow=len(process_start_times) + start_row + 1,
+            chart_title=f"Summary of Applications Init Up Time on {setup_type} {ecu_type} (Average)",
+            y_title="Time Interval (ms)",
+            x_title="Applications",
+            is_combo=False
+        )
+    # # Plot the average data as a graph
+    # plot_process_individual_apps_avg_graph(individual_differences, sheet, start_row, ecu_type)
 
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
@@ -2252,7 +2277,7 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
             sheet.append(data_row)
     if len(process_timing_info) > 0:
         create_combo_chart(
-            ws=sheet, position=f"E{start_row}",
+            ws=sheet, position=f"E{start_row}", step=500,
             width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2,
             cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_timing_info) + start_row + 1,
             sd_mcol=4, sd_mxcol=4, sd_mrow=start_row + 1, sd_mxrow=len(process_timing_info) + start_row + 1,
@@ -4137,13 +4162,9 @@ def start_startup_time_measurement(logger):
         #     return False
        
         # Retrieve the number of iterations from the configuration
-        try:
-            iterations = config["Iterations"]
-            if not isinstance(iterations, int):
-                logger.error("Error: 'Iterations' must be an integer.")
-                return False
-        except KeyError:
-            logger.error("Error: 'Iterations' key not found in the configuration file.")
+        iterations = config.get("Iterations", 0)
+        if not is_pre_gen_logs and (not isinstance(duration, int) or iterations <= 0):
+            logger.error("Error: 'Iterations' must be an integer.")
             return False
        
         duration = config.get("DLT-Viewer Log Capture Time")
