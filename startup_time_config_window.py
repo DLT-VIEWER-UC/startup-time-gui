@@ -1563,7 +1563,28 @@ class StartupTimeConfig(QDialog):
             2: self.isElite and self.isSOC0,
             3: self.isElite and self.isSOC1
         }
-       
+        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Power ON-OFF Delay']:
+            if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay', 'Iterations'] and self.widgets['Pre-Generated Logs'].isChecked():
+                continue
+            text = self.widgets[key][0].text()
+            if not text or len(text) == 0:
+                enabled = False
+                break
+            if key == 'DLT-Viewer Log Capture Time':
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
+                    enabled = False
+            elif key == 'Power ON-OFF Delay':
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
+                    enabled = False
+            elif key == 'Iterations':
+                if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
+                    enabled = False
+        if not self.widgets['Pre-Generated Logs'].isChecked():
+            path_cb = self.widgets['windows.Is Environment Path Set']
+            path_le = self.widgets['windows.DLT-Viewer Installed Path']
+            if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0 or path_le.text().startswith(' ') or path_le.text().endswith(' ')):
+                enabled = False
+        is_partially_filled = not enabled
         for i in range(4):
             if self.ecu_block_list[i].disabled or not ecu_block_list_map[i]:
                 continue
@@ -1612,27 +1633,6 @@ class StartupTimeConfig(QDialog):
                     self._set_widget_style(entry[2], 'border: 1px solid red;')
                 else:
                     self._set_widget_style(entry[2], 'border: 0px;')
-        for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Power ON-OFF Delay']:
-            if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay', 'Iterations'] and self.widgets['Pre-Generated Logs'].isChecked():
-                continue
-            text = self.widgets[key][0].text()
-            if not text or len(text) == 0:
-                enabled = False
-                break
-            if key == 'DLT-Viewer Log Capture Time':
-                if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
-                    enabled = False
-            elif key == 'Power ON-OFF Delay':
-                if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
-                    enabled = False
-            elif key == 'Iterations':
-                if not (self.pre_gen_logs_cb.isChecked() or (text and 1 <= int(text))):
-                    enabled = False
-        if not self.widgets['Pre-Generated Logs'].isChecked():
-            path_cb = self.widgets['windows.Is Environment Path Set']
-            path_le = self.widgets['windows.DLT-Viewer Installed Path']
-            if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0 or path_le.text().startswith(' ') or path_le.text().endswith(' ')):
-                enabled = False
         startup_order_group = self.widgets['Startup Order Application Registration']
         if startup_order_group.isChecked():
             if self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
@@ -1719,7 +1719,12 @@ class StartupTimeConfig(QDialog):
             self.update_ecu_block_styles(self.ecu_block_list[i], self.ecu_error_list[i])
 
         self.ok_btn.setEnabled(False if self.main_window.is_test_in_progress and self.is_KPI_selected else True)
-        return enabled
+        return not is_partially_filled and any(
+            self.ecu_block_list[0] and ecu_block_list_map[0], 
+            self.ecu_block_list[1] and ecu_block_list_map[1],
+            self.ecu_block_list[2] and ecu_block_list_map[2],
+            self.ecu_block_list[3] and ecu_block_list_map[3]
+        )
        
     def update_ecu_block_styles(self, ecu_gb, has_error):
         """Update the styles of the ECU block based on error state."""

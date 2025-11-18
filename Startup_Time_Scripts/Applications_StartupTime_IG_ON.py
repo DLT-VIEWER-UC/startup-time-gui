@@ -3132,8 +3132,8 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
     """
     try:
         global max_log_files_count
-        log_files = glob.glob(os.path.join(pre_gen_logs_folder_path / f"{setup_type}_{ecu_type}", "*.log"))
         if is_pre_gen_logs:
+            log_files = glob.glob(os.path.join(pre_gen_logs_folder_path / f"{setup_type}_{ecu_type}", "*.log"))
             iterations = len(log_files)
             max_log_files_count = max(max_log_files_count, iterations)
         print("Creating sheets for iterations: ", iterations)
@@ -4163,7 +4163,7 @@ def start_startup_time_measurement(logger):
        
         # Retrieve the number of iterations from the configuration
         iterations = config.get("Iterations", 0)
-        if not is_pre_gen_logs and (not isinstance(duration, int) or iterations <= 0):
+        if not is_pre_gen_logs and (not isinstance(iterations, int) or iterations <= 0):
             logger.error("Error: 'Iterations' must be an integer.")
             return False
        

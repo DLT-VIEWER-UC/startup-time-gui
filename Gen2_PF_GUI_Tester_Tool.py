@@ -529,7 +529,7 @@ class MainWindow(QMainWindow):
             self.kpi_log_file = None
 
         py_logger.info(f"Completed execution for {self.current_kpi_label} KPI. Logging stopped.")
-        print(f"{'='*35} END OF KPI EXECUTION {'='*35}")
+        print(f"{'='*35} END OF {self.current_kpi_label.upper()} KPI EXECUTION {'='*35}")
         self.current_kpi_label = None    
 
     def set_window_properties(self) -> None:
@@ -1596,19 +1596,18 @@ class MainWindow(QMainWindow):
                 # Flatten both dictionaries for easier comparison
                 expected_config = data['ECU_setting']
                 current_config = self.ecu_selection_status
-                print("validate_ECU_configuration :: ", expected_config, current_config)
 
                 for ecu_type, settings in expected_config.items():
                     if isinstance(settings, dict):  # Only process nested ECU sections
                         for key, value in settings.items():
                             if value:  # If expected is True
-                                if current_config.get(ecu_type, {}).get(key, False):
-                                    set_button_style(True)
+                                if not current_config.get(ecu_type, {}).get(key, False):
+                                    set_button_style(False)
 
-                                    return True
+                                    return False
 
-                set_button_style(False)
-                return False  # All required True values are matched
+                set_button_style(True)
+                return True  # All required True values are matched
 
             except Exception as e:
                 py_logger.error(f"Error validating ECU configuration '{label}': {e}")
@@ -1620,48 +1619,10 @@ class MainWindow(QMainWindow):
         try:
             is_valid = True
 
-            # if label == "Startup Time":
-            #     with open('./Startup_Time_Scripts/startup_time_config.json', 'r') as file:
-            #         data = json.load(file)
- 
-            #     if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
-            #         return bool(validate_ECU_configuration(data))
-            #     else:
-            #         set_button_style(is_valid)
-            #         return is_valid
-
-            if label == "Shutdown Time":
-                with open('./Shutdown_Time_Scripts/shutdown_time_config.json', 'r') as file:
-                    data = json.load(file)
-               
-                is_valid = (
-                    isinstance(data.get("DLT-Viewer Log Capture Time"), int) and
-                    isinstance(data.get("Iterations"), int) and
-                    data.get("windows", {}).get("Is Environment Path Set") is not None and
-                    isinstance(data.get("windows", {}).get("DLT-Viewer Installed Path"), str)                    
-                )                
-
-                set_button_style(is_valid)
-                return is_valid
-
-            # Instantiate dialog dynamically
-            dialog = self.get_dialog_instance(label, checkbox)
-
-            # Validate dialog fields if method exists, else log and mark invalid            
-            if dialog:
-                if hasattr(dialog, "validate_all_fields"):
-                    is_valid = dialog.validate_all_fields()
-                    del dialog
-                else:
-                    # py_logger.warning(f"Dialog for '{label}' does not implement 'validate_all_fields'.")
-                    is_valid = False
-            else:
-                py_logger.warning(f"No dialog found for label: '{label}'")
-                is_valid = False            
-
+           
             # Labels that require ECU config validation
             ecu_validation_labels = {
-                "Heap Memory", "Startup Time", "Cyclic and Turnaround Time",
+                "Heap Memory",
                 "Throughput and Fault Injection", "Execution Time"
             }
 
@@ -2245,6 +2206,227 @@ class MainWindow(QMainWindow):
                 "SoC1_FTP_Username": ecu_input_fields.get("SoC1", {}).get("FTP_username", ""),
                 "SoC1_FTP_Password": ecu_input_fields.get("SoC1", {}).get("FTP_password", "")
             }
+       
+        # def compare_ecu_settings(data, label):
+        #     """
+        #     Compare ECU settings between self.ecu_selection_status and the given data.
+
+        #     Description:
+        #     ------------
+        #     This function extracts only the 'PADAS' and 'Elite' sections from the input `data`
+        #     (which contains ECU settings) and compares them with `self.ecu_selection_status`.
+        #     For each key inside these sections, the result will be True only if both dictionaries
+        #     have True for that key; otherwise, False.
+
+        #     Input:
+        #     ------
+        #     data : dict
+        #         A dictionary containing ECU settings in the format:
+        #         {
+        #             "ECU_setting": {
+        #                 "PADAS": {...},
+        #                 "Elite": {...}
+        #             },
+        #             "Current_Timestamp": "..."
+        #         }
+
+        #     Output:
+        #     -------
+        #     comparison_result : dict
+        #         A dictionary with the same structure as 'PADAS' and 'Elite', where each key
+        #         is True only if both sources have True, else False.
+        #         Example:
+        #         {
+        #             "PADAS": {"RCAR": True},
+        #             "Elite": {"RCAR": False, "SoC0": False, "SoC1": False}
+        #         }
+
+        #     Logic:
+        #     ------
+        #     1. Extract 'PADAS' and 'Elite' from the input `data` safely using `.get()`.
+        #     2. Loop through each section ('PADAS', 'Elite') and their keys.
+        #     3. For each key, check:
+        #     - If `self.ecu_selection_status[section][key]` is True AND
+        #         `partial_data[section][key]` is True → set True.
+        #     - Else → set False.
+        #     4. Return the comparison result dictionary.
+        #     """
+
+        #     # Step 1: Extract only the required part from data
+        #     partial_data = {
+        #         "PADAS": data.get("ECU_setting", {}).get("PADAS", {}),
+        #         "Elite": data.get("ECU_setting", {}).get("Elite", {})
+        #     }            
+
+        #     # Step 2: Initialize result dictionary
+        #     comparison_result = {}
+
+        #     # Step 3: Compare values
+        #     for section in partial_data:
+        #         comparison_result[section] = {}
+        #         for key in partial_data[section]:
+        #             comparison_result[section][key] = (
+        #                 self.ecu_selection_status.get(section, {}).get(key, False)
+        #                 and partial_data[section].get(key, False)
+        #             )
+           
+        #     py_logger.info(
+        #         f"\n{'#'*70}\n"
+        #         f"Label: {label}\n"
+        #         f"KPI_ecu_settings: {partial_data}\n"
+        #         f"mainwindow_ecu_settings: {self.ecu_selection_status}\n"
+        #         f"comparison_result: {comparison_result}\n"
+        #         f"{'#'*70}"
+        #     )
+
+        #     # Step 4: Return result
+        #     return comparison_result
+
+        def compare_ecu_settings(data, label):
+            """
+            Compare ECU settings between self.ecu_selection_status and the given data,
+            and save extracted ECU settings to a JSON file under the given label.
+
+            Description:
+            ------------
+            This function extracts only the 'PADAS' and 'Elite' sections from the input `data`
+            (which contains ECU settings) and compares them with `self.ecu_selection_status`.
+            For each key inside these sections, the result will be True only if both dictionaries
+            have True for that key; otherwise, False. It also saves the extracted ECU settings
+            to 'all_KPIs_ECU_settings.json' under the key `label`.
+
+            Input:
+            ------
+            data : dict
+                A dictionary containing ECU settings in the format:
+                {
+                    "ECU_setting": {
+                        "PADAS": {...},
+                        "Elite": {...}
+                    },
+                    "Current_Timestamp": "..."
+                }
+            label : str
+                A unique identifier for saving the extracted ECU settings.
+
+                    Output:
+                    -------
+                    comparison_result : dict
+                        A dictionary with the same structure as 'PADAS' and 'Elite', where each key
+                        is True only if both sources have True, else False.
+                        Example:
+                        {
+                            "PADAS": {"RCAR": True},
+                            "Elite": {"RCAR": False, "SoC0": False, "SoC1": False}
+                        }
+
+                    Logic:
+                    ------
+                    1. Extract 'PADAS' and 'Elite' from the input `data` safely using `.get()`.
+                    2. Loop through each section ('PADAS', 'Elite') and their keys.
+                    3. For each key, check:
+                    - If `self.ecu_selection_status[section][key]` is True AND
+                        `partial_data[section][key]` is True → set True.
+                    - Else → set False.
+                    4. Return the comparison result dictionary.
+                    """
+
+            # Step 1: Extract only the required part from data
+            partial_data = {
+                "PADAS": data.get("ECU_setting", {}).get("PADAS", {}),
+                "Elite": data.get("ECU_setting", {}).get("Elite", {})
+            }
+
+            # Step 2: Initialize result dictionary
+            comparison_result = {}
+
+            # Step 3: Compare values
+            for section in partial_data:
+                comparison_result[section] = {}
+                for key in partial_data[section]:
+                    comparison_result[section][key] = (
+                        self.ecu_selection_status.get(section, {}).get(key, False)
+                        and partial_data[section].get(key, False)
+                    )
+
+            # Step 4: Save partial_data to JSON under label
+            file_name = "all_KPIs_ECU_settings.json"
+            if os.path.exists(file_name):
+                with open(file_name, "r") as f:
+                    all_data = json.load(f)
+            else:
+                all_data = {}
+
+            all_data[label] = partial_data
+
+            with open(file_name, "w") as f:
+                json.dump(all_data, f, indent=4)
+
+            # Step 5: Log info
+            py_logger.info(
+                f"\n{'#'*70}\n"
+                f"Label: {label}\n"
+                f"KPI_ecu_settings: {partial_data}\n"
+                f"mainwindow_ecu_settings: {self.ecu_selection_status}\n"
+                f"comparison_result: {comparison_result}\n"
+                f"{'#'*70}"
+            )
+
+            # Step 6: Return result
+            return comparison_result
+
+        def compare_ecu_configs(label, data):
+            """
+            Compare expected ECU settings from JSON with current ECU selection status.
+            Returns a dictionary with the same structure as current_config.
+           
+            Args:
+                data (dict): Dictionary containing ECU settings under the key "ECU_setting".
+           
+            Returns:
+                dict: Updated ECU configuration comparison result.
+            """
+            try:
+                # Validate input structure
+                if not isinstance(data, dict):
+                    raise TypeError("Input 'data' must be a dictionary.")
+               
+                if "ECU_setting" not in data:
+                    raise KeyError("Missing 'ECU_setting' key in input data.")
+               
+                expected_config = data["ECU_setting"]
+                final_config = {}
+
+                py_logger.info(f"{label}\nexpected_config: {expected_config}\n ecu_selection_status: {self.ecu_selection_status}")
+
+                # Ensure self.ecu_selection_status exists and is a dictionary
+                if not hasattr(self, "ecu_selection_status") or not isinstance(self.ecu_selection_status, dict):
+                    raise AttributeError("Object does not have a valid 'ecu_selection_status' attribute.")
+
+                # Iterate through ECU groups and compare configurations
+                for group, keys in self.ecu_selection_status.items():
+                    final_config[group] = {}
+                    for key in keys:
+                        # Compare both configs: True only if both are True
+                        final_config[group][key] = (
+                            self.ecu_selection_status[group].get(key, False) and
+                            expected_config.get(group, {}).get(key, False)
+                        )
+
+                # Update the original data with the comparison result
+                # data["ECU_setting"] = final_config
+                py_logger.info(f"final_config: {final_config}")
+
+                return final_config
+
+            except (TypeError, KeyError, AttributeError) as e:
+                # Handle known exceptions gracefully
+                py_logger.info(f"Error: {e}")
+                return None
+            except Exception as e:
+                # Catch any unexpected errors
+                py_logger.info(f"An unexpected error occurred: {e}")
+                return None
 
         def update_config_file(file_path, label):
             try:
@@ -2255,9 +2437,14 @@ class MainWindow(QMainWindow):
                     data['serial-port-relay'] = self.relay_port_input.text()
                     data['baudrate-relay'] = self.relay_baudrate_input.text()
 
-                if not label in ["Heap Memory", "Startup Time", "Cyclic and Turnaround Time", "Execution Time", "Throughput and Fault Injection"]:            
+                if label in ["Heap Memory", "Startup Time", "Cyclic and Turnaround Time", "Execution Time", "Throughput and Fault Injection"]:
+                    final_config = compare_ecu_settings(data, label)
+                    if final_config:
+                        data["ECU_setting"] = {}
+                        data["ECU_setting"] = final_config                    
+                else:
                     if "ECU_setting" not in data:
-                        data["ECU_setting"] = {}                
+                        data["ECU_setting"] = {}
                
                     data["ECU_setting"]["PADAS"] = {
                         "RCAR": self.padas_checkbox.isChecked()
@@ -2267,19 +2454,15 @@ class MainWindow(QMainWindow):
                         "RCAR": self.RCar_checkbox.isChecked(),
                         "SoC0": self.SoC0_checkbox.isChecked(),
                         "SoC1": self.SoC1_checkbox.isChecked()
-                    }    
+                    }                    
 
                 data["ECU_setting"].update(build_ecu_settings())                
 
                 with open(file_path, 'w') as f:
                     json.dump(data, f, indent=4)
 
-            except FileNotFoundError:
-                py_logger.error(f"Error: Configuration file '{file_path}' not found.")
-            except json.JSONDecodeError:
-                py_logger.error(f"Error: Configuration file '{file_path}' is not a valid JSON.")
-            except KeyError as e:
-                py_logger.error(f"Error: Missing expected key in ECU input fields: {e}")
+            except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+                py_logger.error(f"Error with JSON: {e}", exc_info=True)
             except Exception as e:
                 py_logger.error(f"Unexpected error while updating '{file_path}': {e}")
 
@@ -2353,10 +2536,59 @@ class MainWindow(QMainWindow):
         for widget in self.findChildren((QCheckBox, QLineEdit)):
             widget.setEnabled(False)        
 
+    def restore_KPIs_ECU_settings(self, label):
+        """
+        Restore ECU settings from 'all_KPIs_ECU_settings.json' for the given label
+        and update the corresponding config file.
+
+        Steps:
+        ------
+        1. Load all saved ECU settings from 'all_KPIs_ECU_settings.json'.
+        2. Find the config file path using `switch_dict[label]`.
+        3. Load the config file data.
+        4. Replace its 'ECU_setting' section with the saved settings for the label.
+        5. Save the updated config back to the file.
+        """
+
+        file_name = "all_KPIs_ECU_settings.json"
+
+        # Step 1: Check if JSON file exists
+        if not os.path.exists(file_name):
+            py_logger.warning(f"File '{file_name}' not found. Cannot restore settings.")
+            return
+
+        # Step 2: Load all saved ECU settings
+        with open(file_name, "r") as f:
+            all_data = json.load(f)
+
+        # Step 3: Validate label
+        if label not in all_data:
+            # py_logger.warning(f"Label '{label}' not found in '{file_name}'.")
+            return
+
+        # Step 4: Get config path from switch_dict
+        config_path = switch_dict.get(label)
+        if not config_path or not os.path.exists(config_path):
+            py_logger.warning(f"Config path for label '{label}' not found or invalid.")
+            return
+
+        # Step 5: Load config file data
+        with open(config_path, "r") as f:
+            data = json.load(f)
+
+        # Step 6: Update ECU_setting in config data
+        data["ECU_setting"] = all_data[label]
+
+        # Step 7: Save updated config back to file
+        with open(config_path, "w") as f:
+            json.dump(data, f, indent=4)
+
     def restore_widget_states(self):
         for label, widgets in self.kpi_widgets.items():
             if label in self.kpi_widgets_status:
                 widgets['checkbox'].setEnabled(self.kpi_widgets_status[label]['checkbox'])
+
+                self.restore_KPIs_ECU_settings(label)
 
         self.enable_input_fields_based_on_checkboxes()
         self.update_button_states()
