@@ -87,7 +87,7 @@ class CollapsibleGroupBox(QFrame):
         # font.setWeight(200)
         # font.setPixelSize(13)
         # self.title_label.setFont(font)
-        self.title_label.setStyleSheet("color: #2c3e50; background: transparent; font-weight: 300; font-size: 15px;")
+        self.title_label.setStyleSheet("color: #2c3e50; background: transparent; font-weight: 500; font-size: 9pt;")
         
         # Toggle button
         self.toggle_button = QToolButton()

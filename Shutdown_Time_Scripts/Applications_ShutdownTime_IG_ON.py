@@ -1052,8 +1052,6 @@ def start_shutdown_time_measurement(py_logger):
     cur_dt_time_obj = datetime.now()
     global local_save_path
     # local_save_path = Path(__file__).parents[1].joinpath("Reports", "04_Shutdown_Time", "20250707_12-34-56")
-    local_save_path = Path(__file__).parents[1].joinpath("Reports", "07_Shutdown_Time", config.get('Current_Timestamp', cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S")))
-    local_save_path.mkdir(parents=True, exist_ok=True)
     global current_timestamp
     # current_timestamp = '20250707_123456'
     current_timestamp = cur_dt_time_obj.strftime("%Y%m%d_%H%M%S")
@@ -1091,6 +1089,9 @@ def start_shutdown_time_measurement(py_logger):
         if config is None:
             py_logger.error(f"File '{config_file_path}' not found.")
             return False
+        
+        local_save_path = Path(__file__).parents[1].joinpath("Reports", "07_Shutdown_Time", config.get('Current_Timestamp', cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S")))
+        local_save_path.mkdir(parents=True, exist_ok=True)
        
         if config['windows']['DLT-Viewer Installed Path'] and not os.path.isfile(os.path.join(config['windows']['DLT-Viewer Installed Path'])):
             py_logger.error("Configured dlt-viewer path is not valid.")
