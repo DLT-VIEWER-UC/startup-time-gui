@@ -4417,7 +4417,3 @@ def start_startup_time_measurement(logger):
         logger.info(f"Total script execution time: {(script_end_time-script_start_time):.3f} seconds")
     print("Final response :: ", isSuccess)
     return isSuccess
-
-if __name__ == "__main__":
-    # Start the startup time measurement process
-    start_startup_time_measurement(setup_logging())
