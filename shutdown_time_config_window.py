@@ -98,7 +98,7 @@ class ShutdownTimeConfig(QDialog):
             elif key == 'Iterations':
                 le.textChanged.connect(lambda text: [self.update_border('Iterations')])
             # le.textChanged.connect(lambda text: [self.ok_btn.setDisabled(False)])
-            le.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
+            le.textChanged.connect(lambda text: [self.validate_all_fields()])
             le.setValidator(validator)
             le.setFixedWidth(100)
             row_layout = QHBoxLayout()
@@ -121,7 +121,7 @@ class ShutdownTimeConfig(QDialog):
         path_le = QLineEdit(win.get('DLT-Viewer Installed Path', ''))
         path_le.setReadOnly(True)
         # path_le.textChanged.connect(lambda text: [self.ok_btn.setDisabled(False)])
-        path_le.textChanged.connect(lambda text: [self.on_change_update_ok_btn_state()])
+        path_le.textChanged.connect(lambda text: [self.validate_all_fields()])
         path_le.setMaxLength(250)
         count_lbl = QLabel(f"{len(path_le.text())} / {path_le.maxLength()}")
         path_le.textChanged.connect(lambda text: [count_lbl.setText(f"{len(text)} / {path_le.maxLength()}"),self.update_border('windows.DLT-Viewer Installed Path')])
@@ -142,7 +142,7 @@ class ShutdownTimeConfig(QDialog):
         browse_btn.setDisabled(path_cb.isChecked())
         count_lbl.setDisabled(path_cb.isChecked())
        
-        path_cb.toggled.connect(lambda checked: [path_le.setDisabled(checked), browse_btn.setDisabled(checked), count_lbl.setDisabled(checked),self.on_change_update_ok_btn_state(), self.update_border('windows.DLT-Viewer Installed Path')])
+        path_cb.toggled.connect(lambda checked: [path_le.setDisabled(checked), browse_btn.setDisabled(checked), count_lbl.setDisabled(checked),self.validate_all_fields(), self.update_border('windows.DLT-Viewer Installed Path')])
 
         btn_h = QHBoxLayout()
         btn_h.addStretch()
@@ -153,7 +153,7 @@ class ShutdownTimeConfig(QDialog):
         btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn)
         layout.addLayout(btn_h)
 
-        self.on_change_update_ok_btn_state()
+        self.validate_all_fields()
         for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'windows.DLT-Viewer Installed Path']:
             self.update_border(key)
         # self.ok_btn.setDisabled(True)        
@@ -197,7 +197,7 @@ class ShutdownTimeConfig(QDialog):
             is_valid = bool(text)
         widget.setStyleSheet("border: 0px;" if is_valid else "border: 1px solid red;")
 
-    def on_change_update_ok_btn_state(self):
+    def validate_all_fields(self):
         enabled = True
         for key in ['DLT-Viewer Log Capture Time', 'Iterations']: # , 'threshold-in-seconds'
             text = self.widgets[key].text()
@@ -211,16 +211,16 @@ class ShutdownTimeConfig(QDialog):
         if enabled:
             path_cb = self.widgets['windows.Is Environment Path Set']
             path_le = self.widgets['windows.DLT-Viewer Installed Path']
-            if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0 or path_le.text().startswith(" ")or path_le.text().endswith(" ")):
+            if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0 or path_le.text().startswith(" ") or path_le.text().endswith(" ")):
                 enabled = False        
-
-        enabled = enabled and not (self.main_window.is_test_in_progress and self.is_KPI_selected)
-
-        self.ok_btn.setEnabled(enabled)
-        if not enabled:
-            self.ok_btn.setToolTip("To enable the OK Button, configure all red highlighted fields")
+                
+        is_execution_in_progress = self.main_window.is_test_in_progress and self.is_KPI_selected
+        self.ok_btn.setEnabled(not is_execution_in_progress)
+        if is_execution_in_progress:
+            self.ok_btn.setToolTip("Execution in progress. Cannot modify configuration.")
         else:
             self.ok_btn.setToolTip("")
+        return enabled
 
     def browse_path(self, line_edit):
         # Determine starting directory based on current path in line_edit
