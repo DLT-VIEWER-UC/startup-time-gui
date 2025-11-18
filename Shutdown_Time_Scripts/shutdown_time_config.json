@@ -1,0 +1,35 @@
+{
+  "DLT-Viewer Log Capture Time": 180,
+  "Iterations": 5,
+  "windows": {
+    "Is Environment Path Set": false,
+    "DLT-Viewer Installed Path": "C:/Users/Testing/AppData/Local/Programs/dlt-viewer/dlt-viewer.exe"
+  },
+  "serial-port-relay": "COM4",
+  "baudrate-relay": "9600",
+  "ECU_setting": {
+    "PADAS": {
+      "RCAR": true
+    },
+    "Elite": {
+      "RCAR": false,
+      "SoC0": false,
+      "SoC1": false
+    },
+    "RCAR_IPAddress": "192.168.1.5",
+    "RCAR_Telnet_Username": "root",
+    "RCAR_Telnet_Password": "A5tem0_h0nd@_r00t",
+    "RCAR_FTP_Username": "qnxuser",
+    "RCAR_FTP_Password": "A5tem0_h0nd@_u5er",
+    "Qualcomm_SoC0_IPAddress": "",
+    "SoC0_Telnet_Username": "",
+    "SoC0_Telnet_Password": "",
+    "SoC0_FTP_Username": "",
+    "SoC0_FTP_Password": "",
+    "Qualcomm_SoC1_IPAddress": "",
+    "SoC1_Telnet_Username": "",
+    "SoC1_Telnet_Password": "",
+    "SoC1_FTP_Username": "",
+    "SoC1_FTP_Password": ""
+  }
+}
