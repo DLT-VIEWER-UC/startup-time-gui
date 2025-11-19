@@ -141,9 +141,9 @@ def configure_chart_layout(chart, width=18, height=10, gap_width=100, major_unit
     # Set manual layout with padding
     ml = ManualLayout()
     ml.x = 0.05
-    ml.y = 0.04
+    ml.y = 0.08
     ml.w = 0.95
-    ml.h = 0.95
+    ml.h = 0.90
     ml.xMode = "edge"
     ml.yMode = "edge"
     ml.wMode = "edge"
@@ -1140,7 +1140,7 @@ def extract_log_file_paths(index, ecu_type, setup_type, logger):
             #     target_logs_dir = local_save_path / "Logs" / f"{setup_type}_{ecu_type}"
             # else:  # PADAS
             #     target_logs_dir = local_save_path / "Logs"
-            target_logs_dir = local_save_path / "Logs" / f"{setup_type}_{ecu_type}"
+            target_logs_dir = local_save_path / "Pre-Generated_Logs" / f"{setup_type}_{ecu_type}"
            
             # Create directory if it doesn't exist
             target_logs_dir.mkdir(parents=True, exist_ok=True)
@@ -1440,52 +1440,52 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
     # if not is_empty_log:
     #     sheet.merge_cells(merged_range)
         
-    if is_empty_log:
-        for app in ecu_encountered_apps_map[ecu_type]:
-            ecu_app_info_counts_map[ecu_type].setdefault(app, OverallCounts())
-            is_app_configured = app in [app for _, order in application_startup_order for app in order]
-            is_app_configured = is_app_configured or app in [app for app in threshold_map[ecu_type]]
-            
-            if app not in encountered_apps:
-                encountered_apps.add(app)
-                data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
-                if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
-                    overall_IG_ON_cur_iteration['status'] = False
-                    ecu_app_info_counts_map[ecu_type][app].startup_time_judgement_fail_count += 1
-                if is_app_configured:
-                    ecu_app_info_counts_map[ecu_type][app].not_found_count += 1
-                else:
-                    ecu_app_info_counts_map[ecu_type][app].not_configured_count += 1
-                if validate_startup_order:
-                    if app_registration:
-                        if application_startup_order_status_iteration['startup_order_status']:
-                            application_startup_order_status_iteration['startup_order_status'] = (is_app_configured and not not_found_judgement) or (not is_app_configured and not not_configured_judgement)
-                        status = '-'
-                        if (is_app_configured and not not_found_judgement) or (not is_app_configured and not not_configured_judgement):
-                            status = 'PASS'
-                        else:
-                            status = 'FAIL'
-                        odr_type, expected_order, grp_len = get_expected_startup_order(app, application_startup_order, logger)
-                        data_row.extend([get_expected_startup_order_str(odr_type, expected_order, grp_len), status, '', '⬤' if is_app_configured else '', '⬤' if not is_app_configured else ''])
-                        if is_app_configured:
-                            application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
-                        else:
-                            application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name] += 1
+    # if is_empty_log:
+    for app in ecu_encountered_apps_map[ecu_type]:
+        ecu_app_info_counts_map[ecu_type].setdefault(app, OverallCounts())
+        is_app_configured = app in [app for _, order in application_startup_order for app in order]
+        is_app_configured = is_app_configured or app in [app for app in threshold_map[ecu_type]]
+        
+        if app not in encountered_apps:
+            encountered_apps.add(app)
+            data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
+            if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
+                overall_IG_ON_cur_iteration['status'] = False
+                ecu_app_info_counts_map[ecu_type][app].startup_time_judgement_fail_count += 1
+            if is_app_configured:
+                ecu_app_info_counts_map[ecu_type][app].not_found_count += 1
+            else:
+                ecu_app_info_counts_map[ecu_type][app].not_configured_count += 1
+            if validate_startup_order:
+                if app_registration:
+                    if application_startup_order_status_iteration['startup_order_status']:
+                        application_startup_order_status_iteration['startup_order_status'] = (is_app_configured and not not_found_judgement) or (not is_app_configured and not not_configured_judgement)
+                    status = '-'
+                    if (is_app_configured and not not_found_judgement) or (not is_app_configured and not not_configured_judgement):
+                        status = 'PASS'
                     else:
-                        data_row.extend(['-', '-', '-', '-', '-'])
+                        status = 'FAIL'
+                    odr_type, expected_order, grp_len = get_expected_startup_order(app, application_startup_order, logger)
+                    data_row.extend([get_expected_startup_order_str(odr_type, expected_order, grp_len), status, '', '⬤' if is_app_configured else '', '⬤' if not is_app_configured else ''])
+                    if is_app_configured:
+                        application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_FOUND.name] += 1
+                    else:
+                        application_startup_order_status_iteration[OrderFailureType.APPLICATION_NOT_CONFIGURED.name] += 1
                 else:
                     data_row.extend(['-', '-', '-', '-', '-'])
-                application_startup_order_status_iteration["missing_sts_count"]+=1
-                data_row.extend(['-', '-', '-', '⬤'])
-                sheet.append(data_row)
-                fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
+            else:
+                data_row.extend(['-', '-', '-', '-', '-'])
+            application_startup_order_status_iteration["missing_sts_count"]+=1
+            data_row.extend(['-', '-', '-', '⬤'])
+            sheet.append(data_row)
+            fill_disabled_cell_with_grey(10, 11, 12, sheet, config)
    
     if app_registration:
         for order_type, order in application_startup_order:
             for app in order:
                 ecu_app_info_counts_map[ecu_type].setdefault(app, OverallCounts())
                 overall_IG_ON_cur_iteration['configured_applications'].add(app)
-                if app not in dltstart_timestamps:
+                if app not in encountered_apps:
                     encountered_apps.add(app)
                     data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
                     if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])):
@@ -1689,7 +1689,7 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
         sheet.cell(row=1, column=col).border = border_style
 
 
-def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_columns):
+def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_columns, add_hyperlink=False):
     """
     Creates formatted section headers for different types of data in Excel worksheets.
    
@@ -1774,7 +1774,14 @@ def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_colum
     start_row = sheet.max_row
 
     # Calculate the last column letter based on the number of columns
-    last_column_letter = chr(64 + len(columns))
+    last_column_letter = chr(64 + len(columns) - (1 if add_hyperlink else 0))
+    if add_hyperlink:
+        ecu_ss_hyperlink_cell = sheet.cell(row=start_row, column=len(columns))
+        ecu_ss_hyperlink_cell.value = '=HYPERLINK("'f'#\'{setup_type}_{ecu_type}_Summary\'!A1", "Summary Sheet Link")'
+        ecu_ss_hyperlink_cell.fill = PatternFill(start_color="006fc0", end_color="006fc0", fill_type="solid")
+        ecu_ss_hyperlink_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ecu_ss_hyperlink_cell.font = Font(bold=True, color="FFFFFF", underline='single')
+        
 
     # Merge the cells in the header row
     merged_range = f'A{sheet.max_row}:{last_column_letter}{sheet.max_row}'
@@ -1807,7 +1814,7 @@ def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_colum
     return start_row
 
 
-def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False):
+def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False, isSummarySheet=False):
     """
     Creates a summary table showing test results for each iteration with hyperlinks to detailed data.
    
@@ -1853,7 +1860,7 @@ def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet,
     order_mismatch_judgement = config.get('Startup Order Judgement', False)
     not_found_judgement = config.get('Missing Judgement', False)
     not_configured_judgement = config.get('Unexpected Judgement', False)
-    start_row = create_header(summary_sheet, ecu_type, setup_type, True, 'overall_test_columns')
+    start_row = create_header(summary_sheet, ecu_type, setup_type, True, 'overall_test_columns', add_hyperlink=(isSummaryReport and isSummarySheet))
     for i in range(max(overall_IG_ON_iteration.keys()) + 1):
         if i in overall_IG_ON_iteration:
             overall_value = '-'
@@ -2044,7 +2051,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
             ecu_app_info_counts_map[ecu_type][data_row['process']].not_found_count,
             ecu_app_info_counts_map[ecu_type][data_row['process']].not_configured_count,
             ecu_app_info_counts_map[ecu_type][data_row['process']].terminated_count,
-            len(overall_IG_ON_iteration) - len(process_times.get(data_row['process'], []))
+            len(overall_IG_ON_iteration) - len(process_times.get(data_row['process'], [])) if len(process_times.get(data_row['process'], [])) > 0 else '-'
         ])
 
         # Apply color formatting to the terminated count cell (last column)
@@ -2068,7 +2075,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
             terminated_count_cell = sheet.cell(row=sheet.max_row, column=11)
             terminated_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
             terminated_count_cell.font = Font(color="FFFFFF")  # White font for contrast
-        if len(overall_IG_ON_iteration) - len(process_times.get(data_row['process'], [])) > 0:
+        if len(overall_IG_ON_iteration) - len(process_times.get(data_row['process'], [])) > 0 and len(process_times.get(data_row['process'], [])) > 0:
             missing_count_cell = sheet.cell(row=sheet.max_row, column=12)  # Column 12 is the missing count column
             missing_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
             missing_count_cell.font = Font(color="FFFFFF")  # White font for contrast
@@ -2203,7 +2210,7 @@ def add_logfile_hyperlink(report_path, log_path, sheet, ecu_type, setup_type):
     # sheet.cell(row=row_no, column=1).value = "Log File:"  
  
     # Use Excel's =HYPERLINK() formula with the relative path
-    hyperlink_formula = f'=HYPERLINK(".\\Logs\\{setup_type}_{ecu_type}\\{log_path}", "{log_path}")'
+    hyperlink_formula = f'=HYPERLINK(".\\{"Pre-Generated_Logs" if is_pre_gen_logs else "Logs"}\\{setup_type}_{ecu_type}\\{log_path}", "{log_path}")'
     # Insert the hyperlink formula
     sheet.cell(row=1, column=7).value = hyperlink_formula
    
@@ -2265,14 +2272,14 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
         else:
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
-    if not is_empty_log:
+    if is_empty_log:
         for app in ecu_encountered_apps_map[ecu_type]:
             if app not in process_timing_info:
                 data_row = ['-', app, '-', '-']
                 sheet.append(data_row)
     ind_app_configured_and_terminated_list = get_ind_app_configured_and_terminated_list(ecu_type, overall_IG_ON_cur_iteration)
     for process in ind_app_configured_and_terminated_list:
-        if process not in process_timing_info:
+        if process not in process_timing_info and (not is_empty_log or process not in ecu_encountered_apps_map[ecu_type]):
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
     if len(process_timing_info) > 0:
@@ -3027,7 +3034,6 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, lo
         vary depending on the specific relay controller model.
     """
     try:
-        return True
         # Check for stop flag before starting power cycle
         if check_stop_flag_periodically():
             logger.info("Stop flag detected. Aborting serial relay power cycle.")
@@ -3922,7 +3928,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, sheet, dltstart_timestamps, process_timing_info, application_startup_order, application_startup_order_status[i], overall_IG_ON_iteration[i], is_empty_log, logger)
        
         # Add a hyperlink to the log file in the Excel sheet
-        if not is_empty_log:
+        if filename and os.path.exists(filename):
             add_logfile_hyperlink(filename, logfile, sheet, ecu_type, setup_type)
 
     except Exception as e:
@@ -4003,11 +4009,11 @@ def save_workbook_and_generate_reports(ecu_type, setup_type, summary_sheet, over
         logger.error("Error: Unable to create workbook.")
         return False
 
-    each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False)
+    each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=False, isSummarySheet=True)
    
     es_report_file, es_workbook, es_sheets, es_summary_sheet = ecu_summary_workbook_items
     if es_summary_sheet:
-        each_iteration_test_status(ecu_type, setup_type, report_file, es_summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True)
+        each_iteration_test_status(ecu_type, setup_type, report_file, es_summary_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True, isSummarySheet=True)
 
     # Export the average data to the Excel sheet
     export_and_plot_average_data_to_excel(summary_sheet, ecu_type, setup_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
@@ -4015,7 +4021,7 @@ def save_workbook_and_generate_reports(ecu_type, setup_type, summary_sheet, over
     # Copy summary to ECU_Summary workbook
     for es_sheet in es_sheets:
         if es_sheet.title == f"{setup_type}_{ecu_type}_Summary":
-            each_iteration_test_status(ecu_type, setup_type, report_file, es_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True)
+            each_iteration_test_status(ecu_type, setup_type, report_file, es_sheet, overall_IG_ON_iteration, process_times, config, application_startup_order_status, isSummaryReport=True, isSummarySheet=False)
             export_and_plot_average_data_to_excel(es_sheet, ecu_type, setup_type, process_times, process_start_times, overall_IG_ON_iteration, config, logger)
             break
 
@@ -4409,7 +4415,7 @@ def start_startup_time_measurement(logger):
                 else:
                     no_of_ecu_reports_generated += 1
                     print(f"Report generated for {ecu_type}: {report_file}")
-        if any(anySheet) and len(ecu_summary_workbook_items)==4 and all(ecu_summary_workbook_items):
+        if any(anySheet) and len(ecu_summary_workbook_items)==4 and all(ecu_summary_workbook_items) and len(enabled_ecu_list) > 1:
             # Format the Excel cells
             format_excel_cells(ecu_summary_workbook_items[3], 1)
             # Adjust the column width of the Excel sheet

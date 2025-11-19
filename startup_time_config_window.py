@@ -864,7 +864,7 @@ class StartupTimeConfig(QDialog):
 
         # General Settings
         general_group = QGroupBox('General Settings')
-        general_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 400; font-size: 9pt; }")
+        general_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 500; font-size: 9pt; }")
         general_group.setFixedHeight(280)
         general_layout = QFormLayout()
         for key, validator in [
@@ -1010,7 +1010,7 @@ class StartupTimeConfig(QDialog):
 
         # Windows Settings
         win_group = QGroupBox('DLT Viewer Path Settings')
-        win_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 400; font-size: 9pt; }")
+        win_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 500; font-size: 9pt; }")
         win_group.setFixedHeight(100)
         win_layout = QFormLayout()
         win = self.config_data.get('windows', {})
@@ -1047,7 +1047,7 @@ class StartupTimeConfig(QDialog):
 
         # ECU Configurations
         self.ec_group = QGroupBox('ECU Configurations')
-        self.ec_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 400; font-size: 9pt; }")
+        self.ec_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 500; font-size: 9pt; }")
         ec_vbox = QVBoxLayout()
         self.widgets['ecu-config'] = []
 
@@ -1246,7 +1246,7 @@ class StartupTimeConfig(QDialog):
        
         # Startup Order Section
         startup_group = QGroupBox('Startup Order Configuration')
-        startup_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 400; font-size: 9pt; }")
+        startup_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 500; font-size: 9pt; }")
         startup_vbox = QVBoxLayout()
         startup_fl = QFormLayout()
         startup_entries = []
@@ -1266,7 +1266,7 @@ class StartupTimeConfig(QDialog):
 
         # Threshold Config Section
         self.threshold_group = QGroupBox('Threshold Configuration')
-        self.threshold_group.setStyleSheet(common_groupbox_style+"QGroupBox { font-weight: 400; font-size: 9pt; }")
+        self.threshold_group.setStyleSheet(common_groupbox_style+"QGroupBox { font-weight: 500; font-size: 9pt; }")
         threshold_vbox = QVBoxLayout()
        
         # Non-Configured Application Settings
