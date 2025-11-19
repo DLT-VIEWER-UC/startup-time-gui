@@ -1090,7 +1090,7 @@ def start_shutdown_time_measurement(py_logger):
             py_logger.error(f"File '{config_file_path}' not found.")
             return False
         
-        local_save_path = Path(__file__).parents[1].joinpath("Reports", "07_Shutdown_Time", config.get('Current_Timestamp', cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S")))
+        local_save_path = Path(__file__).parents[2].joinpath("Reports", "07_Shutdown_Time", config.get('Current_Timestamp', cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S")))
         local_save_path.mkdir(parents=True, exist_ok=True)
        
         if config['windows']['DLT-Viewer Installed Path'] and not os.path.isfile(os.path.join(config['windows']['DLT-Viewer Installed Path'])):
