@@ -1675,7 +1675,7 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     # Cell G1 - Log folder path with hyperlink
     sheet.merge_cells('G1:K1')
     log_path_cell = sheet['G1']
-    log_folder_path = f'Logs\\{setup_type}_{ecu_type}'
+    log_folder_path = f'{"Pre-Generated_Logs" if is_pre_gen_logs else "Logs"}\\{setup_type}_{ecu_type}'
     # Create hyperlink formula
     hyperlink_formula = 'No log file available'
     if sheet_type == 'Summary':
