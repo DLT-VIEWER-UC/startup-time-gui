@@ -1437,6 +1437,21 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
 
     # Merge cells in column D for the rows created in this scenario
     # merged_range = f'D{start_row}:D{sheet.max_row}'
+    # mid_cell_no = (start_row + sheet.max_row) // 2
+    # for row_no in range(start_row, sheet.max_row + 1):
+    #     cell = sheet.cell(row=row_no, column=4)  # Column D is the 4th column
+    #     if row_no == start_row:
+    #         cell.border = Border(top=Side(style='thin'), left=Side(style='thin'), right=Side(style='thin'), bottom=Side(style='none'))
+    #         cell.font = Font(color="FFFFFF")
+    #     elif row_no == sheet.max_row:
+    #         cell.border = Border(bottom=Side(style='thin'), left=Side(style='thin'), right=Side(style='thin'), top=Side(style='none'))
+    #         cell.font = Font(color="FFFFFF")
+    #     else:
+    #         cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='none'), bottom=Side(style='none'))
+    #         cell.font = Font(color="FFFFFF")
+    #     if row_no == mid_cell_no:
+    #         cell.font = Font(color="000000")
+    #     cell.alignment = Alignment(vertical='center', horizontal='center')
     # if not is_empty_log:
     #     sheet.merge_cells(merged_range)
         
@@ -1629,10 +1644,14 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
     #     for row in sheet[merged_range]:
     #         for cell in row:
     #             cell.border = border_style
+    
+    # Calculate the total height of rows starting from row 4 to sheet.max_row for chart sizing
+    width, height = calculate_graph_size(sheet, start_row=4, end_row=sheet.max_row, start_col=17, end_col=37)
+    
     if len(dltstart_timestamps)>0:            
         create_combo_chart(
             ws=sheet, position="Q4", step=1,
-            width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2 + 2,
+            width=width, height=height,
             cats_mcol=2, cats_mrow=7, cats_mxrow=len(dltstart_timestamps) + 7,
             sd_mcol=3, sd_mxcol=4, sd_mrow=6, sd_mxrow=len(dltstart_timestamps) + 6,
             cd_mcol=5, cd_mxcol=5, cd_mrow=6, cd_mxrow=len(dltstart_timestamps) + 6,
@@ -1642,6 +1661,27 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
             is_combo=True
         )
 
+def calculate_graph_size(sheet, start_row, end_row, start_col, end_col):
+    total_height_cm = 0
+    for row_idx in range(start_row, end_row + 1):
+        if row_idx in sheet.row_dimensions:
+            row_height = sheet.row_dimensions[row_idx].height or 15  # default height in points
+        else:
+            row_height = 15  # default Excel row height in points
+        # Convert points to cm (1 point = 0.0353 cm)
+        total_height_cm += row_height * 0.0353
+    
+    # Calculate width for 7 columns (A to G)
+    total_width_cm = 0
+    for col_idx in range(start_col, end_col + 1):  # columns A to G
+        col_letter = chr(64 + col_idx)
+        if col_letter in sheet.column_dimensions:
+            col_width = sheet.column_dimensions[col_letter].width or 8.43
+        else:
+            col_width = 8.43  # default width
+        # Convert character width to cm (1 character ≈ 0.269 cm)
+        total_width_cm += col_width * 0.269
+    return total_width_cm, total_height_cm
 
 def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     """
@@ -2082,11 +2122,13 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             differences[data_row['process']] = float(data_row['avg_time'])
+            
+    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row + 1, start_col=20, end_col=40)
     
     if len(process_times) > 0:
         create_combo_chart(
             ws=sheet, position=f"M{start_row}", step=1,
-            width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2,
+            width=width, height=height,
             cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_times) + start_row + 1,
             sd_mcol=5, sd_mxcol=5, sd_mrow=start_row + 1, sd_mxrow=len(process_times) + start_row + 1,
             cd_mcol=5, cd_mxcol=5, cd_mrow=start_row + 1, cd_mxrow=len(process_times) + start_row + 1,
@@ -2144,11 +2186,13 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             individual_differences[data_row['process']] = float(data_row['avg_time'])
+            
+    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=6, end_col=26)
    
     if len(process_start_times) > 0:
         create_combo_chart(
             ws=sheet, position=f"F{start_row}", step=500,
-            width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2,
+            width=width, height=height,
             cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_start_times) + start_row + 1,
             sd_mcol=5, sd_mxcol=5, sd_mrow=start_row + 1, sd_mxrow=len(process_start_times) + start_row + 1,
             cd_mcol=5, cd_mxcol=5, cd_mrow=start_row + 1, cd_mxrow=len(process_start_times) + start_row + 1,
@@ -2282,10 +2326,11 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
         if process not in process_timing_info and (not is_empty_log or process not in ecu_encountered_apps_map[ecu_type]):
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
+    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=5, end_col=25)
     if len(process_timing_info) > 0:
         create_combo_chart(
             ws=sheet, position=f"E{start_row}", step=500,
-            width=(sheet.max_row - start_row) + 4, height=(sheet.max_row - start_row)//2,
+            width=width, height=height,
             cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_timing_info) + start_row + 1,
             sd_mcol=4, sd_mxcol=4, sd_mrow=start_row + 1, sd_mxrow=len(process_timing_info) + start_row + 1,
             cd_mcol=4, cd_mxcol=4, cd_mrow=start_row + 1, cd_mxrow=len(process_timing_info) + start_row + 1,
@@ -2363,11 +2408,33 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, 
 
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
+    
+    format_qnx_startup_time_column(sheet, start_row, dltstart_timestamps)
 
     generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, is_empty_log, config)
 
     # Adjust the column width of the Excel sheet
     adjust_column_width(sheet, ecu_type, logger)
+    
+def format_qnx_startup_time_column(sheet, start_row, dltstart_timestamps):
+    startup_time_start_row = start_row + 3
+    startup_time_end_row = startup_time_start_row + len(dltstart_timestamps) - 1
+    mid_cell_no = (startup_time_start_row + startup_time_end_row) // 2
+    print("Startup Time Start Row:", startup_time_start_row, " End Row:", startup_time_end_row, " Mid Cell No:", mid_cell_no)
+    for row_no in range(startup_time_start_row, startup_time_end_row + 1):
+        cell = sheet.cell(row=row_no, column=4)  # Column D is the 4th column
+        if row_no == start_row:
+            cell.border = Border(top=Side(style='thin'), left=Side(style='thin'), right=Side(style='thin'), bottom=Side(style='none'))
+            cell.font = Font(color="FFFFFF")
+        elif row_no == sheet.max_row:
+            cell.border = Border(bottom=Side(style='thin'), left=Side(style='thin'), right=Side(style='thin'), top=Side(style='none'))
+            cell.font = Font(color="FFFFFF")
+        else:
+            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='none'), bottom=Side(style='none'))
+            cell.font = Font(color="FFFFFF")
+        if row_no == mid_cell_no:
+            cell.font = Font(color="000000")
+        cell.alignment = Alignment(vertical='center', horizontal='center')
 
 
 def extract_and_sort_process_timestamps(process_Start_End_timestamps, logger):
