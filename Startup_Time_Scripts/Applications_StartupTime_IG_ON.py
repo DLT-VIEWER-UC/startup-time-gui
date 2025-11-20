@@ -3829,7 +3829,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             logger.info(f"Stop flag detected after reading log file for {ecu_type} iteration {i+1}.")
             return False
         if is_empty_log and not is_empty_mode:
-            ecu_failed_iterations_map.setdefault(ecu_type, []).append(i)
+            if i not in ecu_failed_iterations_map.setdefault(ecu_type, []):
+                ecu_failed_iterations_map[ecu_type].append(i)
             return False
 
         # Extract the welcome timestamp from the log fil
@@ -3838,6 +3839,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         # Check if the welcome timestamp was found
         if not is_empty_log and welcome_timestamp is None:
             logger.error("KSAR Adaptive not found in log file")
+            if i not in ecu_failed_iterations_map.setdefault(ecu_type, []):
+                ecu_failed_iterations_map[ecu_type].append(i)
             return False
 
         # Check for stop flag after welcome timestamp extraction
@@ -3851,6 +3854,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         # Check if the DLTStart timestamps were found
         if not is_empty_log and (not dltstart_timestamps or len(dltstart_timestamps)==0):
             logger.error("Apps DLTStart time is not found in log file")
+            if i not in ecu_failed_iterations_map.setdefault(ecu_type, []):
+                ecu_failed_iterations_map[ecu_type].append(i)
             return False
 
         # Check for stop flag after timestamp extraction
@@ -3873,6 +3878,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         print ("process_Start_End_timestamp:"+str(process_Start_End_timestamps))
         if not is_empty_log and (not process_Start_End_timestamps or not any('init_time' in process_Start_End_timestamps[key] for key in process_Start_End_timestamps)):
             logger.error("Error: Unable to extract process timestamps.")
+            if i not in ecu_failed_iterations_map.setdefault(ecu_type, []):
+                ecu_failed_iterations_map[ecu_type].append(i)
             return False
 
         # Check for stop flag before process timing analysis
@@ -3885,6 +3892,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
        
         if not is_empty_log and (not process_timing_info):
             logger.error("Error: No report data available.")
+            if i not in ecu_failed_iterations_map.setdefault(ecu_type, []):
+                ecu_failed_iterations_map[ecu_type].append(i)
             return False    
 
         for process, item in process_timing_info.items():
@@ -3933,6 +3942,8 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
 
     except Exception as e:
         logger.error(f"Exception :: {e}")
+        if i not in ecu_failed_iterations_map.setdefault(ecu_type, []):
+            ecu_failed_iterations_map[ecu_type].append(i)
         return False
     return True
 
@@ -4123,6 +4134,7 @@ def start_startup_time_measurement(logger):
     ecu_encountered_apps_map = {}
     global ecu_app_info_counts_map
     ecu_app_info_counts_map = {}
+    filename_list_map={}
     # current_timestamp = '20250630_175500'
     current_timestamp = cur_dt_time_obj.strftime("%Y%m%d_%H%M%S")
 
@@ -4300,6 +4312,7 @@ def start_startup_time_measurement(logger):
                         filename_list[ecu_type] = tuple(get_log_file_path(ecu_type, setup_type, i))
                 else:
                     filename_list[ecu_type] = extract_log_file_paths(i, ecu_type, setup_type, logger)
+                filename_list_map[i]=filename_list
                 logger.info(f"Log files for {ecu_type} in iteration {i}: {filename_list}")
                 if any(not filename for (filename, logfile, dltfile) in filename_list.values()):
                     if is_pre_gen_logs:
@@ -4362,7 +4375,7 @@ def start_startup_time_measurement(logger):
                     failed_iteration,
                     ecu_type,
                     setup_type,
-                    tuple([None, None, None]),
+                    filename_list_map[failed_iteration][ecu_type],
                     None,
                     config,
                     workbook_map[ecu_type][2][failed_iteration],
@@ -4415,14 +4428,15 @@ def start_startup_time_measurement(logger):
                 else:
                     no_of_ecu_reports_generated += 1
                     print(f"Report generated for {ecu_type}: {report_file}")
-        if any(anySheet) and len(ecu_summary_workbook_items)==4 and all(ecu_summary_workbook_items) and len(enabled_ecu_list) > 1:
-            # Format the Excel cells
-            format_excel_cells(ecu_summary_workbook_items[3], 1)
-            # Adjust the column width of the Excel sheet
-            adjust_column_width(ecu_summary_workbook_items[3], 'ECU_Summary', logger)
-            ecu_summary_workbook_items[1].save(ecu_summary_workbook_items[0])
-        else:
-            logger.error("Error: Unable to create ECU Summary workbook.")
+        if len(enabled_ecu_list) > 1:
+            if any(anySheet) and len(ecu_summary_workbook_items)==4 and all(ecu_summary_workbook_items):
+                # Format the Excel cells
+                format_excel_cells(ecu_summary_workbook_items[3], 1)
+                # Adjust the column width of the Excel sheet
+                adjust_column_width(ecu_summary_workbook_items[3], 'ECU_Summary', logger)
+                ecu_summary_workbook_items[1].save(ecu_summary_workbook_items[0])
+            else:
+                logger.error("Error: Unable to create ECU Summary workbook.")
            
         if no_of_ecu_reports_generated < len(enabled_ecu_list):
             isSuccess = False
