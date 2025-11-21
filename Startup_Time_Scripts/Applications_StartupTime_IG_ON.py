@@ -1713,7 +1713,7 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     log_label_cell.border = border_style
     
     # Cell G1 - Log folder path with hyperlink
-    sheet.merge_cells('G1:K1')
+    sheet.merge_cells('G1:K1' if sheet_type != 'Summary' else 'G1:H1')
     log_path_cell = sheet['G1']
     log_folder_path = f'{"Pre-Generated_Logs" if is_pre_gen_logs else "Logs"}\\{setup_type}_{ecu_type}'
     # Create hyperlink formula
@@ -1725,7 +1725,7 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     log_path_cell.alignment = Alignment(horizontal='left', vertical='center')
     
     # Apply border to all cells in the merged range
-    for col in range(7, 12):  # G=7 to K=11 (columns G through K)
+    for col in range(7, 12 if sheet_type != 'Summary' else 9):  # G=7 to K=11 (columns G through K)
         sheet.cell(row=1, column=col).border = border_style
 
 

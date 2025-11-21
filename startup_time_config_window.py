@@ -2141,7 +2141,7 @@ class StartupTimeConfig(QDialog):
             2: self.isElite and self.isSOC0,
             3: self.isElite and self.isSOC1
         }
-        self.validate_all_fields()
+        data['is_all_fields_valid'] = self.validate_all_fields()
  
         # py_logger.info(f'self.ecu_selection: {self.ecu_selection}')
  
