@@ -644,6 +644,12 @@ class StartupTimeConfig(QDialog):
             'Elite': {'RCAR': False, 'SoC0': False, 'SoC1': False},
             'PADAS': {'RCAR': False}
         }
+        self.ecu_block_list_selection_map = {
+            0: False,
+            1: False,
+            2: False,
+            3: False
+        }
 
         self.ecu_map = {
             "PADAS": "PADAS_RCAR",
@@ -676,6 +682,13 @@ class StartupTimeConfig(QDialog):
                     self.isPadas = False
                 else:
                     self.isSOC1 = False
+            
+            self.ecu_block_list_selection_map = {
+                0: self.isPadas and self.isRCAR,
+                1: self.isElite and self.isRCAR,
+                2: self.isElite and self.isSOC0,
+                3: self.isElite and self.isSOC1
+            }
 
         # Initialize file system watcher for logs folder
         self.logs_path = Path(__file__).parent.joinpath('Startup_Time_Scripts/Pre-Generated_Logs')
@@ -1555,7 +1568,7 @@ class StartupTimeConfig(QDialog):
     def validate_all_fields(self):
         enabled = True
         self.ecu_error_list = [False, False, False, False]
-        ecu_block_list_map = {
+        self.ecu_block_list_selection_map = {
             0: self.isPadas and self.isRCAR,
             1: self.isElite and self.isRCAR,
             2: self.isElite and self.isSOC0,
@@ -1584,7 +1597,7 @@ class StartupTimeConfig(QDialog):
                 enabled = False
         is_partially_filled = not enabled
         for i in range(4):
-            if self.ecu_block_list[i].disabled or not ecu_block_list_map[i]:
+            if self.ecu_block_list[i].disabled or not self.ecu_block_list_selection_map[i]:
                 continue
             enable_checkbox=self.widgets['ecu-config'][i]['apply_checkbox']
             threshold_input=self.widgets['ecu-config'][i]['nc_threshold_input']
@@ -1633,7 +1646,7 @@ class StartupTimeConfig(QDialog):
                     self._set_widget_style(entry[2], 'border: 0px;')
         startup_order_group = self.widgets['Startup Order Application Registration']
         if startup_order_group.isChecked():
-            if self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
+            if self.ecu_block_list_selection_map[0] and not self.ecu_block_list[0].disabled:
                 if len(self.widgets['ecu-config'][0]['startup']) == 0:
                     enabled=False
                     self.ecu_error_list[0] = True
@@ -1644,7 +1657,7 @@ class StartupTimeConfig(QDialog):
                             enabled = False
                             self.ecu_error_list[0] = True
                             break
-            if self.isRCAR and self.isElite and not self.ecu_block_list[1].disabled:
+            if self.ecu_block_list_selection_map[1] and not self.ecu_block_list[1].disabled:
                 if len(self.widgets['ecu-config'][1]['startup']) == 0:
                     enabled=False
                     self.ecu_error_list[1] = True
@@ -1655,7 +1668,7 @@ class StartupTimeConfig(QDialog):
                             enabled = False
                             self.ecu_error_list[1] = True
                             break
-            if self.isSOC0 and self.isElite and not self.ecu_block_list[2].disabled:
+            if self.ecu_block_list_selection_map[2] and not self.ecu_block_list[2].disabled:
                 if len(self.widgets['ecu-config'][2]['startup']) == 0:
                     enabled=False
                     self.ecu_error_list[2] = True
@@ -1666,7 +1679,7 @@ class StartupTimeConfig(QDialog):
                             enabled = False
                             self.ecu_error_list[2] = True
                             break
-            if self.isSOC1 and self.isElite and not self.ecu_block_list[3].disabled:
+            if self.ecu_block_list_selection_map[3] and not self.ecu_block_list[3].disabled:
                 if len(self.widgets['ecu-config'][3]['startup']) == 0:
                     enabled=False
                     self.ecu_error_list[3] = True
@@ -1677,7 +1690,7 @@ class StartupTimeConfig(QDialog):
                             enabled = False
                             self.ecu_error_list[3] = True
                             break
-        if self.isRCAR and self.isPadas and not self.ecu_block_list[0].disabled:
+        if self.ecu_block_list_selection_map[0] and not self.ecu_block_list[0].disabled:
             # Check threshold entries for RCAR-PADAS
             for entry in self.widgets['ecu-config'][0]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
@@ -1686,7 +1699,7 @@ class StartupTimeConfig(QDialog):
                     enabled = False
                     self.ecu_error_list[0] = True
                     break
-        if self.isRCAR and self.isElite and not self.ecu_block_list[1].disabled:
+        if self.ecu_block_list_selection_map[1] and not self.ecu_block_list[1].disabled:
             # Check threshold entries for RCAR
             for entry in self.widgets['ecu-config'][1]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
@@ -1695,7 +1708,7 @@ class StartupTimeConfig(QDialog):
                     enabled = False
                     self.ecu_error_list[1] = True
                     break
-        if self.isSOC0 and self.isElite and not self.ecu_block_list[2].disabled:
+        if self.ecu_block_list_selection_map[2] and not self.ecu_block_list[2].disabled:
             # Check threshold entries for SoC0
             for entry in self.widgets['ecu-config'][2]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
@@ -1704,7 +1717,7 @@ class StartupTimeConfig(QDialog):
                     enabled = False
                     self.ecu_error_list[2] = True
                     break
-        if self.isSOC1 and self.isElite and not self.ecu_block_list[3].disabled:
+        if self.ecu_block_list_selection_map[3] and not self.ecu_block_list[3].disabled:
             # Check threshold entries for SoC1
             for entry in self.widgets['ecu-config'][3]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
@@ -1717,11 +1730,12 @@ class StartupTimeConfig(QDialog):
             self.update_ecu_block_styles(self.ecu_block_list[i], self.ecu_error_list[i])
 
         self.ok_btn.setEnabled(False if self.main_window.is_test_in_progress and self.main_window.is_KPI_selected else True)
+        print(f"Validation result - ECU block list map: {self.ecu_block_list_selection_map}, ECU error list: {self.ecu_error_list}), is_partially_filled: {is_partially_filled}")
         return not is_partially_filled and any((
-            not self.ecu_error_list[0] and ecu_block_list_map[0], 
-            not self.ecu_error_list[1] and ecu_block_list_map[1],
-            not self.ecu_error_list[2] and ecu_block_list_map[2],
-            not self.ecu_error_list[3] and ecu_block_list_map[3]
+            not self.ecu_error_list[0] and self.ecu_block_list_selection_map[0], 
+            not self.ecu_error_list[1] and self.ecu_block_list_selection_map[1],
+            not self.ecu_error_list[2] and self.ecu_block_list_selection_map[2],
+            not self.ecu_error_list[3] and self.ecu_block_list_selection_map[3]
         ))
        
     def update_ecu_block_styles(self, ecu_gb, has_error):
@@ -2111,12 +2125,23 @@ class StartupTimeConfig(QDialog):
         for idx, block in enumerate(self.ecu_block_list):
             # if block.disabled:
             #     continue  # Skip disabled blocks
+            
+            self.ecu_block_list_selection_map = {i: i==idx for i in range(4)}
+            self.validate_all_fields()
 
             # Get mapped title if available
             title = self.ecu_map.get(block.title, block.title)
             group, key = validation_map[title]
             self.ecu_selection[group][key] = not block.disabled and not self.ecu_error_list[idx]
             py_logger.info(f"Enabled ECU: {title} {group}-{key} {self.ecu_selection[group][key]}")
+        
+        self.ecu_block_list_selection_map = {
+            0: self.isPadas and self.isRCAR,
+            1: self.isElite and self.isRCAR,
+            2: self.isElite and self.isSOC0,
+            3: self.isElite and self.isSOC1
+        }
+        self.validate_all_fields()
  
         # py_logger.info(f'self.ecu_selection: {self.ecu_selection}')
  

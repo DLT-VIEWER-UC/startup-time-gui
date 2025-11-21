@@ -15,7 +15,13 @@ switch_dict = {
     'Event Trigger KEV': './Event_Trigger_KEV_Scripts/kev_gen_and_logMover_config.json',
     'RAM Monitor': './RAM_Measurement_Scripts/XCP_RAM_Measurement_Config.json',
     'Event Trigger RAM Monitor': './Event_Trigger_RAM_Measurement_Scripts/XCP_RAM_Event_Trigger_Config.json',
-    'APL Communication Layout': './APL_Communication_Layout_Scripts/XCP_APL_Config.json'
+    'APL Communication Layout': './APL_Communication_Layout_Scripts/XCP_APL_Config.json',
+    "Positive Response": 'Positive_Response_Config.json',
+    "Negative Response": 'Negative_Response_Config.json',
+    "Diagnostic Trouble Code (DTC)": 'DTC_Config.json',
+    "Reprogramming_FOTA": 'Reprogramming_FOTA_Config.json',
+    "Reprogramming_Wired": 'Reprogramming_Wired_Config.json',
+    "Diag_All_KPIs": 'Diag_All_KPIs_Config.json',
 }
 
 # Mapping of labels to their module and class names
@@ -131,6 +137,7 @@ class SpinnerDialog(QDialog):
 
 class Worker(QObject):
     finished = pyqtSignal()
+    set_status_inProgess = pyqtSignal(str)
     update_status = pyqtSignal(str, str)
     disable_widgets = pyqtSignal()
     enable_widgets = pyqtSignal()
@@ -185,19 +192,15 @@ class Worker(QObject):
                 py_logger.warning(f"No active instances of {exe_name} found.")
             else:
                 py_logger.info(f"[Worker] Total terminated PIDs: {', '.join(pids_terminated)}")
-
-            # Current working directory
-            cwd = os.getcwd()
-            parent_dir = os.path.abspath(os.path.join(cwd, os.pardir))
-            full_path = os.path.join(cwd, "diag_abrupt_termination.bat")
-            subprocess.run(full_path, check=True, shell=True, cwd=os.path.dirname(full_path), env=os.environ.copy())      
-               
+           
+            from diag_abrupt_termination import run_deletion_sequence
+            run_deletion_sequence()  
         except subprocess.CalledProcessError:
             py_logger.error("Process scan failed�no matches found.")
         except Exception as e:
             py_logger.error(f"Process termination error: {e}")
-   
-    def launch_diag_application(self):      
+ 
+    def launch_diag_application(self):
         py_logger.info("Launching the Diag High Level ECU Tester, please wait!...")
 
         current_os = platform.system()
@@ -220,13 +223,13 @@ class Worker(QObject):
             self.process = subprocess.Popen([exe_path])
             time.sleep(3)
             py_logger.info("Diag High Level ECU Tester is Successfully Launched.")
-           
+
             # Wait for the process to complete or be forcefully stopped
             while self.process.poll() is None:
                 if self._stop_requested:
                     self.terminate_all_ecu_processes()
                     return False
-               
+
                 time.sleep(0.2)  # Non-blocking check
 
             return True  # Process finished naturally
@@ -270,13 +273,13 @@ class Worker(QObject):
 
                 if config_path:
                     try:
-                        with open(config_path, 'r') as f:
+                        with open(config_path, 'r', encoding="utf-8") as f:
                             data = json.load(f)
 
                         Current_Timestamp = datetime.now().strftime("%Y%m%d_%H-%M-%S")
                         data["Current_Timestamp"] = Current_Timestamp
 
-                        with open(config_path, 'w') as f:
+                        with open(config_path, 'w', encoding="utf-8") as f:
                             json.dump(data, f, indent=4)
 
                         return Current_Timestamp
@@ -341,14 +344,16 @@ class Worker(QObject):
                 continue
 
             try:
+                status = False
                 # Update config file and get timestamp
                 current_timestamp = update_config_file(label)
                 self.start_kpi_logging.emit(label, current_timestamp)
+                self.set_status_inProgess.emit(label)
 
                 # Execute KPI logic
                 if label in label_actions:
                     # Access the function mapped to the label and call it
-                    status = status = label_actions[label]()
+                    status = label_actions[label]()
 
                 elif label in diag_labels:
                     status = self.launch_diag_application()
@@ -413,8 +418,8 @@ class MainWindow(QMainWindow):
         self.update_button_states()
 
         # To remove the stop.flag file
-        self.manage_stop_flag(is_create=False)    
-   
+        self.manage_stop_flag(is_create=False)
+
     def create_console_tab(self):        
         class EmittingStream(QObject):
             text_written = pyqtSignal(str)
@@ -441,7 +446,7 @@ class MainWindow(QMainWindow):
                 # Regex to remove ANSI escape sequences
                 ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
                 return ansi_escape.sub('', text)
-           
+
         layout = QVBoxLayout()
 
         label = QLabel("Runtime logs will appear below:")
@@ -494,7 +499,7 @@ class MainWindow(QMainWindow):
         if self.kpi_log_file:
             self.kpi_log_file.write(text)
             self.kpi_log_file.flush()
-   
+
     def start_kpi_logging(self, kpi_label, Current_Timestamp):
         try:
             self.current_kpi_label = kpi_label
@@ -538,7 +543,7 @@ class MainWindow(QMainWindow):
         """
         # Set the title of the window
         self.setWindowTitle("Gen2 Platform Validation GUI Tester Tool")
-       
+
         # Set the icon of the window
         self.setWindowIcon(QIcon('./GUI_Icons/KPIT_logo.ico'))
 
@@ -588,7 +593,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
 
         layout.addWidget(self.create_kpis_group())
-       
+
         background_colors = ["#D0CEE2", "#FFFF00", "#60A917", "#E51400"]
         label_names = ["Not Tested", "In Progress", "PASS / Configuration Done", "FAIL / Configuration Not Done"]
 
@@ -597,7 +602,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.create_configuration_group())
 
         layout.addLayout(self.create_run_button_layout())
-       
+
         # Create a QWidget and set the layout
         container = QWidget()
         container.setLayout(layout)
@@ -630,7 +635,7 @@ class MainWindow(QMainWindow):
         self.tab3_layout = QVBoxLayout()
         self.tab3_layout.addWidget(self.about_text)
         self.tab3.setLayout(self.tab3_layout)
-   
+
     def create_kpis_group(self):
         kpis_group = QGroupBox("KPIs")
         kpis_group.setStyleSheet(common_groupbox_style)
@@ -709,15 +714,15 @@ class MainWindow(QMainWindow):
 
         self.xcp_checkboxes = []
 
-        xcp_layout = QVBoxLayout()      
+        xcp_layout = QVBoxLayout()
         xcp_layout.addWidget(self.create_kpi_row("RAM Monitor", checkbox_list=self.xcp_checkboxes))
         xcp_layout.addWidget(self.create_kpi_row("Event Trigger RAM Monitor", checkbox_list=self.xcp_checkboxes))
         xcp_layout.addWidget(self.create_kpi_row("APL Communication Layout", checkbox_list=self.xcp_checkboxes))
         xcp_layout.setSpacing(0)
 
         xcp_group.setLayout(xcp_layout)
-        return xcp_group      
-   
+        return xcp_group
+
     def create_kpi_row(self, label, checkbox_list=None):
         row_widget = QWidget()
 
@@ -829,10 +834,10 @@ class MainWindow(QMainWindow):
 
     def create_ecu_selection_login_credential_layout(self):
         ecu_select_login_credential_layout = QHBoxLayout()
-       
+
         ecu_selection_group = self.create_ecu_selection_group()
         login_credential_group = self.create_login_credential_group()
-       
+
         ecu_select_login_credential_layout.addWidget(ecu_selection_group)
         ecu_select_login_credential_layout.addWidget(login_credential_group)
         return ecu_select_login_credential_layout    
@@ -936,7 +941,7 @@ class MainWindow(QMainWindow):
         relay_baudrate_layout = QHBoxLayout()
 
         relay_baudrate_label = QLabel('Relay Baudrate')
-       
+
         # QIntValidator only supports 32-bit signed integers (qint32)
         # So the maximum value must be within the range: -2,147,483,648 to 2,147,483,647
         # Here, we set the minimum value to 1
@@ -957,7 +962,7 @@ class MainWindow(QMainWindow):
 
         relay_baudrate_unit_label = QLabel('(e.g., 9600 or 115200 bps)')
         relay_baudrate_unit_label.setStyleSheet("font-size: 12px;")
-       
+
         relay_baudrate_layout.addWidget(self.relay_baudrate_input)
         relay_baudrate_layout.addWidget(relay_baudrate_unit_label)
 
@@ -967,8 +972,8 @@ class MainWindow(QMainWindow):
     def create_IG_button_layout(self):
         IG_button_layout = QHBoxLayout()
 
-        self.IG_OFF_button = QPushButton('IG OFF')  
-        # self.IG_OFF_button.setFixedSize(150,35)    
+        self.IG_OFF_button = QPushButton('IG OFF')
+        # self.IG_OFF_button.setFixedSize(150,35)
         self.IG_OFF_button.setStyleSheet(common_enabled_style + common_hover_style)
         self.IG_OFF_button.clicked.connect(self.IG_ON_Off)
         self.IG_OFF_button.setEnabled(False)
@@ -1027,10 +1032,10 @@ class MainWindow(QMainWindow):
     def create_Rcar_telent_layout(self):
         Rcar_telent_layout = QFormLayout()
         Rcar_telent_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-       
+
         self.Rcar_IP_label = QLabel('R-Car IP Address')
         self.Rcar_IP_label.setEnabled(False)
-       
+
         # Create four QLineEdit fields for each IP octet
         self.rcar_ip1 = QLineEdit()
         self.rcar_ip2 = QLineEdit()
@@ -1045,53 +1050,74 @@ class MainWindow(QMainWindow):
             ip.setEnabled(False)
             ip.textChanged.connect(self.update_button_states)
 
+        dot_style = "font-size: 20px;"  # Define style for dots
+
         ip_layout = QHBoxLayout()
         ip_layout.setSpacing(0)
+
+        # Add first IP part
         ip_layout.addWidget(self.rcar_ip1)
-        ip_layout.addWidget(QLabel("."))
+
+        # Add dot and next IP parts
+        dot1 = QLabel(".")
+        dot1.setStyleSheet(dot_style)
+        ip_layout.addWidget(dot1)
+
         ip_layout.addWidget(self.rcar_ip2)
-        ip_layout.addWidget(QLabel("."))
+
+        dot2 = QLabel(".")
+        dot2.setStyleSheet(dot_style)
+        ip_layout.addWidget(dot2)
+
         ip_layout.addWidget(self.rcar_ip3)
-        ip_layout.addWidget(QLabel("."))
+
+        dot3 = QLabel(".")
+        dot3.setStyleSheet(dot_style)
+        ip_layout.addWidget(dot3)
+
         ip_layout.addWidget(self.rcar_ip4)
-       
+
+        # Add stretch at the end
+        ip_layout.addStretch()
+
+        # Add to form layout
         Rcar_telent_layout.addRow(self.Rcar_IP_label, ip_layout)
-       
+
         self.Rcar_telnet_username_label = QLabel('Telnet Username')
         self.Rcar_telnet_username_label.setEnabled(False)
-       
+
         self.Rcar_telnet_username_input = QLineEdit()
         self.Rcar_telnet_username_input.setObjectName('Rcar_telnet_username_input')
-        # self.Rcar_telnet_username_input.setFixedWidth(150)
+        self.Rcar_telnet_username_input.setFixedWidth(180)
         self.Rcar_telnet_username_input.setPlaceholderText('Enter Username')
         self.Rcar_telnet_username_input.textChanged.connect(lambda: self.update_button_states())
         self.Rcar_telnet_username_input.setEnabled(False)
-       
+
         Rcar_telent_layout.addRow(self.Rcar_telnet_username_label, self.Rcar_telnet_username_input)
-       
+
         self.Rcar_telnet_password_label = QLabel('Telnet Password')
         self.Rcar_telnet_password_label.setEnabled(False)
-       
+
         self.Rcar_telnet_password_input = QLineEdit()
         self.Rcar_telnet_password_input.setObjectName('Rcar_telnet_password_input')
-        # self.Rcar_telnet_password_input.setFixedWidth(150)  
+        self.Rcar_telnet_password_input.setFixedWidth(180)  
         self.Rcar_telnet_password_input.setPlaceholderText('Enter Password')
         self.Rcar_telnet_password_input.textChanged.connect(lambda: self.update_button_states())
         self.Rcar_telnet_password_input.setEnabled(False)
-       
+
         Rcar_telent_layout.addRow(self.Rcar_telnet_password_label, self.Rcar_telnet_password_input)
         return Rcar_telent_layout    
 
     def create_Rcar_FTP_layout(self):
         Rcar_FTP_layout = QFormLayout()
         Rcar_FTP_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-       
+
         self.Rcar_FTP_username_label = QLabel('FTP Username')
         self.Rcar_FTP_username_label.setEnabled(False)
 
         self.Rcar_FTP_username_input = QLineEdit()
         self.Rcar_FTP_username_input.setObjectName('Rcar_FTP_username_input')
-        # self.Rcar_FTP_username_input.setFixedWidth(150)
+        self.Rcar_FTP_username_input.setFixedWidth(180)
         self.Rcar_FTP_username_input.setPlaceholderText('Enter Username')
         self.Rcar_FTP_username_input.textChanged.connect(lambda: self.update_button_states())
         self.Rcar_FTP_username_input.setEnabled(False)
@@ -1103,7 +1129,7 @@ class MainWindow(QMainWindow):
 
         self.Rcar_FTP_password_input = QLineEdit()
         self.Rcar_FTP_password_input.setObjectName('Rcar_FTP_password_input')
-        # self.Rcar_FTP_password_input.setFixedWidth(150)
+        self.Rcar_FTP_password_input.setFixedWidth(180)
         self.Rcar_FTP_password_input.setPlaceholderText('Enter Password')
         self.Rcar_FTP_password_input.textChanged.connect(lambda: self.update_button_states())
         self.Rcar_FTP_password_input.setEnabled(False)
@@ -1152,16 +1178,37 @@ class MainWindow(QMainWindow):
             ip.setEnabled(False)
             ip.textChanged.connect(self.update_button_states)
 
+        dot_style = "font-size: 20px;"  # Define style for dots
+
         ip_layout = QHBoxLayout()
         ip_layout.setSpacing(0)
+
+        # Add first IP part
         ip_layout.addWidget(self.soc0_ip1)
-        ip_layout.addWidget(QLabel("."))
+
+        # Add dot and next IP parts
+        dot1 = QLabel(".")
+        dot1.setStyleSheet(dot_style)
+        ip_layout.addWidget(dot1)
+
         ip_layout.addWidget(self.soc0_ip2)
-        ip_layout.addWidget(QLabel("."))
+
+        dot2 = QLabel(".")
+        dot2.setStyleSheet(dot_style)
+        ip_layout.addWidget(dot2)
+
         ip_layout.addWidget(self.soc0_ip3)
-        ip_layout.addWidget(QLabel("."))
+
+        dot3 = QLabel(".")
+        dot3.setStyleSheet(dot_style)
+        ip_layout.addWidget(dot3)
+
         ip_layout.addWidget(self.soc0_ip4)
 
+        # Add stretch at the end
+        ip_layout.addStretch()
+
+        # Add to form layout
         SoC0_telent_layout.addRow(self.SoC0_IP_label, ip_layout)
 
         self.SoC0_telnet_username_label = QLabel('Telnet Username')
@@ -1169,7 +1216,7 @@ class MainWindow(QMainWindow):
 
         self.SoC0_telnet_username_input = QLineEdit()
         self.SoC0_telnet_username_input.setObjectName('SoC0_telnet_username_input')
-        # self.SoC0_telnet_username_input.setFixedWidth(150)
+        self.SoC0_telnet_username_input.setFixedWidth(180)
         self.SoC0_telnet_username_input.setPlaceholderText('Enter Username')
         self.SoC0_telnet_username_input.textChanged.connect(lambda: self.update_button_states())
         self.SoC0_telnet_username_input.setEnabled(False)
@@ -1181,7 +1228,7 @@ class MainWindow(QMainWindow):
 
         self.SoC0_telnet_password_input = QLineEdit()
         self.SoC0_telnet_password_input.setObjectName('SoC0_telnet_password_input')
-        # self.SoC0_telnet_password_input.setFixedWidth(150)
+        self.SoC0_telnet_password_input.setFixedWidth(180)
         self.SoC0_telnet_password_input.setPlaceholderText('Enter Password')
         self.SoC0_telnet_password_input.textChanged.connect(lambda: self.update_button_states())
         self.SoC0_telnet_password_input.setEnabled(False)
@@ -1198,7 +1245,7 @@ class MainWindow(QMainWindow):
 
         self.SoC0_FTP_username_input = QLineEdit()
         self.SoC0_FTP_username_input.setObjectName('SoC0_FTP_username_input')
-        # self.SoC0_FTP_username_input.setFixedWidth(150)
+        self.SoC0_FTP_username_input.setFixedWidth(180)
         self.SoC0_FTP_username_input.setPlaceholderText('Enter Username')
         self.SoC0_FTP_username_input.textChanged.connect(lambda: self.update_button_states())
         self.SoC0_FTP_username_input.setEnabled(False)
@@ -1210,7 +1257,7 @@ class MainWindow(QMainWindow):
 
         self.SoC0_FTP_password_input = QLineEdit()
         self.SoC0_FTP_password_input.setObjectName('SoC0_FTP_password_input')
-        # self.SoC0_FTP_password_input.setFixedWidth(150)
+        self.SoC0_FTP_password_input.setFixedWidth(180)
         self.SoC0_FTP_password_input.setPlaceholderText('Enter Password')
         self.SoC0_FTP_password_input.textChanged.connect(lambda: self.update_button_states())
         self.SoC0_FTP_password_input.setEnabled(False)
@@ -1259,16 +1306,37 @@ class MainWindow(QMainWindow):
             ip.setEnabled(False)
             ip.textChanged.connect(self.update_button_states)
 
+        dot_style = "font-size: 20px;"  # Define style for dots
+
         ip_layout = QHBoxLayout()
         ip_layout.setSpacing(0)
+
+        # Add first IP part
         ip_layout.addWidget(self.soc1_ip1)
-        ip_layout.addWidget(QLabel("."))
+
+        # Add dot and next IP parts
+        dot1 = QLabel(".")
+        dot1.setStyleSheet(dot_style)
+        ip_layout.addWidget(dot1)
+
         ip_layout.addWidget(self.soc1_ip2)
-        ip_layout.addWidget(QLabel("."))
+
+        dot2 = QLabel(".")
+        dot2.setStyleSheet(dot_style)
+        ip_layout.addWidget(dot2)
+
         ip_layout.addWidget(self.soc1_ip3)
-        ip_layout.addWidget(QLabel("."))
+
+        dot3 = QLabel(".")
+        dot3.setStyleSheet(dot_style)
+        ip_layout.addWidget(dot3)
+
         ip_layout.addWidget(self.soc1_ip4)
 
+        # Add stretch at the end
+        ip_layout.addStretch()
+
+        # Add to form layout
         SoC1_telent_layout.addRow(self.SoC1_IP_label, ip_layout)
 
         self.SoC1_telnet_username_label = QLabel('Telnet Username')
@@ -1276,7 +1344,7 @@ class MainWindow(QMainWindow):
 
         self.SoC1_telnet_username_input = QLineEdit()
         self.SoC1_telnet_username_input.setObjectName('SoC1_telnet_username_input')
-        # self.SoC1_telnet_username_input.setFixedWidth(150)
+        self.SoC1_telnet_username_input.setFixedWidth(180)
         self.SoC1_telnet_username_input.setPlaceholderText('Enter Username')
         self.SoC1_telnet_username_input.textChanged.connect(lambda: self.update_button_states())
         self.SoC1_telnet_username_input.setEnabled(False)
@@ -1288,7 +1356,7 @@ class MainWindow(QMainWindow):
 
         self.SoC1_telnet_password_input = QLineEdit()
         self.SoC1_telnet_password_input.setObjectName('SoC1_telnet_password_input')
-        # self.SoC1_telnet_password_input.setFixedWidth(150)
+        self.SoC1_telnet_password_input.setFixedWidth(180)
         self.SoC1_telnet_password_input.setPlaceholderText('Enter Password')
         self.SoC1_telnet_password_input.textChanged.connect(lambda: self.update_button_states())
         self.SoC1_telnet_password_input.setEnabled(False)
@@ -1305,7 +1373,7 @@ class MainWindow(QMainWindow):
 
         self.SoC1_FTP_username_input = QLineEdit()
         self.SoC1_FTP_username_input.setObjectName('SoC1_FTP_username_input')
-        # self.SoC1_FTP_username_input.setFixedWidth(150)
+        self.SoC1_FTP_username_input.setFixedWidth(180)
         self.SoC1_FTP_username_input.setPlaceholderText('Enter Username')
         self.SoC1_FTP_username_input.textChanged.connect(lambda: self.update_button_states())
         self.SoC1_FTP_username_input.setEnabled(False)
@@ -1317,7 +1385,7 @@ class MainWindow(QMainWindow):
 
         self.SoC1_FTP_password_input = QLineEdit()
         self.SoC1_FTP_password_input.setObjectName('SoC1_FTP_password_input')
-        # self.SoC1_FTP_password_input.setFixedWidth(150)
+        self.SoC1_FTP_password_input.setFixedWidth(180)
         self.SoC1_FTP_password_input.setPlaceholderText('Enter Password')
         self.SoC1_FTP_password_input.textChanged.connect(lambda: self.update_button_states())
         self.SoC1_FTP_password_input.setEnabled(False)
@@ -1350,35 +1418,102 @@ class MainWindow(QMainWindow):
         run_button_layout.addWidget(self.run_button)
         run_button_layout.addWidget(self.stop_KPIs_execution_button)
         run_button_layout.addStretch()
-        return run_button_layout    
-   
-    def set_RCAR_ip_address(self, ip_address):
-        parts = ip_address.split(".")
-        if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
-            self.rcar_ip1.setText(parts[0])
-            self.rcar_ip2.setText(parts[1])
-            self.rcar_ip3.setText(parts[2])
-            self.rcar_ip4.setText(parts[3])
+        return run_button_layout
 
-    def set_SoC0_ip_address(self, ip_address):
-        parts = ip_address.split(".")
-        if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
-            self.soc0_ip1.setText(parts[0])
-            self.soc0_ip2.setText(parts[1])
-            self.soc0_ip3.setText(parts[2])
-            self.soc0_ip4.setText(parts[3])
-   
-    def set_SoC1_ip_address(self, ip_address):
-        parts = ip_address.split(".")
-        if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
-            self.soc1_ip1.setText(parts[0])
-            self.soc1_ip2.setText(parts[1])
-            self.soc1_ip3.setText(parts[2])
-            self.soc1_ip4.setText(parts[3])
+    def set_RCAR_ip_address(self, ip_address: str):
+        """
+        Sets the RCAR IP address fields based on the provided IP string.
+        If the IP is invalid, defaults to 192.168.1.5.
+
+        Args:
+            ip_address (str): The IP address in dotted-decimal format (e.g., "192.168.1.5").
+        """
+
+        try:
+            # Split the IP address into parts and convert each part to an integer
+            parts = [int(part) for part in ip_address.split(".")]
+
+            # Validate: IP must have exactly 4 parts and each part should be in range 0-255
+            if len(parts) == 4 and all(0 <= part <= 255 for part in parts):
+                # Convert back to strings for setting text fields
+                ip_values = [str(part) for part in parts]
+            else:
+                # If validation fails, raise an error to trigger fallback
+                raise ValueError
+
+        except (ValueError, AttributeError):
+            # Fallback IP address if input is invalid or not a string
+            ip_values = ["192", "168", "1", "5"]
+
+        # Set the text fields with the validated or fallback IP values
+        self.rcar_ip1.setText(ip_values[0])
+        self.rcar_ip2.setText(ip_values[1])
+        self.rcar_ip3.setText(ip_values[2])
+        self.rcar_ip4.setText(ip_values[3])
+
+    def set_SoC0_ip_address(self, ip_address: str):
+        """
+        Sets the SoC0 IP address fields based on the provided IP string.
+        If the IP is invalid, no changes are made (or optionally set defaults).
+
+        Args:
+            ip_address (str): The IP address in dotted-decimal format (e.g., "192.168.1.3").
+        """
+
+        try:
+            # Split the IP address into parts and convert each part to an integer
+            parts = [int(part) for part in ip_address.split(".")]
+
+            # Validate: IP must have exactly 4 parts and each part should be in range 0-255
+            if len(parts) == 4 and all(0 <= part <= 255 for part in parts):
+                # Convert back to strings for setting text fields
+                ip_values = [str(part) for part in parts]
+            else:
+                raise ValueError  # Trigger fallback if validation fails
+
+        except (ValueError, AttributeError):
+            # Fallback IP address if input is invalid or not a string
+            ip_values = ["192", "168", "1", "3"]  # Example default for SoC0
+
+        # Set the text fields with the validated or fallback IP values
+        self.soc0_ip1.setText(ip_values[0])
+        self.soc0_ip2.setText(ip_values[1])
+        self.soc0_ip3.setText(ip_values[2])
+        self.soc0_ip4.setText(ip_values[3])
+
+    def set_SoC1_ip_address(self, ip_address: str):
+        """
+        Sets the SoC1 IP address fields based on the provided IP string.
+        If the IP is invalid, no changes are made (or optionally set defaults).
+
+        Args:
+            ip_address (str): The IP address in dotted-decimal format (e.g., "192.168.1.58").
+        """
+
+        try:
+            # Split the IP address into parts and convert each part to an integer
+            parts = [int(part) for part in ip_address.split(".")]
+
+            # Validate: IP must have exactly 4 parts and each part should be in range 0-255
+            if len(parts) == 4 and all(0 <= part <= 255 for part in parts):
+                # Convert back to strings for setting text fields
+                ip_values = [str(part) for part in parts]
+            else:
+                raise ValueError  # Trigger fallback if validation fails
+
+        except (ValueError, AttributeError):
+            # Fallback IP address if input is invalid or not a string
+            ip_values = ["192", "168", "1", "58"]  # Example default for SoC1
+
+        # Set the text fields with the validated or fallback IP values
+        self.soc1_ip1.setText(ip_values[0])
+        self.soc1_ip2.setText(ip_values[1])
+        self.soc1_ip3.setText(ip_values[2])
+        self.soc1_ip4.setText(ip_values[3])
 
     def read_ECU_configuration(self):
         try:
-            with open('ECU_Config.json', 'r') as file:
+            with open('ECU_Config.json', 'r', encoding="utf-8") as file:
                 ecu_config = json.load(file)
 
             if 'RCAR' in ecu_config:
@@ -1387,21 +1522,21 @@ class MainWindow(QMainWindow):
                 self.Rcar_telnet_password_input.setText(ecu_config['RCAR']['telnet_password'])
                 self.Rcar_FTP_username_input.setText(ecu_config['RCAR']['FTP_username'])
                 self.Rcar_FTP_password_input.setText(ecu_config['RCAR']['FTP_password'])
-           
+
             if 'SoC0' in ecu_config:
                 self.set_SoC0_ip_address(ecu_config['SoC0']['IP'])
                 self.SoC0_telnet_username_input.setText(ecu_config['SoC0']['telnet_username'])
                 self.SoC0_telnet_password_input.setText(ecu_config['SoC0']['telnet_password'])
                 self.SoC0_FTP_username_input.setText(ecu_config['SoC0']['FTP_username'])
                 self.SoC0_FTP_password_input.setText(ecu_config['SoC0']['FTP_password'])
-           
+
             if 'SoC1' in ecu_config:
                 self.set_SoC1_ip_address(ecu_config['SoC1']['IP'])
                 self.SoC1_telnet_username_input.setText(ecu_config['SoC1']['telnet_username'])
                 self.SoC1_telnet_password_input.setText(ecu_config['SoC1']['telnet_password'])
                 self.SoC1_FTP_username_input.setText(ecu_config['SoC1']['FTP_username'])
                 self.SoC1_FTP_password_input.setText(ecu_config['SoC1']['FTP_password'])
-           
+
             if 'Relay' in ecu_config:
                 self.relay_port_input.setText(ecu_config['Relay']['relay_port'])
                 self.relay_baudrate_input.setText(str(ecu_config['Relay']['relay_baudrate']))
@@ -1412,22 +1547,88 @@ class MainWindow(QMainWindow):
             py_logger.error("Invalid JSON format")
 
     def get_RCAR_ip_address(self):
-        ip_parts = [self.rcar_ip1.text(), self.rcar_ip2.text(), self.rcar_ip3.text(), self.rcar_ip4.text()]
+        """
+        Retrieves the RCAR IP address from the UI fields and returns it as a string.
+        If any part is invalid, returns an empty string.
+
+        Returns:
+            str: The IP address in dotted-decimal format (e.g., "192.168.1.5") or an empty string if invalid.
+        """
+
+        # Collect the four IP parts from the UI text fields
+        ip_parts = [
+            self.rcar_ip1.text(),
+            self.rcar_ip2.text(),
+            self.rcar_ip3.text(),
+            self.rcar_ip4.text()
+        ]
+
+        # Validate each part:
+        # - Must be numeric (isdigit())
+        # - Must be in range 0 to 999 (though typical IP range is 0-255)
+        # NOTE: Using 999 here might be intentional for UI flexibility, but usually 255 is correct for IPv4.
         if all(part.isdigit() and 0 <= int(part) <= 999 for part in ip_parts):
+            # If valid, join the parts with dots to form the IP address string
             return ".".join(ip_parts)
-        return None
-   
+
+        # If validation fails, return an empty string to indicate invalid IP
+        return ""
+
     def get_SoC0_ip_address(self):
-        ip_parts = [self.soc0_ip1.text(), self.soc0_ip2.text(), self.soc0_ip3.text(), self.soc0_ip4.text()]
+        """
+        Retrieves the SoC0 IP address from the UI fields and returns it as a string.
+        If any part is invalid, returns an empty string.
+
+        Returns:
+            str: The IP address in dotted-decimal format (e.g., "192.168.1.3") or an empty string if invalid.
+        """
+
+        # Collect the four IP parts from the SoC0 UI text fields
+        ip_parts = [
+            self.soc0_ip1.text(),
+            self.soc0_ip2.text(),
+            self.soc0_ip3.text(),
+            self.soc0_ip4.text()
+        ]
+
+        # Validate each part:
+        # - Must be numeric (isdigit())
+        # - Must be in range 0 to 999 (though typical IPv4 range is 0-255)
+        # NOTE: If 999 is intentional for UI flexibility, document why.
         if all(part.isdigit() and 0 <= int(part) <= 999 for part in ip_parts):
+            # If valid, join the parts with dots to form the IP address string
             return ".".join(ip_parts)
-        return None
-   
+
+        # If validation fails, return an empty string to indicate invalid IP
+        return ""
+
     def get_SoC1_ip_address(self):
-        ip_parts = [self.soc1_ip1.text(), self.soc1_ip2.text(), self.soc1_ip3.text(), self.soc1_ip4.text()]
+        """
+        Retrieves the SoC1 IP address from the UI fields and returns it as a string.
+        If any part is invalid, returns an empty string.
+
+        Returns:
+            str: The IP address in dotted-decimal format (e.g., "192.168.1.58") or an empty string if invalid.
+        """
+
+        # Collect the four IP parts from the SoC1 UI text fields
+        ip_parts = [
+            self.soc1_ip1.text(),
+            self.soc1_ip2.text(),
+            self.soc1_ip3.text(),
+            self.soc1_ip4.text()
+        ]
+
+        # Validate each part:
+        # - Must be numeric (isdigit())
+        # - Must be in range 0 to 999 (though typical IPv4 range is 0-255)
+        # NOTE: If 999 is intentional for UI flexibility, document why.
         if all(part.isdigit() and 0 <= int(part) <= 999 for part in ip_parts):
+            # If valid, join the parts with dots to form the IP address string
             return ".".join(ip_parts)
-        return None
+
+        # If validation fails, return an empty string to indicate invalid IP
+        return ""
 
     def Write_ECU_Configuration(self):
         try:
@@ -1440,7 +1641,7 @@ class MainWindow(QMainWindow):
                 'FTP_username': self.Rcar_FTP_username_input.text(),
                 'FTP_password': self.Rcar_FTP_password_input.text()
             }
-           
+
             ecu_input_fields['SoC0'] = {
                 'IP': self.get_SoC0_ip_address(),
                 'telnet_username': self.SoC0_telnet_username_input.text(),
@@ -1448,7 +1649,7 @@ class MainWindow(QMainWindow):
                 'FTP_username': self.SoC0_FTP_username_input.text(),
                 'FTP_password': self.SoC0_FTP_password_input.text()
             }
-           
+
             ecu_input_fields['SoC1'] = {
                 'IP': self.get_SoC1_ip_address(),
                 'telnet_username': self.SoC1_telnet_username_input.text(),
@@ -1461,12 +1662,11 @@ class MainWindow(QMainWindow):
                 'relay_port': self.relay_port_input.text(),
                 'relay_baudrate': int(self.relay_baudrate_input.text())
             }
-       
-            with open('ECU_Config.json', 'w') as file:
+            with open('ECU_Config.json', 'w', encoding="utf-8") as file:
                 json.dump(ecu_input_fields, file, indent=4)
         except Exception as e:
             print("Error writing to file: ", str(e))
-   
+
     def get_dialog_instance(self, label, checkbox):
         try:
             # Determine if label is a diag type
@@ -1494,7 +1694,7 @@ class MainWindow(QMainWindow):
             py_logger.error(f"Failed to load dialog for '{label}': {e}")
 
         return None
-   
+
     def on_button_click(self, label, edit_button, checkbox, folder_button):
         try:
             self.setEnabled(False)
@@ -1538,7 +1738,7 @@ class MainWindow(QMainWindow):
     def toggle_buttons(self, state, label, current_checkbox, checkbox_list, edit_button, folder_button):
         try:
             enabled = state == Qt.Checked
-           
+
             # folder_button.setEnabled(enabled)
 
             if enabled:            
@@ -1585,95 +1785,88 @@ class MainWindow(QMainWindow):
         except Exception as e:
             py_logger.error(f"Unexpected error: {e}")
             return False
-
+   
     def check_KPIs_config(self, label, edit_button, checkbox, folder_button):
-        def set_button_style(is_valid):
+        """
+        Validates KPI configuration for a given label and updates the button style accordingly.
+
+        Args:
+            label (str): The KPI label to validate.
+            edit_button (QPushButton): Button whose style will be updated based on validation.
+            checkbox (QCheckBox): Checkbox indicating additional validation requirement.
+            folder_button (QPushButton): Button to enable/disable based on folder presence.
+
+        Returns:
+            bool: True if configuration is valid, False otherwise.
+        """
+
+        # Helper function to set button style based on validity
+        def set_button_style(is_valid: bool):
             style = common_enabled_style_green if is_valid else common_enabled_style_red
             edit_button.setStyleSheet(style + common_hover_style)
 
-        def validate_ECU_configuration(data):
-            try:
-                # Flatten both dictionaries for easier comparison
-                expected_config = data['ECU_setting']
-                current_config = self.ecu_selection_status
+        # Helper function to validate ECU configuration
+        def validate_ECU_configuration(data: dict) -> bool:
+            """
+            Checks if any ECU configuration is both selected and configured.
 
-                for ecu_type, settings in expected_config.items():
-                    if isinstance(settings, dict):  # Only process nested ECU sections
-                        for key, value in settings.items():
-                            if value:  # If expected is True
-                                if not current_config.get(ecu_type, {}).get(key, False):
-                                    set_button_style(False)
+            Args:
+                data (dict): JSON data containing ECU settings.
 
-                                    return False
+            Returns:
+                bool: True if at least one ECU setting is valid, False otherwise.
+            """
+            # Extract only relevant ECU sections
+            partial_data = {
+                "PADAS": data.get("ECU_setting", {}).get("PADAS", {}),
+                "Elite": data.get("ECU_setting", {}).get("Elite", {})
+            }
 
-                set_button_style(True)
-                return True  # All required True values are matched
+            comparison_result = []
 
-            except Exception as e:
-                py_logger.error(f"Error validating ECU configuration '{label}': {e}")
-                set_button_style(False)
-                return False
+            # Compare ECU selection status with configuration data
+            for section, keys in partial_data.items():
+                for key in keys:
+                    is_selected = self.ecu_selection_status.get(section, {}).get(key, False)
+                    is_configured = keys.get(key, False)
+                    comparison_result.append(is_selected and is_configured)
 
+            # Return True if any ECU setting is valid
+            return any(comparison_result)
+
+        # Enable folder button if folder exists for the label
         folder_button.setEnabled(self.is_folder_present(label))
 
         try:
-            is_valid = True
-
-            # if label == "Startup Time":
-            #     with open('./Startup_Time_Scripts/startup_time_config.json', 'r') as file:
-            #         data = json.load(file)
- 
-            #     if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
-            #         return bool(validate_ECU_configuration(data))
-            #     else:
-            #         set_button_style(is_valid)
-            #         return is_valid
-
-            # elif label == "Shutdown Time":
-            #     with open('./Shutdown_Time_Scripts/shutdown_time_config.json', 'r') as file:
-            #         data = json.load(file)
-               
-            #     is_valid = (
-            #         isinstance(data.get("DLT-Viewer Log Capture Time"), int) and
-            #         isinstance(data.get("Iterations"), int) and
-            #         data.get("windows", {}).get("Is Environment Path Set") is not None and
-            #         isinstance(data.get("windows", {}).get("DLT-Viewer Installed Path"), str)                    
-            #     )                
-
-            #     set_button_style(is_valid)
-            #     return is_valid
-
-            # Instantiate dialog dynamically
-            dialog = self.get_dialog_instance(label, checkbox)
-
-            # Validate dialog fields if method exists, else log and mark invalid            
-            if dialog:
-                if hasattr(dialog, "validate_all_fields"):
-                    is_valid = dialog.validate_all_fields()
-                    del dialog
-                else:
-                    # py_logger.warning(f"Dialog for '{label}' does not implement 'validate_all_fields'.")
-                    is_valid = False
-            else:
-                py_logger.warning(f"No dialog found for label: '{label}'")
-                is_valid = False            
-
-            # Labels that require ECU config validation
-            ecu_validation_labels = {
+            # Labels that require ECU configuration validation
+            ecu_validation_labels = [
                 "Heap Memory",
-                "Throughput and Fault Injection", "Execution Time"
-            }
+                "Startup Time",
+                "Cyclic and Turnaround Time",
+                "Throughput and Fault Injection",
+                "Execution Time"
+            ]
 
+            # Initialize validation flag as False
+            is_valid = False
+
+            # Get configuration file path for the given label from switch_dict
+            config_path = switch_dict.get(label)
+
+            # Load configuration file if path exists
+            if config_path:
+                with open(config_path, 'r', encoding="utf-8") as f:
+                    data = json.load(f)
+
+                # Safely get validation flag from JSON
+                is_valid = data.get("is_all_fields_valid", False)
+
+            # Additional ECU validation for specific labels
             if label in ecu_validation_labels:
-                config_path = switch_dict.get(label)
-                if config_path:
-                    with open(config_path, 'r') as f:
-                        data = json.load(f)
+                if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
+                    is_valid = validate_ECU_configuration(data)
 
-                    if is_valid and self.is_any_ecu_selected_flag and checkbox.isChecked():
-                        return bool(validate_ECU_configuration(data))
-
-            # Final style update and return
+            # Update button style and return result
             set_button_style(is_valid)
             return is_valid
 
@@ -1682,8 +1875,9 @@ class MainWindow(QMainWindow):
         except Exception as e:
             py_logger.error(f"Error validating '{label}' configuration: {e}")
 
+        # Default case: invalid configuration
         set_button_style(False)
-        return False
+        return False    
 
     def print_ecu_selection_status(self):
         for category, components in self.ecu_selection_status.items():
@@ -1862,7 +2056,7 @@ class MainWindow(QMainWindow):
         # Return True if at least one KPI was selected for validation and all selected KPIs are valid
         # Return False if no KPIs were selected for validation or any selected KPI failed validation
         return bool(kpi_results) and all(kpi_results)
-   
+
     def update_run_button_status(self):    
         if self.validate_kpi_configurations() and self.configuration_flag:
             self.run_button.setEnabled(True)
@@ -1870,7 +2064,7 @@ class MainWindow(QMainWindow):
         else:
             self.run_button.setEnabled(False)
             self.run_button.setToolTip("To enable the RUN Button, configure all red highlighted fields")
-   
+
     def is_configuration_valid(self) -> bool:
         """
         Validates all relevant input widgets regardless of checkbox state.
@@ -2018,7 +2212,7 @@ class MainWindow(QMainWindow):
 
             for label, widgets in self.kpi_widgets.items():
                 checkbox = widgets['checkbox']
-               
+
                 if checkbox.isChecked() and label in restricted_kpis:
                     if not self.padas_checkbox.isChecked():
                         QMessageBox.warning(self, "Incompatible ECU and KPI Selection",
@@ -2033,7 +2227,7 @@ class MainWindow(QMainWindow):
     def on_run_button_click(self):
         if not self.check_kpi_compatibility():
             return
-       
+
         ecu_input_fields = self.get_ecu_input_fields()
         self.run_and_update_config(ecu_input_fields)
         self.prepare_and_store_widget_states()
@@ -2052,12 +2246,13 @@ class MainWindow(QMainWindow):
         # Connect signals        
         self.worker.start_kpi_logging.connect(self.start_kpi_logging)
         self.worker.stop_kpi_logging.connect(self.stop_kpi_logging)
+        self.worker.set_status_inProgess.connect(self.set_status_label_inProgess)
         self.worker.update_status.connect(self.set_status_label_and_enable_widgets)
         self.worker.disable_widgets.connect(self.disable_all_widgets)
         self.worker.enable_widgets.connect(self.restore_widget_states)
 
         self.thread.start()
-   
+
     def manage_stop_flag(self, is_create):
         """
         Creates or removes the stop.flag file based on the is_create flag.
@@ -2072,7 +2267,7 @@ class MainWindow(QMainWindow):
         try:
             if is_create:
                 # Create the stop.flag file and write the stop signal
-                with open(stop_flag_path, "w") as f:
+                with open(stop_flag_path, "w", encoding="utf-8") as f:
                     f.write("stop")
                 py_logger.info(f"stop.flag created at {stop_flag_path}")
             else:
@@ -2119,7 +2314,6 @@ class MainWindow(QMainWindow):
                 self.worker.request_stop()
 
                 # Keep processing GUI events while waiting for the thread to stop
-                from PyQt5.QtCore import QCoreApplication
                 while self.worker is not None:
                     QCoreApplication.processEvents()  # Prevent GUI freeze
                     time.sleep(0.1)  # Brief pause before checking again
@@ -2193,7 +2387,7 @@ class MainWindow(QMainWindow):
                 'FTP_username': self.Rcar_FTP_username_input.text(),
                 'FTP_password': self.Rcar_FTP_password_input.text()
             }
-           
+
         if self.RCar_checkbox.isChecked():
             ecu_input_fields['RCAR'] = {
                 'IP': self.get_RCAR_ip_address(),
@@ -2202,7 +2396,7 @@ class MainWindow(QMainWindow):
                 'FTP_username': self.Rcar_FTP_username_input.text(),
                 'FTP_password': self.Rcar_FTP_password_input.text()
             }
-           
+
         if self.SoC0_checkbox.isChecked():
             ecu_input_fields['SoC0'] = {
                 'IP': self.get_SoC0_ip_address(),
@@ -2211,7 +2405,7 @@ class MainWindow(QMainWindow):
                 'FTP_username': self.SoC0_FTP_username_input.text(),
                 'FTP_password': self.SoC0_FTP_password_input.text()
             }
-           
+
         if self.SoC1_checkbox.isChecked():
             ecu_input_fields['SoC1'] = {
                 'IP': self.get_SoC1_ip_address(),
@@ -2221,8 +2415,8 @@ class MainWindow(QMainWindow):
                 'FTP_password': self.SoC1_FTP_password_input.text()
             }
 
-        return ecu_input_fields  
-   
+        return ecu_input_fields
+
     def run_and_update_config(self, ecu_input_fields):
         self.Write_ECU_Configuration()
 
@@ -2244,81 +2438,6 @@ class MainWindow(QMainWindow):
                 "SoC1_FTP_Username": ecu_input_fields.get("SoC1", {}).get("FTP_username", ""),
                 "SoC1_FTP_Password": ecu_input_fields.get("SoC1", {}).get("FTP_password", "")
             }
-       
-        # def compare_ecu_settings(data, label):
-        #     """
-        #     Compare ECU settings between self.ecu_selection_status and the given data.
-
-        #     Description:
-        #     ------------
-        #     This function extracts only the 'PADAS' and 'Elite' sections from the input `data`
-        #     (which contains ECU settings) and compares them with `self.ecu_selection_status`.
-        #     For each key inside these sections, the result will be True only if both dictionaries
-        #     have True for that key; otherwise, False.
-
-        #     Input:
-        #     ------
-        #     data : dict
-        #         A dictionary containing ECU settings in the format:
-        #         {
-        #             "ECU_setting": {
-        #                 "PADAS": {...},
-        #                 "Elite": {...}
-        #             },
-        #             "Current_Timestamp": "..."
-        #         }
-
-        #     Output:
-        #     -------
-        #     comparison_result : dict
-        #         A dictionary with the same structure as 'PADAS' and 'Elite', where each key
-        #         is True only if both sources have True, else False.
-        #         Example:
-        #         {
-        #             "PADAS": {"RCAR": True},
-        #             "Elite": {"RCAR": False, "SoC0": False, "SoC1": False}
-        #         }
-
-        #     Logic:
-        #     ------
-        #     1. Extract 'PADAS' and 'Elite' from the input `data` safely using `.get()`.
-        #     2. Loop through each section ('PADAS', 'Elite') and their keys.
-        #     3. For each key, check:
-        #     - If `self.ecu_selection_status[section][key]` is True AND
-        #         `partial_data[section][key]` is True → set True.
-        #     - Else → set False.
-        #     4. Return the comparison result dictionary.
-        #     """
-
-        #     # Step 1: Extract only the required part from data
-        #     partial_data = {
-        #         "PADAS": data.get("ECU_setting", {}).get("PADAS", {}),
-        #         "Elite": data.get("ECU_setting", {}).get("Elite", {})
-        #     }            
-
-        #     # Step 2: Initialize result dictionary
-        #     comparison_result = {}
-
-        #     # Step 3: Compare values
-        #     for section in partial_data:
-        #         comparison_result[section] = {}
-        #         for key in partial_data[section]:
-        #             comparison_result[section][key] = (
-        #                 self.ecu_selection_status.get(section, {}).get(key, False)
-        #                 and partial_data[section].get(key, False)
-        #             )
-           
-        #     py_logger.info(
-        #         f"\n{'#'*70}\n"
-        #         f"Label: {label}\n"
-        #         f"KPI_ecu_settings: {partial_data}\n"
-        #         f"mainwindow_ecu_settings: {self.ecu_selection_status}\n"
-        #         f"comparison_result: {comparison_result}\n"
-        #         f"{'#'*70}"
-        #     )
-
-        #     # Step 4: Return result
-        #     return comparison_result
 
         def compare_ecu_settings(data, label):
             """
@@ -2390,85 +2509,32 @@ class MainWindow(QMainWindow):
             # Step 4: Save partial_data to JSON under label
             file_name = "all_KPIs_ECU_settings.json"
             if os.path.exists(file_name):
-                with open(file_name, "r") as f:
+                with open(file_name, "r", encoding="utf-8") as f:
                     all_data = json.load(f)
             else:
                 all_data = {}
 
             all_data[label] = partial_data
 
-            with open(file_name, "w") as f:
+            with open(file_name, "w", encoding="utf-8") as f:
                 json.dump(all_data, f, indent=4)
 
             # Step 5: Log info
-            py_logger.info(
-                f"\n{'#'*70}\n"
-                f"Label: {label}\n"
-                f"KPI_ecu_settings: {partial_data}\n"
-                f"mainwindow_ecu_settings: {self.ecu_selection_status}\n"
-                f"comparison_result: {comparison_result}\n"
-                f"{'#'*70}"
-            )
+            # py_logger.info(
+            #     f"\n{'#'*70}\n"
+            #     f"Label: {label}\n"
+            #     f"KPI_ecu_settings: {partial_data}\n"
+            #     f"mainwindow_ecu_settings: {self.ecu_selection_status}\n"
+            #     f"comparison_result: {comparison_result}\n"
+            #     f"{'#'*70}"
+            # )
 
             # Step 6: Return result
             return comparison_result
 
-        def compare_ecu_configs(label, data):
-            """
-            Compare expected ECU settings from JSON with current ECU selection status.
-            Returns a dictionary with the same structure as current_config.
-           
-            Args:
-                data (dict): Dictionary containing ECU settings under the key "ECU_setting".
-           
-            Returns:
-                dict: Updated ECU configuration comparison result.
-            """
-            try:
-                # Validate input structure
-                if not isinstance(data, dict):
-                    raise TypeError("Input 'data' must be a dictionary.")
-               
-                if "ECU_setting" not in data:
-                    raise KeyError("Missing 'ECU_setting' key in input data.")
-               
-                expected_config = data["ECU_setting"]
-                final_config = {}
-
-                py_logger.info(f"{label}\nexpected_config: {expected_config}\n ecu_selection_status: {self.ecu_selection_status}")
-
-                # Ensure self.ecu_selection_status exists and is a dictionary
-                if not hasattr(self, "ecu_selection_status") or not isinstance(self.ecu_selection_status, dict):
-                    raise AttributeError("Object does not have a valid 'ecu_selection_status' attribute.")
-
-                # Iterate through ECU groups and compare configurations
-                for group, keys in self.ecu_selection_status.items():
-                    final_config[group] = {}
-                    for key in keys:
-                        # Compare both configs: True only if both are True
-                        final_config[group][key] = (
-                            self.ecu_selection_status[group].get(key, False) and
-                            expected_config.get(group, {}).get(key, False)
-                        )
-
-                # Update the original data with the comparison result
-                # data["ECU_setting"] = final_config
-                py_logger.info(f"final_config: {final_config}")
-
-                return final_config
-
-            except (TypeError, KeyError, AttributeError) as e:
-                # Handle known exceptions gracefully
-                py_logger.info(f"Error: {e}")
-                return None
-            except Exception as e:
-                # Catch any unexpected errors
-                py_logger.info(f"An unexpected error occurred: {e}")
-                return None
-
         def update_config_file(file_path, label):
             try:
-                with open(file_path, 'r') as f:
+                with open(file_path, 'r', encoding="utf-8") as f:
                     data = json.load(f)
 
                 if label in ["Startup Time", "Shutdown Time", "Throughput and Fault Injection"]:
@@ -2483,64 +2549,48 @@ class MainWindow(QMainWindow):
                 else:
                     if "ECU_setting" not in data:
                         data["ECU_setting"] = {}
-               
+
                     data["ECU_setting"]["PADAS"] = {
                         "RCAR": self.padas_checkbox.isChecked()
                     }
-               
+
                     data["ECU_setting"]["Elite"] = {
                         "RCAR": self.RCar_checkbox.isChecked(),
                         "SoC0": self.SoC0_checkbox.isChecked(),
                         "SoC1": self.SoC1_checkbox.isChecked()
-                    }                    
+                    }
 
                 data["ECU_setting"].update(build_ecu_settings())                
 
-                with open(file_path, 'w') as f:
+                with open(file_path, 'w', encoding="utf-8") as f:
                     json.dump(data, f, indent=4)
 
             except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
                 py_logger.error(f"Error with JSON: {e}", exc_info=True)
             except Exception as e:
                 py_logger.error(f"Unexpected error while updating '{file_path}': {e}")
-
-        for label, widgets in self.kpi_widgets.items():
-            if widgets['checkbox'].isChecked():
-                config_path = switch_dict.get(label)
-                if config_path:
-                    update_config_file(config_path, label)                
-
-                elif label in diag_labels:
-                    try:
-                        if label == "Positive Response":
-                            with open('Positive_Response_Config.json', 'r') as f:
+       
+        try:
+            for label, widgets in self.kpi_widgets.items():
+                if widgets['checkbox'].isChecked():
+                    config_path = switch_dict.get(label)
+                    if config_path:
+                        if label in diag_labels:                            
+                            with open(config_path, 'r', encoding="utf-8") as f:
                                 data = json.load(f)
-                        elif label == "Negative Response":
-                            with open('Negative_Response_Config.json', 'r') as f:
-                                 data = json.load(f)
-                        elif label == "Diagnostic Trouble Code (DTC)":
-                            with open('DTC_Config.json', 'r') as f:
-                                 data = json.load(f)
-                        elif label == "Reprogramming_FOTA":
-                            with open('Reprogramming_FOTA_Config.json', 'r') as f:
-                                 data = json.load(f)
-                        elif label == "Reprogramming_Wired":
-                            with open('Reprogramming_Wired_Config.json', 'r') as f:
-                                 data = json.load(f)
-                        elif label == "Diag_All_KPIs":
-                            with open('Diag_All_KPIs_Config.json', 'r') as f:
-                                 data = json.load(f)
 
-                        # Update KPI checkbox states
-                        for key in diag_labels:
-                            data[key] = self.kpi_widgets[key]['checkbox'].isChecked()
+                            # Update KPI checkbox states
+                            for key in diag_labels:
+                                data[key] = self.kpi_widgets[key]['checkbox'].isChecked()
 
-                        with open('DIAG_KPI_Config.json', 'w') as f:
-                            json.dump(data, f, indent=4)
+                            with open('DIAG_KPI_Config.json', 'w', encoding="utf-8") as f:
+                                json.dump(data, f, indent=4)
 
-                        update_config_file('DIAG_KPI_Config.json', label)
-                    except Exception as e:
-                        py_logger.error(f"Error updating DIAG_KPI_Config.json: {e}")
+                            update_config_file('DIAG_KPI_Config.json', label)
+                        else:
+                            update_config_file(config_path, label)
+        except Exception as e:
+            py_logger.error(f"Error updating config file: {e}")
 
     def prepare_and_store_widget_states(self):
         self.is_test_in_progress = True
@@ -2551,12 +2601,17 @@ class MainWindow(QMainWindow):
             status_label = widgets['status_label']
 
             status_label.setStyleSheet("background-color: #D0CEE2; border: 0.5px solid #999999;")
-            if checkbox.isChecked():
-                status_label.setStyleSheet("background-color: #FFFF00; border: 0.5px solid #999999;")
+            # if checkbox.isChecked():
+            #     status_label.setStyleSheet("background-color: #FFFF00; border: 0.5px solid #999999;")
 
             self.kpi_widgets_status[label] = {
                 'checkbox': checkbox.isEnabled(),
             }
+
+    def set_status_label_inProgess(self, label):
+        if label in self.kpi_widgets:
+            widgets = self.kpi_widgets[label]
+            widgets['status_label'].setStyleSheet("background-color: #FFFF00; border: 0.5px solid #999999;")
 
     def set_status_label_and_enable_widgets(self, label, color):
         if label in self.kpi_widgets:
@@ -2596,7 +2651,7 @@ class MainWindow(QMainWindow):
             return
 
         # Step 2: Load all saved ECU settings
-        with open(file_name, "r") as f:
+        with open(file_name, "r", encoding="utf-8") as f:
             all_data = json.load(f)
 
         # Step 3: Validate label
@@ -2611,14 +2666,14 @@ class MainWindow(QMainWindow):
             return
 
         # Step 5: Load config file data
-        with open(config_path, "r") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         # Step 6: Update ECU_setting in config data
         data["ECU_setting"] = all_data[label]
 
         # Step 7: Save updated config back to file
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 
     def restore_widget_states(self):
@@ -2674,7 +2729,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-   
+
     # Set global tooltip style before creating any widgets
     app.setStyleSheet("""
         QToolTip {

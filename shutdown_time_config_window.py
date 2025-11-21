@@ -119,7 +119,7 @@ class ShutdownTimeConfig(QDialog):
 
         # Path line edit with char count
         path_le = QLineEdit(win.get('DLT-Viewer Installed Path', ''))
-        path_le.setReadOnly(True)
+        # path_le.setReadOnly(True)
         # path_le.textChanged.connect(lambda text: [self.ok_btn.setDisabled(False)])
         path_le.textChanged.connect(lambda text: [self.validate_all_fields()])
         path_le.setMaxLength(250)
