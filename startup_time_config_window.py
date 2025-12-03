@@ -705,6 +705,13 @@ class StartupTimeConfig(QDialog):
         self.init_ui()
    
     def set_window_properties(self):
+        # Enable minimize/maximize buttons and the context-help '?' hint
+        flags = (self.windowFlags()
+                #  | Qt.WindowMinimizeButtonHint
+                 | Qt.WindowMaximizeButtonHint            
+                 | Qt.Window)
+       
+        self.setWindowFlags(flags)
         self.setWindowTitle('Startup Time Configuration')
         self.setWindowIcon(QIcon('./GUI_Icons/KPIT_logo.ico'))
 
@@ -724,7 +731,7 @@ class StartupTimeConfig(QDialog):
 
         # Set the geometry and fixed size of the window
         self.setGeometry(x, y, window_width, window_height)
-        self.setFixedSize(window_width, window_height)
+        self.setMinimumSize(window_width, window_height)
 
     def load_config(self):
         if not os.path.exists(self.config_path):
