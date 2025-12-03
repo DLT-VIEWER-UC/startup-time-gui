@@ -74,7 +74,7 @@ class ApplicationSelectorWidget(QWidget):
         self.text_field.setPlaceholderText(placeholder_text)
         self.text_field.textChanged.connect(self.on_text_changed)
         self.text_field.editingFinished.connect(self.on_editing_finished)
-        
+       
         # Track if there are duplicates
         self.has_duplicates = False
        
@@ -367,7 +367,7 @@ class ApplicationSelectorWidget(QWidget):
         # Build final list preserving the order from text field
         final_apps = []
         seen = set()
-        
+       
         # First, add all apps from current text that are still valid (either checked or manual)
         for app in all_current_apps:
             if app not in seen:
@@ -375,7 +375,7 @@ class ApplicationSelectorWidget(QWidget):
                 if app in checked_apps or app not in self.application_checkboxes:
                     final_apps.append(app)
                     seen.add(app)
-        
+       
         # Then add any newly checked apps that weren't in the text field yet
         for app in checked_apps:
             if app not in seen:
@@ -383,12 +383,12 @@ class ApplicationSelectorWidget(QWidget):
                 seen.add(app)
        
         return final_apps
-    
+   
     def check_for_duplicates(self):
         """Check if there are duplicate applications in the text field"""
         text = self.text_field.text()
         apps = [app.strip() for app in text.split(',') if app.strip()]
-        
+       
         # Check for duplicates
         seen = set()
         has_duplicates = False
@@ -397,14 +397,14 @@ class ApplicationSelectorWidget(QWidget):
                 has_duplicates = True
                 break
             seen.add(app)
-        
+       
         return has_duplicates
-    
+   
     def remove_duplicates_from_text(self):
         """Remove duplicate applications, keeping only the first occurrence"""
         text = self.text_field.text()
         apps = [app.strip() for app in text.split(',') if app.strip()]
-        
+       
         # Remove duplicates while preserving order
         unique_apps = []
         seen = set()
@@ -412,7 +412,7 @@ class ApplicationSelectorWidget(QWidget):
             if app not in seen:
                 unique_apps.append(app)
                 seen.add(app)
-        
+       
         return unique_apps
            
     def update_all_cross_group_disabling(self):
@@ -484,18 +484,18 @@ class ApplicationSelectorWidget(QWidget):
             self.parent_dialog.update_all_disabled_states_delayed()
        
         self.updating_from_text = False
-    
+   
     def on_editing_finished(self):
         """Handle when user finishes editing the text field (loses focus or presses Enter)"""
         if self.has_duplicates:
             # Remove duplicates keeping first occurrence
             unique_apps = self.remove_duplicates_from_text()
-            
+           
             # Update the text field with deduplicated list
             self.updating_from_checkboxes = True
             self.text_field.setText(', '.join(unique_apps))
             self.updating_from_checkboxes = False
-            
+           
             # Update checkboxes to match the deduplicated list
             self.updating_from_text = True
             for app, checkbox in self.application_checkboxes.items():
@@ -503,13 +503,13 @@ class ApplicationSelectorWidget(QWidget):
                 checkbox.setChecked(app in unique_apps)
                 checkbox.clicked.connect(self.on_application_checkbox_changed)
             self.updating_from_text = False
-            
+           
             # Clear duplicate flag and border
             self.has_duplicates = False
-            
+           
             # Update Select All state
             self.update_select_all_visual_state()
-            
+           
             # Trigger validation update on parent dialog
             if hasattr(self.parent_dialog, 'validate_all_fields'):
                 self.parent_dialog.validate_all_fields()
@@ -682,7 +682,7 @@ class StartupTimeConfig(QDialog):
                     self.isPadas = False
                 else:
                     self.isSOC1 = False
-            
+           
             self.ecu_block_list_selection_map = {
                 0: self.isPadas and self.isRCAR,
                 1: self.isElite and self.isRCAR,
@@ -705,7 +705,7 @@ class StartupTimeConfig(QDialog):
    
     def set_window_properties(self):
         self.setWindowTitle('Startup Time Configuration')
-        self.setWindowIcon(QIcon('KPIT_logo.ico'))
+        self.setWindowIcon(QIcon('./GUI_Icons/KPIT_logo.ico'))
 
         # Get the geometry of the MainWindow
         main_window_x = self.main_window.x()
@@ -913,7 +913,8 @@ class StartupTimeConfig(QDialog):
         self.app_input_btn = QPushButton()
         self.app_input_btn.setFocusPolicy(Qt.NoFocus)
         self.app_input_btn.setFixedSize(30, 24)  # Make it square and slightly larger for the icon
-        self.app_input_btn.setText("📋")  # Use clipboard/Excel emoji as icon
+        # self.app_input_btn.setText("📋")  # Use clipboard/Excel emoji as icon
+        self.app_input_btn.setIcon(QIcon("./GUI_Icons/Excel_icon.ico"))
         self.app_input_btn.clicked.connect(self.open_application_input_list)
         app_input_layout.addWidget(self.app_input_btn)
         app_input_layout.addStretch()  # Push everything to the left
@@ -1243,7 +1244,7 @@ class StartupTimeConfig(QDialog):
     def _create_ecu_block(self, data, idx):
         # Create the main collapsible group box for the ECU
         gb = CollapsibleGroupBox(data.get('ecu-type'))
-        
+       
         # Create a scroll area for the ECU content
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -1251,7 +1252,7 @@ class StartupTimeConfig(QDialog):
         scroll_area.setMaximumHeight(400)  # Set maximum height before scrolling
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        
+       
         # Create a widget to hold the content
         content_widget = QWidget()
         vbox = QVBoxLayout(content_widget)
@@ -1348,7 +1349,7 @@ class StartupTimeConfig(QDialog):
 
         vbox.addWidget(self.threshold_group)
         vbox.addWidget(startup_group)
-        
+       
         # Set the content widget to the scroll area
         scroll_area.setWidget(content_widget)
        
@@ -1732,7 +1733,7 @@ class StartupTimeConfig(QDialog):
         self.ok_btn.setEnabled(False if self.main_window.is_test_in_progress and self.main_window.is_KPI_selected else True)
         print(f"Validation result - ECU block list map: {self.ecu_block_list_selection_map}, ECU error list: {self.ecu_error_list}), is_partially_filled: {is_partially_filled}")
         return not is_partially_filled and any((
-            not self.ecu_error_list[0] and self.ecu_block_list_selection_map[0], 
+            not self.ecu_error_list[0] and self.ecu_block_list_selection_map[0],
             not self.ecu_error_list[1] and self.ecu_block_list_selection_map[1],
             not self.ecu_error_list[2] and self.ecu_block_list_selection_map[2],
             not self.ecu_error_list[3] and self.ecu_block_list_selection_map[3]
@@ -2125,7 +2126,7 @@ class StartupTimeConfig(QDialog):
         for idx, block in enumerate(self.ecu_block_list):
             # if block.disabled:
             #     continue  # Skip disabled blocks
-            
+           
             self.ecu_block_list_selection_map = {i: i==idx for i in range(4)}
             self.validate_all_fields()
 
@@ -2134,19 +2135,20 @@ class StartupTimeConfig(QDialog):
             group, key = validation_map[title]
             self.ecu_selection[group][key] = not block.disabled and not self.ecu_error_list[idx]
             py_logger.info(f"Enabled ECU: {title} {group}-{key} {self.ecu_selection[group][key]}")
-        
+       
         self.ecu_block_list_selection_map = {
             0: self.isPadas and self.isRCAR,
             1: self.isElite and self.isRCAR,
             2: self.isElite and self.isSOC0,
             3: self.isElite and self.isSOC1
         }
-        data['is_all_fields_valid'] = self.validate_all_fields()
+        self.validate_all_fields()
  
         # py_logger.info(f'self.ecu_selection: {self.ecu_selection}')
  
         data['ecu-config'] = ec
         data['ECU_setting'] = self.ecu_selection
+        data["is_all_fields_valid"] = self.validate_all_fields()
         try:
             with open(self.config_path, 'w') as f:
                 json.dump(data, f, indent=4)

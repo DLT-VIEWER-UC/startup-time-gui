@@ -1,45 +1,5 @@
-import importlib
 from imports_utils import *
-# from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
-
-# Dictionary mapping KPI labels to their config file paths
-switch_dict = {
-    'CPU and Memory Utilization': './CPU_Memory_Utilization_Scripts/cpu_memory_utilization_config.json',
-    'Heap Memory': './Heap_Memory_Scripts/heap_memory_config.json',
-    'Startup Time': './Startup_Time_Scripts/startup_time_config.json',
-    'Cyclic and Turnaround Time': './Cyclic_Turnaround_Time_Scripts/cyclic_turnaround_config.json',
-    'Execution Time': './Execution_Time_Scripts/Execution_Time_Config.json',
-    'Throughput and Fault Injection': './Throughput_Scripts/throughput_faultinjection_config.json',
-    'Shutdown Time': './Shutdown_Time_Scripts/shutdown_time_config.json',
-    'Continuous KEV': './Continuous_KEV_Scripts/kev_gen_and_logMover_config.json',
-    'Event Trigger KEV': './Event_Trigger_KEV_Scripts/kev_gen_and_logMover_config.json',
-    'RAM Monitor': './RAM_Measurement_Scripts/XCP_RAM_Measurement_Config.json',
-    'Event Trigger RAM Monitor': './Event_Trigger_RAM_Measurement_Scripts/XCP_RAM_Event_Trigger_Config.json',
-    'APL Communication Layout': './APL_Communication_Layout_Scripts/XCP_APL_Config.json',
-    "Positive Response": 'Positive_Response_Config.json',
-    "Negative Response": 'Negative_Response_Config.json',
-    "Diagnostic Trouble Code (DTC)": 'DTC_Config.json',
-    "Reprogramming_FOTA": 'Reprogramming_FOTA_Config.json',
-    "Reprogramming_Wired": 'Reprogramming_Wired_Config.json',
-    "Diag_All_KPIs": 'Diag_All_KPIs_Config.json',
-}
-
-# Mapping of labels to their module and class names
-config_dialogs = {
-    "CPU and Memory Utilization": ("cpu_memory_utilization_config_window", "CpuMemoryConfig"),
-    "Heap Memory": ("heap_memory_config_window", "HeapMemoryConfig"),
-    "Startup Time": ("startup_time_config_window", "StartupTimeConfig"),
-    "Cyclic and Turnaround Time": ("cyclic_turnaround_time_config_window", "CyclicTurnaroundConfig"),
-    "Throughput and Fault Injection": ("throughput_config_window", "ThroughputConfig"),
-    "Execution Time": ("execution_time_config_window", "ExecutionTimeConfig"),
-    "Shutdown Time": ("shutdown_time_config_window", "ShutdownTimeConfig"),
-    "Event Trigger KEV": ("event_trigger_KEV_config_window", "EventTriggerKEVConfig"),
-    "Continuous KEV": ("Continous_KEV_config_window", "ContinuousKEVConfig"),
-    "RAM Monitor": ("XCP_RAM_measurment_config_window", "XcpRAMMonitoringConfig"),
-    "Event Trigger RAM Monitor": ("XCP_RAM_measurement_event_trigger_config_window", "XCPRAMMonitorEventTriggerConfig"),
-    "APL Communication Layout": ("XCP_APL_communication_layout_config_window", "XCPAPLCommConfig"),
-    "Diag": ("diag_config_window", "DiagConfig")  # Optional fallback for diag labels
-}
+from CPU_Memory_Utilization_Scripts.Integrated_CPU_Memory_Measurement import CPU_Memory_measurement
 
 class CustomIntValidator(QIntValidator):
     def __init__(self, min_value, max_value, parent=None):
@@ -221,8 +181,8 @@ class Worker(QObject):
                 subprocess.run(["chmod", "+x", exe_path])
 
             self.process = subprocess.Popen([exe_path])
-            time.sleep(3)
-            py_logger.info("Diag High Level ECU Tester is Successfully Launched.")
+            time.sleep(5)
+            # py_logger.info("Diag High Level ECU Tester is Successfully Launched.")
 
             # Wait for the process to complete or be forcefully stopped
             while self.process.poll() is None:
@@ -573,7 +533,7 @@ class MainWindow(QMainWindow):
         # py_logger.info(f"Screen Resolution: {screen_width}x{screen_height}")
 
         # Calculate the window dimensions as a fraction of the screen dimensions
-        window_width = int(screen_width * 0.65)  # 60% of the screen width
+        window_width = int(screen_width * 0.65)  # 65% of the screen width
         window_height = int(screen_height * 0.95)  # 95% of the screen height
 
         # Ensure the window dimensions do not exceed the screen dimensions

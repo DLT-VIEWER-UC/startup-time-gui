@@ -68,7 +68,7 @@ def create_data_references(ws, cats_mcol, cats_mrow, cats_mxrow, sd_mcol, sd_mxc
     cats = Reference(ws, min_col=cats_mcol, min_row=cats_mrow, max_row=cats_mxrow)
     stacked_data = Reference(ws, min_col=sd_mcol, max_col=sd_mxcol, min_row=sd_mrow, max_row=sd_mxrow)
     clustered_data = Reference(ws, min_col=cd_mcol, max_col=cd_mxcol, min_row=cd_mrow, max_row=cd_mxrow)
-    
+   
     return cats, stacked_data, clustered_data
 
 def create_stacked_chart(stacked_data, cats, title, y_title, x_title):
@@ -83,18 +83,18 @@ def create_stacked_chart(stacked_data, cats, title, y_title, x_title):
     stacked.y_axis.title = y_title
     stacked.x_axis.title = x_title
     stacked.legend = None
-    
+   
     # Reverse the order of series so Col2 (1.5) appears first, then Col1 (3.567)
     stacked.series = list(reversed(stacked.series))
-    
+   
     # Ensure axes are visible
     stacked.y_axis.delete = False
     stacked.x_axis.delete = False
-    
+   
     # Position category axis at the bottom
     stacked.y_axis.tickLblPos = "low"
     stacked.x_axis.crosses = "min"
-    
+   
     return stacked
 
 
@@ -106,16 +106,16 @@ def create_clustered_chart(clustered_data, cats, gap_width=100):
     clustered.overlap = 0
     clustered.add_data(clustered_data, titles_from_data=True)
     clustered.set_categories(cats)
-    
+   
     # Configure secondary axis
     clustered.y_axis.axId = 200
     clustered.y_axis.tickLblPos = "low"
     clustered.x_axis.crosses = "min"
     clustered.gapWidth = gap_width
-    
+   
     # Disable major gridlines for secondary axis
     clustered.y_axis.majorGridlines = None
-    
+   
     return clustered
 
 def add_gridlines(chart, color="D3D3D3"):
@@ -132,12 +132,12 @@ def configure_chart_layout(chart, width=18, height=10, gap_width=100, major_unit
     """Configure chart size, layout, and axis settings."""
     # Set axis major unit
     chart.y_axis.majorUnit = major_unit
-    
+   
     # Set chart sizing
     chart.gapWidth = gap_width
     chart.width = width
     chart.height = height
-    
+   
     # Set manual layout with padding
     ml = ManualLayout()
     ml.x = 0.05
@@ -177,17 +177,17 @@ def customize_clustered_series(chart, transparent=True, label_position="outEnd")
         ser.dLbls.showSerName = False
         ser.dLbls.showLegendKey = False
         ser.dLbls.dLblPos = label_position
-        
+       
         if transparent:
             # Make series completely transparent
             gp = GraphicalProperties()
             gp.noFill = True
-            
+           
             # Remove border
             no_line = LineProperties()
             no_line.noFill = True
             gp.ln = no_line
-            
+           
             ser.graphicalProperties = gp
 
 def create_combo_chart(ws, width, height, step, position, cats_mcol, cats_mrow, cats_mxrow, sd_mcol, sd_mxcol, sd_mrow, sd_mxrow, cd_mcol, cd_mxcol, cd_mrow, cd_mxrow, chart_title, x_title, y_title, is_combo=True):
@@ -199,7 +199,7 @@ def create_combo_chart(ws, width, height, step, position, cats_mcol, cats_mrow, 
             sd_mcol=sd_mcol, sd_mxcol=sd_mxcol, sd_mrow=sd_mrow, sd_mxrow=sd_mxrow,
             cd_mcol=cd_mcol, cd_mxcol=cd_mxcol, cd_mrow=cd_mrow, cd_mxrow=cd_mxrow
         )
-    
+   
     # Create charts
     stacked = create_stacked_chart(
         stacked_data, cats,
@@ -207,23 +207,23 @@ def create_combo_chart(ws, width, height, step, position, cats_mcol, cats_mrow, 
         y_title=y_title,
         x_title=x_title
     )
-    
+   
     clustered = create_clustered_chart(clustered_data, cats, gap_width=100)
-    
+   
     # Combine charts
     stacked += clustered
-    
+   
     # Add gridlines and configure layout
     add_gridlines(stacked)
     configure_chart_layout(stacked, width=width, height=height, gap_width=100, major_unit=step)
-    
+   
     # Customize series
     customize_stacked_series(stacked, colors=["deebf7", "ffbf00"] if is_combo else ["c5e0b4"], is_combo=is_combo)
     customize_clustered_series(clustered, transparent=True, label_position="outEnd")
-    
+   
     # Place chart on worksheet
     ws.add_chart(stacked, position)
-    
+   
     return stacked
 
 
@@ -231,10 +231,10 @@ def get_signal_name_with_fallback(signum):
     """
     Get signal name with comprehensive fallback for all platforms.
     Returns signal name even if it doesn't exist on current platform.
-    
+   
     Args:
         signum (int): Signal number
-        
+       
     Returns:
         str: Signal name or empty string if unknown
     """
@@ -276,7 +276,7 @@ def get_signal_name_with_fallback(signum):
         '34': 'SIGRTMIN',
         '64': 'SIGRTMAX',
     }
-    
+   
     return signal_map.get(signum, '')
 
 def check_stop_flag():
@@ -1454,13 +1454,13 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
     #     cell.alignment = Alignment(vertical='center', horizontal='center')
     # if not is_empty_log:
     #     sheet.merge_cells(merged_range)
-        
+       
     # if is_empty_log:
     for app in ecu_encountered_apps_map[ecu_type]:
         ecu_app_info_counts_map[ecu_type].setdefault(app, OverallCounts())
         is_app_configured = app in [app for _, order in application_startup_order for app in order]
         is_app_configured = is_app_configured or app in [app for app in threshold_map[ecu_type]]
-        
+       
         if app not in encountered_apps:
             encountered_apps.add(app)
             data_row = ['-', app, '-', '-', '-', threshold_map[ecu_type].get(app, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', 'FAIL' if ((app in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-']
@@ -1644,10 +1644,10 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
     #     for row in sheet[merged_range]:
     #         for cell in row:
     #             cell.border = border_style
-    
+   
     # Calculate the total height of rows starting from row 4 to sheet.max_row for chart sizing
-    width, height = calculate_graph_size(sheet, start_row=4, end_row=sheet.max_row, start_col=17, end_col=37)
-    
+    width, height = calculate_graph_size(sheet, start_row=4, end_row=sheet.max_row, start_col=17, end_col=30)
+   
     if len(dltstart_timestamps)>0:            
         create_combo_chart(
             ws=sheet, position="Q4", step=1,
@@ -1670,7 +1670,7 @@ def calculate_graph_size(sheet, start_row, end_row, start_col, end_col):
             row_height = 15  # default Excel row height in points
         # Convert points to cm (1 point = 0.0353 cm)
         total_height_cm += row_height * 0.0353
-    
+   
     # Calculate width for 7 columns (A to G)
     total_width_cm = 0
     for col_idx in range(start_col, end_col + 1):  # columns A to G
@@ -1686,9 +1686,9 @@ def calculate_graph_size(sheet, start_row, end_row, start_col, end_col):
 def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     """
     Adds a title header row at the beginning of each sheet with specified formatting.
-    
+   
     Creates a merged title cell (A-E) and log folder information (F-G) with custom styling.
-    
+   
     Args:
         sheet: Excel worksheet object
         ecu_type: ECU type identifier (e.g., 'SoC1', 'RCAR')
@@ -1696,14 +1696,14 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     """
     # Insert a new row at the top
     sheet.insert_rows(1)
-    
+   
     # Merge cells A1 to E1 for the title
     sheet.merge_cells('A1:E1')
     title_cell = sheet['A1']
     title_cell.value = f'Startup Time Report {setup_type} {ecu_type} - {sheet_type} -'
     title_cell.font = Font(name='Calibri', size=18, bold=True)
     title_cell.alignment = Alignment(horizontal='left', vertical='center')
-    
+   
     # Cell F1 - "Log Folder" label
     log_label_cell = sheet['F1']
     log_label_cell.value = 'Log Folder' if sheet_type == 'Summary' else 'Log File'
@@ -1711,9 +1711,9 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     log_label_cell.fill = PatternFill(start_color='006fc0', end_color='006fc0', fill_type='solid')
     log_label_cell.alignment = Alignment(horizontal='center', vertical='center')
     log_label_cell.border = border_style
-    
+   
     # Cell G1 - Log folder path with hyperlink
-    sheet.merge_cells('G1:K1' if sheet_type != 'Summary' else 'G1:H1')
+    sheet.merge_cells('G1:K1')
     log_path_cell = sheet['G1']
     log_folder_path = f'{"Pre-Generated_Logs" if is_pre_gen_logs else "Logs"}\\{setup_type}_{ecu_type}'
     # Create hyperlink formula
@@ -1723,9 +1723,9 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     log_path_cell.value = hyperlink_formula
     log_path_cell.font = Font(name='Calibri', size=10, color='006fc0' if sheet_type == 'Summary' else 'E4080A', underline='single', bold=True)
     log_path_cell.alignment = Alignment(horizontal='left', vertical='center')
-    
+   
     # Apply border to all cells in the merged range
-    for col in range(7, 12 if sheet_type != 'Summary' else 9):  # G=7 to K=11 (columns G through K)
+    for col in range(7, 12):  # G=7 to K=11 (columns G through K)
         sheet.cell(row=1, column=col).border = border_style
 
 
@@ -1821,7 +1821,7 @@ def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_colum
         ecu_ss_hyperlink_cell.fill = PatternFill(start_color="006fc0", end_color="006fc0", fill_type="solid")
         ecu_ss_hyperlink_cell.alignment = Alignment(horizontal='center', vertical='center')
         ecu_ss_hyperlink_cell.font = Font(bold=True, color="FFFFFF", underline='single')
-        
+       
 
     # Merge the cells in the header row
     merged_range = f'A{sheet.max_row}:{last_column_letter}{sheet.max_row}'
@@ -2122,9 +2122,9 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             differences[data_row['process']] = float(data_row['avg_time'])
-            
-    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row + 1, start_col=20, end_col=40)
-    
+           
+    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row + 1, start_col=13, end_col=28)
+   
     if len(process_times) > 0:
         create_combo_chart(
             ws=sheet, position=f"M{start_row}", step=1,
@@ -2186,8 +2186,8 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             individual_differences[data_row['process']] = float(data_row['avg_time'])
-            
-    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=6, end_col=26)
+           
+    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=5, end_col=14)
    
     if len(process_start_times) > 0:
         create_combo_chart(
@@ -2326,7 +2326,7 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
         if process not in process_timing_info and (not is_empty_log or process not in ecu_encountered_apps_map[ecu_type]):
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
-    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=5, end_col=25)
+    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=5, end_col=19)
     if len(process_timing_info) > 0:
         create_combo_chart(
             ws=sheet, position=f"E{start_row}", step=500,
@@ -2408,14 +2408,14 @@ def generate_apps_startup_report_from_QNX_startup(ecu_type, setup_type, config, 
 
     # Format the Excel cells
     format_excel_cells(sheet, start_row)
-    
+   
     format_qnx_startup_time_column(sheet, start_row, dltstart_timestamps)
 
     generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, is_empty_log, config)
 
     # Adjust the column width of the Excel sheet
     adjust_column_width(sheet, ecu_type, logger)
-    
+   
 def format_qnx_startup_time_column(sheet, start_row, dltstart_timestamps):
     startup_time_start_row = start_row + 3
     startup_time_end_row = startup_time_start_row + len(dltstart_timestamps) - 1
@@ -3245,7 +3245,7 @@ def create_workBook(ecu_type, setup_type, enabled_ecu_list, iterations, config, 
 
         # Set the title of the sheet
         summary_sheet.title = f'{setup_type}_{ecu_type}_Summary' if ecu_type != 'ECU_Summary' else f'{setup_type}_Summary'
-        
+       
         # Set tab color for summary sheet (light blue)
         summary_sheet.sheet_properties.tabColor = tab_color_map.get(ecu_type, '0070C0')
 
@@ -4205,7 +4205,7 @@ def start_startup_time_measurement(logger):
     # current_timestamp = '20250630_175500'
     current_timestamp = cur_dt_time_obj.strftime("%Y%m%d_%H%M%S")
 
-    # Start stop flag monitoring thread 
+    # Start stop flag monitoring thread
     stop_monitor_thread = threading.Thread(target=check_stop_flag, daemon=True)
     stop_monitor_thread.start()
     register_thread(stop_monitor_thread)
@@ -4434,7 +4434,7 @@ def start_startup_time_measurement(logger):
             if check_stop_flag_periodically():
                 logger.info(f"Stop flag detected after completing iteration {i+1}/{iterations}.")
                 return False
-        
+       
         for ecu_type, failed_iteration_list in ecu_failed_iterations_map.items():
             logger.warning(f"ECU Type: {ecu_type} - Failed Iterations: {failed_iteration_list}")
             for failed_iteration in failed_iteration_list:

@@ -1,0 +1,12 @@
+{
+    "Startup Time": {
+        "PADAS": {
+            "RCAR": true
+        },
+        "Elite": {
+            "RCAR": true,
+            "SoC0": true,
+            "SoC1": true
+        }
+    }
+}
