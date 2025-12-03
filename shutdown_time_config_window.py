@@ -38,7 +38,7 @@ class ShutdownTimeConfig(QDialog):
         self.config_path = './Shutdown_Time_Scripts/shutdown_time_config.json'
         self.config_data = self.load_config()
         self.widgets = {}
-
+        self.pdf_process = None
         self.init_ui()
    
     def set_window_properties(self):
@@ -75,6 +75,13 @@ class ShutdownTimeConfig(QDialog):
             return merged
         except Exception as e:
             return dict(self.DEFAULT_CONFIG)
+
+    def handle_help_click(self):
+        """
+        Slot for help button click.
+        Opens the user manual and updates pdf_process reference.
+        """
+        self.pdf_process = open_user_manual("Shutdown Time", self.pdf_process)
 
     def init_ui(self):      
         layout = QVBoxLayout()      
@@ -147,10 +154,20 @@ class ShutdownTimeConfig(QDialog):
         btn_h = QHBoxLayout()
         btn_h.addStretch()
         self.ok_btn = QPushButton('OK'); self.ok_btn.clicked.connect(self.ok_clicked)
+        self.ok_btn.setFixedHeight(35)
         self.ok_btn.setFocusPolicy(Qt.NoFocus)
         cancel_btn = QPushButton('Cancel'); cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setFixedHeight(35)
         cancel_btn.setFocusPolicy(Qt.NoFocus)
-        btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn)
+        
+        help_button = QPushButton()
+        help_button.setIcon(QIcon('./GUI_Icons/Help_icon.ico'))
+        help_button.setFixedSize(35,35)
+        help_button.setToolTip("Help")
+        help_button.clicked.connect(self.handle_help_click)
+        help_button.setWindowIconText(None)  # Icon beside text
+        help_button.setFocusPolicy(Qt.NoFocus)
+        btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn); btn_h.addWidget(help_button)
         layout.addLayout(btn_h)
 
         self.validate_all_fields()
@@ -164,6 +181,7 @@ class ShutdownTimeConfig(QDialog):
 
     def done(self, result):
         # print("Shutdown Time configuration window closed successfully")
+        self.pdf_process = close_pdf_process(self.pdf_process)
         super().done(result)
 
     def on_radio_changed(self, checked):
@@ -211,7 +229,7 @@ class ShutdownTimeConfig(QDialog):
         if enabled:
             path_cb = self.widgets['windows.Is Environment Path Set']
             path_le = self.widgets['windows.DLT-Viewer Installed Path']
-            if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0 or path_le.text().startswith(" ") or path_le.text().endswith(" ")):
+            if not path_cb.isChecked() and (not path_le.text() or len(path_le.text()) == 0 or path_le.text().startswith(" ")or path_le.text().endswith(" ")):
                 enabled = False        
                 
         is_execution_in_progress = self.main_window.is_test_in_progress and self.is_KPI_selected
@@ -247,6 +265,8 @@ class ShutdownTimeConfig(QDialog):
             'Is Environment Path Set': self.widgets['windows.Is Environment Path Set'].isChecked(),
             'DLT-Viewer Installed Path': self.widgets['windows.DLT-Viewer Installed Path'].text()
         }
+
+        data["is_all_fields_valid"] = self.validate_all_fields()
        
         try:
             with open(self.config_path, 'w') as f:

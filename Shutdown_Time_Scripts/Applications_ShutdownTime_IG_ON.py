@@ -673,7 +673,7 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, py
        
         py_logger.info("Turning ON relay...")
         signal.write("AT+CH1=1".encode())   # Relay ON
-        time.sleep(15)  # 15s delay
+        time.sleep(25)  # 25s delay
     except Exception as e:
         py_logger.error(f"Failed to open serial port: {e}")
         return False

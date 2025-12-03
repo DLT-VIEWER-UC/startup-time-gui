@@ -700,6 +700,7 @@ class StartupTimeConfig(QDialog):
 
         # Track the Excel file path for cleanup
         self.excel_file_path = None
+        self.pdf_process = None
 
         self.init_ui()
    
@@ -861,6 +862,13 @@ class StartupTimeConfig(QDialog):
                 border-radius: 5px;
             }}
         """)
+
+    def handle_help_click(self):
+        """
+        Slot for help button click.
+        Opens the user manual and updates pdf_process reference.
+        """
+        self.pdf_process = open_user_manual("Startup Time", self.pdf_process)
 
     def init_ui(self):
         scroll = QScrollArea(self)
@@ -1133,10 +1141,21 @@ class StartupTimeConfig(QDialog):
         btn_h = QHBoxLayout()
         btn_h.addStretch()
         self.ok_btn = QPushButton('OK'); self.ok_btn.clicked.connect(self.ok_clicked)
+        self.ok_btn.setFixedHeight(35)
         self.ok_btn.setFocusPolicy(Qt.NoFocus)
         cancel_btn = QPushButton('Cancel'); cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setFixedHeight(35)
         cancel_btn.setFocusPolicy(Qt.NoFocus)
-        btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn)
+        
+        help_button = QPushButton()
+        help_button.setIcon(QIcon('./GUI_Icons/Help_icon.ico'))
+        help_button.setFixedSize(35,35)
+        help_button.setToolTip("Help")
+        help_button.clicked.connect(self.handle_help_click)
+        # help_button.setIconSize(QSize(30, 30))
+        help_button.setWindowIconText(None)  # Icon beside text
+        help_button.setFocusPolicy(Qt.NoFocus)
+        btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn); btn_h.addWidget(help_button)
         layout.addLayout(btn_h)
 
         self.widgets['DLT-Viewer Log Capture Time'][0].textChanged.connect(lambda text: [self.update_border('DLT-Viewer Log Capture Time')])
@@ -1236,10 +1255,6 @@ class StartupTimeConfig(QDialog):
     def ok_clicked(self):
         self.save_config()
         self.close()
-
-    def done(self, result):
-        print("Startup Time configuration window closed successfully")
-        super().done(result)
 
     def _create_ecu_block(self, data, idx):
         # Create the main collapsible group box for the ECU
@@ -2160,14 +2175,17 @@ class StartupTimeConfig(QDialog):
     def closeEvent(self, event):
         """Handle dialog close event to cleanup Excel processes"""
         self.close_opened_excel_files()
+        self.pdf_process = close_pdf_process(self.pdf_process)
         super().closeEvent(event)
    
     def reject(self):
         """Handle dialog cancel to cleanup Excel processes"""
         self.close_opened_excel_files()
+        self.pdf_process = close_pdf_process(self.pdf_process)
         super().reject()
    
     def done(self, result):
         """Handle dialog completion to cleanup Excel processes"""
         self.close_opened_excel_files()
+        self.pdf_process = close_pdf_process(self.pdf_process)
         super().done(result)
