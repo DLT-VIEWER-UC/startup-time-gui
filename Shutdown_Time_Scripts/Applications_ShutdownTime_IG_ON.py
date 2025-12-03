@@ -187,13 +187,13 @@ border_style = Border(left=Side(border_style='thin'), right=Side(border_style='t
 def remove_png_files(py_logger):
     script_dir = Path(__file__).parent
     png_files = list(script_dir.glob('*.png'))
-    for file in png_files:
-        try:
-            # py_logger.info(f"Deleting {file.name}")
-            file.unlink()
-        except Exception as e:
-            pass
-            py_logger.info(f"Error deleting file {file}: {e}")  
+    if png_files:
+        py_logger.info(f"Cleaning up {len(png_files)} temporary chart file(s)...")
+        for file in png_files:
+            try:
+                file.unlink()
+            except Exception as e:
+                py_logger.warning(f"Could not delete file {file.name}: {e}")  
 
 
 def adjust_column_width(sheet, ecu_type, logger):
@@ -398,13 +398,12 @@ def get_log_file_paths_for_elite(index, ecu_config_list, setup_type, py_logger):
    
     for logs_dir, ecu_type in zip(logs_dir_list, ecu_type_list):
         basename = f'{current_timestamp}_Shutdown_Time_Logs_{setup_type}_{ecu_type}_N{index + 1}'
-        # basename = f'20250530_204941_Shutdown_Time_Logs_{ecu_type}_N{index + 1}'
         logfile = basename+'.log'
         dltfile = basename+'.dlt'
         filename_list[ecu_type] = tuple((logs_dir / logfile, logfile, dltfile))
         if(not logs_dir.exists()):
             logs_dir.mkdir(parents=True, exist_ok=True)
-    py_logger.info(f"Log files will be saved in the following directories: {filename_list}")
+            py_logger.info(f"Created log directory: {logs_dir}")
     return filename_list
 
 def write_data_to_excel(welcome_timestamp: datetime, differences: List[ShutdownInfo], sheet):
@@ -617,8 +616,8 @@ def extract_shutdown_timing_data(lines: List[str], py_logger) -> Tuple[str, Orde
                 # For duplicates, the last occurrence's timestamp will be kept
                 terminated_apps[app_name] = app_timestamp
 
-    py_logger.info(f"MachineFG Timestamp :: {mfg_timestamp}")
-    py_logger.info(f"Total applications terminated :: {len(terminated_apps)}")
+    py_logger.info(f"  MachineFG shutdown timestamp: {mfg_timestamp}")
+    py_logger.info(f"  Applications terminated: {len(terminated_apps)}")
        
     return (mfg_timestamp, terminated_apps)
 
@@ -629,11 +628,12 @@ def RCAR_ON_OFF_Relay(power_on_off_delay, py_logger):
             py_logger.info("Stop flag detected. Aborting RCAR relay operation.")
             return False
             
-        py_logger.info("Turning OFF relay...")
+        py_logger.info("  Turning OFF relay...")
         subprocess.run(["usbrelay", "BITFT_1=0"])
         
         # Check stop flag during delay
         delay_time = float(power_on_off_delay)
+        py_logger.info(f"  Waiting {delay_time} seconds...")
         start_time = time.time()
         while time.time() - start_time < delay_time:
             if check_stop_flag_periodically(py_logger):
@@ -646,12 +646,12 @@ def RCAR_ON_OFF_Relay(power_on_off_delay, py_logger):
             py_logger.info("Stop flag detected. Aborting RCAR relay operation.")
             return False
 
-        py_logger.info("Turning ON relay...")
+        py_logger.info("  Turning ON relay...")
         subprocess.run(["usbrelay", "BITFT_1=1"])
         time.sleep(0.2)  #  delay
 
     except Exception as e:
-        py_logger.error(f"Error executing usbrelay commands: {e}")
+        py_logger.error(f"[Error] Failed to execute usbrelay commands: {e}")
         return False
     return True    
 
@@ -660,18 +660,20 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, py
         #set up your serial port with the desire COM port and baudrate.
         signal = serial.Serial(serial_port_relay, baudrate_relay, bytesize=8, stopbits=1, timeout=1)
         if not signal.is_open:
-            py_logger.error(f"Failed to open serial port: {serial_port_relay}")
+            py_logger.error(f"[Error] Failed to open serial port: {serial_port_relay}")
             return False
        
-        py_logger.info("Turning OFF relay...")
+        py_logger.info("  Turning OFF relay...")
         signal.write("AT+CH1=0".encode())   # Relay OFF
+        py_logger.info(f"  Waiting {float(power_on_off_delay)} seconds...")
         time.sleep(float(power_on_off_delay))  # Delay for power off
        
-        py_logger.info("Turning ON relay...")
+        py_logger.info("  Turning ON relay...")
         signal.write("AT+CH1=1".encode())   # Relay ON
+        py_logger.info("  Waiting 25 seconds for system boot...")
         time.sleep(25)  # 25s delay
     except Exception as e:
-        py_logger.error(f"Failed to open serial port: {e}")
+        py_logger.error(f"[Error] Serial port operation failed: {e}")
         return False
     return True
     
@@ -685,14 +687,15 @@ def power_ON_OFF_Relay1(serial_port_relay, baudrate_relay, power_on_off_delay, p
         #set up your serial port with the desire COM port and baudrate.
         signal = serial.Serial(serial_port_relay, baudrate_relay, bytesize=8, stopbits=1, timeout=1)
         if not signal.is_open:
-            py_logger.error(f"Failed to open serial port: {serial_port_relay}")
+            py_logger.error(f"[Error] Failed to open serial port: {serial_port_relay}")
             return False
        
-        py_logger.info("Turning OFF relay...")
+        py_logger.info("  Turning OFF relay...")
         signal.write("AT+CH1=0".encode())   # Relay OFF
         
         # Check stop flag during power off delay
         delay_time = float(power_on_off_delay)
+        py_logger.info(f"  Waiting {delay_time} seconds...")
         start_time = time.time()
         while time.time() - start_time < delay_time:
             if check_stop_flag_periodically(py_logger):
@@ -707,10 +710,11 @@ def power_ON_OFF_Relay1(serial_port_relay, baudrate_relay, power_on_off_delay, p
             signal.close()
             return False
             
-        py_logger.info("Turning ON relay...")
+        py_logger.info("  Turning ON relay...")
         signal.write("AT+CH1=1".encode())   # Relay ON
         
         # Check stop flag during 25s delay
+        py_logger.info("  Waiting 25 seconds for system boot...")
         start_time = time.time()
         while time.time() - start_time < 25:
             if check_stop_flag_periodically(py_logger):
@@ -721,7 +725,7 @@ def power_ON_OFF_Relay1(serial_port_relay, baudrate_relay, power_on_off_delay, p
             
         signal.close()
     except Exception as e:
-        py_logger.error(f"Failed to open serial port: {e}")
+        py_logger.error(f"[Error] Serial port operation failed: {e}")
         return False
     return True
 
@@ -815,8 +819,11 @@ def create_dlp_files(ecu_config_list, setup_type, py_logger):
             file_path = os.path.join(output_dir_path, file)
             if os.path.isfile(file_path):
                 os.unlink(file_path)
+        py_logger.info(f"Cleared existing DLP directory")
     else:
         os.makedirs(output_dir_path)
+        py_logger.info(f"Created DLP directory: {output_dir_path}")
+    
     # Use the script directory to find the proj.dlp file
     proj_path = os.path.join(script_dir, 'proj.dlp')
     tree = ET.parse(proj_path)
@@ -828,18 +835,19 @@ def create_dlp_files(ecu_config_list, setup_type, py_logger):
         if hostname is not None:
             hostname.text = ecu['ip-address']
         else:
-            py_logger.warning(f"Warning: 'hostname' not found for ECU {ecu['ecu-type']}")
+            py_logger.warning(f"[Warning] 'hostname' not found for ECU {ecu['ecu-type']}")
             continue
         # Set description text to the ECU type
         description = root.find('ecu/description')
         if description is not None:
             description.text = ecu['ecu-type']
         else:
-            py_logger.warning(f"Warning: 'description' not found for ECU {ecu['ecu-type']}")
+            py_logger.warning(f"[Warning] 'description' not found for ECU {ecu['ecu-type']}")
         # Write updated XML to file
         output_path = os.path.join(output_dir_path, project_name)
         dlp_files[ecu['ecu-type']] = output_path
         tree.write(output_path, encoding='utf-8', xml_declaration=True)
+        py_logger.info(f"  Created DLP file: {project_name}")
    
     return dlp_files
 
@@ -883,16 +891,18 @@ def is_valid_ip(ip_string):
        return False
 
 def validate_ip_address(ecu_config_list, py_logger):
+    py_logger.info("Validating IP addresses for all ECUs...")
     for ecu in ecu_config_list:
         if is_valid_ip(ecu['ip-address']):
-            continue
+            py_logger.info(f"  {ecu['ecu-type']}: {ecu['ip-address']} - Valid")
         else:
-            py_logger.info(f"Entered IP address for {ecu['ecu-type']} is not valid.")
+            py_logger.error(f"[Error] Invalid IP address for {ecu['ecu-type']}: {ecu['ip-address']}")
             return False
     return True
 
 def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name, config, ecu_type, py_logger):
-    py_logger.info("Starting DLT log capture...")
+    py_logger.info(f"Starting DLT log capture for {ecu_type}...")
+    py_logger.info(f"  Capture timeout: {config['DLT-Viewer Log Capture Time']} seconds")
     
     # Check stop flag before starting
     if check_stop_flag_periodically(py_logger):
@@ -907,14 +917,15 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
         if sys.platform.startswith("win"):
             isPathSet = config['windows']['Is Environment Path Set']
             if isPathSet:
+                py_logger.info("  Using DLT-Viewer from system PATH")
                 process = subprocess.Popen([script_dir, "dlt-viewer.exe", str(timeout), log_file_name, dlt_file_name, project_file_name])
             else:
                 dlt_viewer_path = config['windows']['DLT-Viewer Installed Path']
                 log_file_name = os.path.join(log_file_name)
-                py_logger.info(f"dlt_viewer_path: {dlt_viewer_path}")
-                py_logger.info(f"log_file_name : {log_file_name}")
+                py_logger.info(f"  Using DLT-Viewer from: {dlt_viewer_path}")
                 process = subprocess.Popen([script_dir, dlt_viewer_path, str(timeout), log_file_name, dlt_file_name, project_file_name])
         elif sys.platform.startswith("linux"):
+            py_logger.info("  Running on Linux platform")
             process = subprocess.Popen("timeout " + str(timeout) + " dlt-viewer -p "+project_file_name+" -l "+dlt_file_name+" -v", shell=True)
         
         # Register the process for tracking
@@ -940,7 +951,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
                     py_logger.info("Stop flag detected. Aborting DLT conversion.")
                     return False
                     
-                py_logger.info("Converting *.dlt to *.txt...")
+                py_logger.info("  Converting DLT to text format...")
                 convert_process = subprocess.Popen("dlt-viewer -c  "+str(dlt_file_name)+" "+str(log_file_name), shell=True)
                 register_process(convert_process)
                 
@@ -955,13 +966,16 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
                             convert_process.kill()
                         return False
                     time.sleep(0.5)
-                py_logger.info("Conversion done, successfully...")
+                py_logger.info("  Conversion completed successfully")
 
         # Check if log file was created successfully
         size = os.path.getsize(log_file_name)
         if size == 0:
-            py_logger.warning(f"Generated {os.path.basename(log_file_name)} is empty, Please check for valid IP-address / Status of {ecu_type}.")
+            py_logger.error(f"[Error] Generated log file is empty: {os.path.basename(log_file_name)}")
+            py_logger.error(f"  Please verify: IP address, ECU status for {ecu_type}")
             return False
+        
+        py_logger.info(f"  Log file captured successfully: {os.path.basename(log_file_name)} ({size} bytes)")
             
     except Exception as e:
         py_logger.error(f"Error during DLT log capture: {e}")
@@ -971,6 +985,8 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
 
 def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config, sheet, shutdown_summary, py_logger):
     try:
+        py_logger.info(f"Processing log file for {ecu_type} - Iteration {i+1}")
+        
         # Check stop flag before processing
         if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected. Aborting log file processing.")
@@ -979,6 +995,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
         # Get the log file path and name for the specified ECU type and timestamp
         filename, logfile, dltfile = log_file_details
         if not capture_logs_from_dlt_viewer(filename, dltfile, dlp_file, config, ecu_type, py_logger):
+            py_logger.error(f"[Error] Failed to capture logs for {ecu_type}")
             return False
             
         # Check stop flag after capture
@@ -987,15 +1004,17 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
             
         # Attempt to open the log file in read mode with error handling for encoding issues
+        py_logger.info(f"  Reading log file: {os.path.basename(filename)}")
         try:
             with open(filename, 'r', encoding='utf-8', errors='ignore') as file:
                 lines = file.readlines()
                 time.sleep(2)
+            py_logger.info(f"  Log file contains {len(lines)} lines")
         except FileNotFoundError:
-            py_logger.error(f"File not found: {filename}")
+            py_logger.error(f"[Error] File not found: {filename}")
             return False
         except UnicodeDecodeError as e:
-            py_logger.error(f"Unicode decode error: {e}")
+            py_logger.error(f"[Error] Unicode decode error: {e}")
             return False
            
         # Check stop flag before processing log data
@@ -1004,21 +1023,22 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
             
         # Extract the shutdown timing data from the log file
+        py_logger.info("  Analyzing shutdown timing data...")
         mfg_timestamp, terminated_apps = extract_shutdown_timing_data(lines, py_logger)
         if mfg_timestamp is None:
-            py_logger.error("Error: Unable to extract shutdown timing data.")
+            py_logger.error("[Error] Unable to extract shutdown timing data from log")
             return False
    
         if (terminated_apps is None) or (len(terminated_apps) == 0):
-            py_logger.error("Error: No terminated applications found.")
+            py_logger.error("[Error] No terminated applications found in log")
             return False
    
         mfg_datetime, shutdown_app_timings = calculate_differences(mfg_timestamp, terminated_apps, py_logger)
-        py_logger.info(f"Total applications with calculated shutdown timings :: {len(shutdown_app_timings)}")
+        py_logger.info(f"  Calculated shutdown timings for {len(shutdown_app_timings)} applications")
    
         # Check if the differences were calculated
         if shutdown_app_timings is None or len(shutdown_app_timings) == 0:
-            py_logger.error("Found error in measuring time differences from EXM termination to applications termination time")
+            py_logger.error("[Error] Failed to calculate time differences from shutdown to application termination")
             return False
            
         # Check stop flag before updating summary
@@ -1027,28 +1047,29 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
             
         update_shutdown_summary(shutdown_summary, shutdown_app_timings)
+        py_logger.info("  Updated shutdown summary statistics")
 
         # Check stop flag before generating report
         if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected before generating report. Aborting.")
             return False
             
+        py_logger.info("  Generating Excel report...")
         generate_apps_shutdown_report_from_QNX_shutdown(ecu_type, sheet, mfg_datetime, shutdown_app_timings, py_logger)
    
         # Add a hyperlink to the log file in the Excel sheet
         add_logfile_hyperlink(filename, logfile, sheet, ecu_type, setup_type)
+        py_logger.info(f"Successfully processed log file for {ecu_type} - Iteration {i+1}")
 
     except Exception as e:
-        py_logger.error(f"Exception :: {e}")
+        py_logger.error(f"[Error] Exception during log processing: {e}")
         return False
     return True      
 
 def start_shutdown_time_measurement(py_logger):
     cur_dt_time_obj = datetime.now()
     global local_save_path
-    # local_save_path = Path(__file__).parents[1].joinpath("Reports", "04_Shutdown_Time", "20250707_12-34-56")
     global current_timestamp
-    # current_timestamp = '20250707_123456'
     current_timestamp = cur_dt_time_obj.strftime("%Y%m%d_%H%M%S")
     global table_headers
     table_headers  = list()
@@ -1057,10 +1078,14 @@ def start_shutdown_time_measurement(py_logger):
     stop_monitor_thread = threading.Thread(target=check_stop_flag, args=(py_logger,), daemon=True)
     stop_monitor_thread.start()
     register_thread(stop_monitor_thread)
-    py_logger.info("Stop flag monitoring started.")
+    py_logger.info("Stop flag monitoring started")
    
     script_start_time = time.perf_counter()
-    py_logger.info(f"Script execution start time: {datetime.fromtimestamp(script_start_time).strftime('%H:%M:%S.%f')[:-2]} {datetime.fromtimestamp(script_start_time).strftime('%d-%m-%Y')}")
+    py_logger.info("="*80)
+    py_logger.info("SHUTDOWN TIME MEASUREMENT - EXECUTION STARTED")
+    py_logger.info("="*80)
+    py_logger.info(f"Execution Start Time: {datetime.fromtimestamp(script_start_time).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
+    py_logger.info(f"Timestamp: {current_timestamp}")
     try:
         workbook_map = {}
         fgs_map = {}
@@ -1078,35 +1103,41 @@ def start_shutdown_time_measurement(py_logger):
             return False
 
         # Load the configuration
+        py_logger.info("\n[Configuration Loading]")
         config_file_path = 'shutdown_time_config.json'
         config = load_config(config_file_path, py_logger)
 
         # Check if the configuration is empty
         if config is None:
-            py_logger.error(f"File '{config_file_path}' not found.")
+            py_logger.error(f"[Error] Configuration file not found: {config_file_path}")
             return False
+        
+        py_logger.info("Configuration loaded successfully")
         
         local_save_path = Path(__file__).parents[2].joinpath("Reports", "07_Shutdown_Time", config.get('Current_Timestamp', cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S")))
         local_save_path.mkdir(parents=True, exist_ok=True)
+        py_logger.info(f"Report directory: {local_save_path}")
        
         if config['windows']['DLT-Viewer Installed Path'] and not os.path.isfile(os.path.join(config['windows']['DLT-Viewer Installed Path'])):
-            py_logger.error("Configured dlt-viewer path is not valid.")
+            py_logger.error("[Error] Configured DLT-Viewer path is not valid")
             return False
 
         # Retrieve the number of iterations from the configuration
         try:
             iterations = config["Iterations"]
+            py_logger.info(f"Number of iterations: {iterations}")
         except KeyError:
-            py_logger.error("Error: 'Iterations' key not found in the configuration file.")
+            py_logger.error("[Error] 'Iterations' key not found in configuration file")
             return False
        
         try:
             duration = config["DLT-Viewer Log Capture Time"]
             if not isinstance(duration, int):
-                py_logger.error("Error: 'duration' must be an integer.")
+                py_logger.error("[Error] 'DLT-Viewer Log Capture Time' must be an integer")
                 return False
+            py_logger.info(f"DLT-Viewer log capture time: {duration} seconds")
         except KeyError:
-            py_logger.error("Error: 'duration' key not found in the configuration file.")
+            py_logger.error("[Error] 'DLT-Viewer Log Capture Time' key not found in configuration file")
             return False        
                
         if config.get('ECU_setting', {}).get('PADAS', {}).get('RCAR', False):
@@ -1118,13 +1149,15 @@ def start_shutdown_time_measurement(py_logger):
                     enabled_ecu_list.add(board_type)
                     setup_type = 'ELITE'
        
-        py_logger.info(f"Enabled ECU List: {enabled_ecu_list}, Setup Type: {setup_type}")
+        py_logger.info(f"\n[GUI Settings]")
+        py_logger.info(f"Setup Type: {setup_type}")
+        py_logger.info(f"Enabled ECUs: {', '.join(enabled_ecu_list)}")
+        
         if setup_type is None or len(enabled_ecu_list) == 0:
-            py_logger.error("No enabled ECU found in the configuration.")
+            py_logger.error("[Error] No enabled ECU found in the configuration")
             return False
            
         def get_ecu_setting(config, prop):
-            py_logger.info("get_ecu_setting :: {}".format(prop))
             return config['ECU_setting'].get(prop)
 
         ecu_config_list = [
@@ -1139,7 +1172,11 @@ def start_shutdown_time_measurement(py_logger):
             for ecu_name in enabled_ecu_list
         ]
 
+        py_logger.info("\n[ECU Initialization]")
         for ecu in ecu_config_list:
+            py_logger.info(f"Setting up {ecu['ecu-type']}...")
+            py_logger.info(f"  IP Address: {ecu['ip-address']}")
+            
             fgs_transfer = FGSTransfer(
                 config,
                 py_logger,
@@ -1151,34 +1188,49 @@ def start_shutdown_time_measurement(py_logger):
             )
             fgs_map[ecu['ecu-type']] = fgs_transfer
             if not fgs_transfer.remote_fgs_transfer():
+                py_logger.error(f"[Error] Failed to transfer FGS for {ecu['ecu-type']}")
                 return False
+            
+            py_logger.info(f"  Creating workbook for {ecu['ecu-type']}...")
             workbook_map[ecu['ecu-type']] = tuple(create_workBook(ecu['ecu-type'], setup_type, iterations, py_logger))
 
             if workbook_map[ecu['ecu-type']][2] is None:
-                py_logger.error("Error: Unable to create workbook.")
+                py_logger.error(f"[Error] Unable to create workbook for {ecu['ecu-type']}")
                 return False
 
             shutdown_summary_map[ecu['ecu-type']] = {}
+            py_logger.info(f"  {ecu['ecu-type']} initialized successfully")
 
         if not validate_ip_address(ecu_config_list, py_logger):
             return False
-           
+        
+        py_logger.info("\n[DLP File Creation]")
         dlp_files = create_dlp_files(ecu_config_list, setup_type, py_logger)
         if not dlp_files and len(dlp_files)==0:
+            py_logger.error("[Error] Failed to create DLP files")
             return False
+        py_logger.info(f"Created {len(dlp_files)} DLP file(s)")
 
         for i in range(iterations):
+            py_logger.info(f"\n{'='*80}")
+            py_logger.info(f"ITERATION {i+1} of {iterations}")
+            py_logger.info(f"{'='*80}")
+            
             # Check stop flag before each iteration
             if check_stop_flag_periodically(py_logger):
                 py_logger.info(f"Stop flag detected before iteration {i+1}. Aborting measurement.")
                 return False
            
+            py_logger.info(f"[Power Cycling]")
             if setup_type == ECUType.RCAR.value:
                 if not RCAR_ON_OFF_Relay(config.get('power-on-off-delay-in-seconds', 25), py_logger):
+                    py_logger.error("[Error] Power cycling failed for RCAR")
                     return False
             else:
                 if not power_ON_OFF_Relay(config.get('serial-port-relay'), config.get('baudrate-relay'), config.get('power-on-off-delay-in-seconds', 25), py_logger):
+                    py_logger.error("[Error] Power cycling failed")
                     return False
+            py_logger.info("Power cycling completed successfully")
 
             # Check stop flag after power cycling
             if check_stop_flag_periodically(py_logger):
@@ -1188,7 +1240,7 @@ def start_shutdown_time_measurement(py_logger):
             threads = []
            
             for ecu_type, (report_file, workbook, sheets, summary_sheet) in workbook_map.items():
-                py_logger.info(f"Starting iteration {i+1} of {iterations} for ECU - {setup_type} {ecu_type}.")
+                py_logger.info(f"\n[Processing {ecu_type}]")
                 # Check stop flag before processing each ECU
                 if check_stop_flag_periodically(py_logger):
                     py_logger.info(f"Stop flag detected before processing ECU {ecu_type}. Aborting.")
@@ -1200,7 +1252,7 @@ def start_shutdown_time_measurement(py_logger):
                 else:
                     filename_list[ecu_type] = tuple(get_log_file_path(ecu_type, setup_type, i))
                 if any(not filename for (filename, logfile, dltfile) in filename_list.values()):
-                    py_logger.error("Log file not created")
+                    py_logger.error("[Error] Log file path could not be created")
                     return False
                 thread = ResultThread(
                     target=process_log_file,
@@ -1222,6 +1274,7 @@ def start_shutdown_time_measurement(py_logger):
                 thread.start()
                
             # Wait for all threads to complete, checking stop flag periodically
+            py_logger.info(f"Waiting for all {len(threads)} ECU processing thread(s) to complete...")
             for thread in threads:
                 while thread.is_alive():
                     if check_stop_flag_periodically(py_logger):
@@ -1229,9 +1282,14 @@ def start_shutdown_time_measurement(py_logger):
                         return False
                     thread.join(timeout=0.5)  # Check every 0.5 seconds
                 anySheet.append(thread.result)
+            py_logger.info(f"Iteration {i+1} completed")
                 
-        py_logger.info(f"All iterations completed :: {anySheet}")
+        py_logger.info(f"\n[Iterations Summary]")
+        py_logger.info(f"All {iterations} iteration(s) completed")
+        successful_iterations = sum(1 for result in anySheet if result)
+        py_logger.info(f"Successful iterations: {successful_iterations}/{len(anySheet)}")
         if not any(anySheet):
+            py_logger.warning("No successful data collected from any iteration")
             isSuccess = False
 
         # Check stop flag before generating final reports
@@ -1240,54 +1298,67 @@ def start_shutdown_time_measurement(py_logger):
             return False
 
         # Save workbooks and generate reports for each ECU type
+        py_logger.info(f"\n[Report Generation]")
         for ecu_type, (report_file, workbook, sheets, summary_sheet) in workbook_map.items():
             # Check stop flag before each ECU report generation
             if check_stop_flag_periodically(py_logger):
                 py_logger.info(f"Stop flag detected before generating report for {ecu_type}. Aborting.")
                 return False
            
-            py_logger.info(f"shutdown_summary::{shutdown_summary_map[ecu_type]}")
+            py_logger.info(f"Generating report for {ecu_type}...")
             # Export the average data to the Excel sheet
             if not export_and_plot_average_data_to_excel(summary_sheet, ecu_type, shutdown_summary_map[ecu_type], workbook, report_file, py_logger):
-                py_logger.error("Error exporting and plotting average data to Excel.")
+                py_logger.error(f"[Error] Failed to generate report for {ecu_type}")
                 isSuccess = False
-
-        # py_logger. a success message
-        py_logger.info(f"Test report is created successfully {report_file}")
+            else:
+                py_logger.info(f"Report created successfully: {report_file.name}")
 
     except KeyError as e:
-        py_logger.error(f"Error: Missing expected key in ECU input fields: {e}")
+        py_logger.error(f"[Error] Missing expected key in ECU input fields: {e}")
         isSuccess = False
     except Exception as e:
-        py_logger.error(f"An error occurred: {e}")
+        py_logger.error(f"[Error] An unexpected error occurred: {e}")
         isSuccess = False
     finally:
         try:
+            py_logger.info("\n[Cleanup Operations]")
+            
             # Check if stop was requested for logging purposes
             if stop_requested.is_set():
-                py_logger.info("Measurement stopped due to stop flag detection.")
+                py_logger.warning("Measurement stopped due to stop flag detection")
                 
             remove_png_files(py_logger)
            
-            # Only perform final power cycling if not stopped by user
-            #if not stop_requested.is_set():
+            # Final power cycling
+            py_logger.info("Performing final power cycle...")
             if setup_type == ECUType.RCAR.value:
                 RCAR_ON_OFF_Relay(config.get('power-on-off-delay-in-seconds', 25), py_logger)
             else:
                 power_ON_OFF_Relay(config.get('serial-port-relay'), config.get('baudrate-relay'), config.get('power-on-off-delay-in-seconds', 25), py_logger)
 
+            # FGS cleanup
+            py_logger.info("Cleaning up FGS transfers...")
             for ecu_type, fgs_transfer in fgs_map.items():
                 if fgs_transfer:
+                    py_logger.info(f"  Cleaning up {ecu_type} FGS")
                     fgs_transfer.remote_fgs_cleanup()
 
             # Final cleanup of any remaining processes
             terminate_all_processes(py_logger)
             
             script_end_time = time.perf_counter()
-            py_logger.info(f"Script end time: {datetime.fromtimestamp(script_end_time).strftime('%H:%M:%S.%f')[:-2]} {datetime.fromtimestamp(script_end_time).strftime('%d-%m-%Y')}")
-            py_logger.info(f"Total script execution time: {(script_end_time-script_start_time):.3f} seconds")
+            execution_time = script_end_time - script_start_time
+            
+            py_logger.info("\n" + "="*80)
+            py_logger.info("SHUTDOWN TIME MEASUREMENT - EXECUTION COMPLETED")
+            py_logger.info("="*80)
+            py_logger.info(f"Execution End Time: {datetime.fromtimestamp(script_end_time).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
+            py_logger.info(f"Total Execution Time: {execution_time:.2f} seconds ({execution_time/60:.2f} minutes)")
+            py_logger.info(f"Final Status: {'SUCCESS' if isSuccess else 'FAILURE'}")
+            py_logger.info("="*80)
+            
             stop_requested.clear()
         except Exception as e:
-            py_logger.error(f"Exception occurred as {e}")
-    py_logger.info("Final response :: " + ('Success' if isSuccess else 'Failure'))
+            py_logger.error(f"[Error] Exception during cleanup: {e}")
+    
     return isSuccess
