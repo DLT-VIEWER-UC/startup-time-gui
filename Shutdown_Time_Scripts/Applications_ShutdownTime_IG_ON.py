@@ -34,14 +34,14 @@ stop_requested = threading.Event()
 script_directory = Path(__file__).parent.parent
 stop_flag_path = script_directory / "stop.flag"
 
-def check_stop_flag():
+def check_stop_flag(py_logger):
     """
     Continuously monitors for the stop.flag file and sets the stop event if found.
     This function runs in a separate thread to provide real-time monitoring.
     """
     while not stop_requested.is_set():
         if stop_flag_path.exists():
-            print(f"Stop flag detected at {stop_flag_path}. Initiating graceful shutdown...")
+            py_logger.warning(f"Stop flag detected at {stop_flag_path}. Initiating graceful shutdown...")
             stop_requested.set()
             break
         time.sleep(0.5)  # Check every 500ms
@@ -66,31 +66,31 @@ def register_thread(thread):
     global running_threads
     running_threads.append(thread)
 
-def terminate_all_processes():
+def terminate_all_processes(py_logger):
     """
     Terminate all registered processes and threads gracefully.
     This function is called when stop flag is detected.
     """
     global running_processes, running_threads
     
-    print("Terminating all running processes and threads...")
+    py_logger.warning("Terminating all running processes and threads...")
     
     # Terminate all registered processes
     for process in running_processes[:]:  # Create a copy to avoid modification during iteration
         try:
             if hasattr(process, 'terminate'):
-                print(f"Terminating process PID: {process.pid}")
+                py_logger.warning(f"Terminating process PID: {process.pid}")
                 process.terminate()
                 process.wait(timeout=5)  # Wait up to 5 seconds
             running_processes.remove(process)
         except Exception as e:
-            print(f"Error terminating process: {e}")
+            py_logger.error(f"Error terminating process: {e}")
             try:
                 if hasattr(process, 'kill'):
                     process.kill()
                 running_processes.remove(process)
             except Exception as kill_error:
-                print(f"Error killing process: {kill_error}")
+                py_logger.error(f"Error killing process: {kill_error}")
     
     # Kill any dlt-viewer processes by name using system commands
     try:
@@ -98,27 +98,27 @@ def terminate_all_processes():
         if platform.system() == "Windows":
             # Use taskkill on Windows
             subprocess.run(["taskkill", "/F", "/IM", "dlt-viewer.exe"], capture_output=True, check=False)
-            print("Terminated dlt-viewer.exe processes on Windows")
+            py_logger.warning("Terminated dlt-viewer.exe processes on Windows")
         else:
             # Use pkill on Linux/Unix
             subprocess.run(["pkill", "-f", "dlt-viewer"], capture_output=True, check=False)
-            print("Terminated dlt-viewer processes on Linux/Unix")
+            py_logger.warning("Terminated dlt-viewer processes on Linux/Unix")
     except Exception as e:
-        print(f"Error terminating dlt-viewer processes: {e}")
+        py_logger.error(f"Error terminating dlt-viewer processes: {e}")
     
     # Set stop event for threads
     for thread in running_threads[:]:
         try:
             if thread.is_alive():
-                print(f"Stopping thread: {thread.name}")
+                py_logger.warning(f"Stopping thread: {thread.name}")
                 # For threads that check stop_requested, they will stop automatically
             running_threads.remove(thread)
         except Exception as e:
-            print(f"Error stopping thread: {e}")
+            py_logger.error(f"Error stopping thread: {e}")
     
-    print("Process and thread termination completed.")
+    py_logger.info("Process and thread termination completed.")
 
-def check_stop_flag_periodically():
+def check_stop_flag_periodically(py_logger):
     """
     Check if stop flag exists and handle graceful shutdown if detected.
     This should be called periodically during long-running operations.
@@ -127,8 +127,8 @@ def check_stop_flag_periodically():
         bool: True if stop was requested, False otherwise
     """
     if stop_requested.is_set() or stop_flag_path.exists():
-        print("Stop requested. Terminating all processes...")
-        terminate_all_processes()
+        py_logger.warning("Stop requested. Terminating all processes...")
+        terminate_all_processes(py_logger)
         return True
     return False
 
@@ -389,7 +389,7 @@ def get_log_file_path(ecu_type, setup_type, index):
     # Return the log file path and name
     return filename, logfile, dltfile
 
-def get_log_file_paths_for_elite(index, ecu_config_list, setup_type):
+def get_log_file_paths_for_elite(index, ecu_config_list, setup_type, py_logger):
    
     parent_dir = local_save_path / "Logs"
     ecu_type_list = [ecu['ecu-type'] for ecu in ecu_config_list]
@@ -404,7 +404,7 @@ def get_log_file_paths_for_elite(index, ecu_config_list, setup_type):
         filename_list[ecu_type] = tuple((logs_dir / logfile, logfile, dltfile))
         if(not logs_dir.exists()):
             logs_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Log files will be saved in the following directories: {filename_list}")
+    py_logger.info(f"Log files will be saved in the following directories: {filename_list}")
     return filename_list
 
 def write_data_to_excel(welcome_timestamp: datetime, differences: List[ShutdownInfo], sheet):
@@ -580,7 +580,7 @@ def calculate_differences(initial_shutdown_timestamp, application_shutdown_times
             py_logger.error(f"Error parsing timestamp for process {app_name}: {app_timestamp}")
     return initial_shutdown_datetime, process_shutdown_timing_info
 
-def extract_shutdown_timing_data(lines: List[str]) -> Tuple[str, OrderedDict[str, str]]:
+def extract_shutdown_timing_data(lines: List[str], py_logger) -> Tuple[str, OrderedDict[str, str]]:
     # Flag to indicate if we've found the shutdown message
     shutdown_initiated = False
     mfg_timestamp=None
@@ -617,19 +617,15 @@ def extract_shutdown_timing_data(lines: List[str]) -> Tuple[str, OrderedDict[str
                 # For duplicates, the last occurrence's timestamp will be kept
                 terminated_apps[app_name] = app_timestamp
 
-    print("MachineFG Timestamp ::", mfg_timestamp)
-    print("Terminated Applications (duplicates removed):")
-    print("-------------------------------------------")
-    for app_name, app_timestamp in terminated_apps.items():
-        print(f"{app_name} -> Timestamp: {app_timestamp}")
-    print("-------------------------------------------")
+    py_logger.info(f"MachineFG Timestamp :: {mfg_timestamp}")
+    py_logger.info(f"Total applications terminated :: {len(terminated_apps)}")
        
     return (mfg_timestamp, terminated_apps)
 
 def RCAR_ON_OFF_Relay(power_on_off_delay, py_logger):
     try:
         # Check stop flag before starting
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected. Aborting RCAR relay operation.")
             return False
             
@@ -640,13 +636,13 @@ def RCAR_ON_OFF_Relay(power_on_off_delay, py_logger):
         delay_time = float(power_on_off_delay)
         start_time = time.time()
         while time.time() - start_time < delay_time:
-            if check_stop_flag_periodically():
+            if check_stop_flag_periodically(py_logger):
                 py_logger.info("Stop flag detected during relay delay. Aborting operation.")
                 return False
             time.sleep(min(0.5, delay_time - (time.time() - start_time)))  # Check every 0.5s or remaining time
 
         # Check stop flag before turning on
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected. Aborting RCAR relay operation.")
             return False
 
@@ -682,7 +678,7 @@ def power_ON_OFF_Relay(serial_port_relay, baudrate_relay, power_on_off_delay, py
 def power_ON_OFF_Relay1(serial_port_relay, baudrate_relay, power_on_off_delay, py_logger):
     try:
         # Check stop flag before starting
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected. Aborting power relay operation.")
             return False
             
@@ -699,14 +695,14 @@ def power_ON_OFF_Relay1(serial_port_relay, baudrate_relay, power_on_off_delay, p
         delay_time = float(power_on_off_delay)
         start_time = time.time()
         while time.time() - start_time < delay_time:
-            if check_stop_flag_periodically():
+            if check_stop_flag_periodically(py_logger):
                 py_logger.info("Stop flag detected during power off delay. Aborting operation.")
                 signal.close()
                 return False
             time.sleep(min(0.5, delay_time - (time.time() - start_time)))  # Check every 0.5s
        
         # Check stop flag before turning on
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected. Aborting power relay operation.")
             signal.close()
             return False
@@ -717,7 +713,7 @@ def power_ON_OFF_Relay1(serial_port_relay, baudrate_relay, power_on_off_delay, p
         # Check stop flag during 25s delay
         start_time = time.time()
         while time.time() - start_time < 25:
-            if check_stop_flag_periodically():
+            if check_stop_flag_periodically(py_logger):
                 py_logger.info("Stop flag detected during power on delay. Aborting operation.")
                 signal.close()
                 return False
@@ -792,7 +788,6 @@ def create_workBook(ecu_type, setup_type, iterations, py_logger):
 def load_config(file_path, py_logger):
     try:
         config_path = Path(__file__).parent.joinpath(file_path)
-        # print(f"config_path: {config_path}")
         root, ext = os.path.splitext(config_path)
         with open(config_path, 'r') as file:
             if ext == '.json':
@@ -808,7 +803,7 @@ def load_config(file_path, py_logger):
         py_logger.error(f"An error occurred while reading the file '{file_path}': {e}")
         return None
    
-def create_dlp_files(ecu_config_list, setup_type):
+def create_dlp_files(ecu_config_list, setup_type, py_logger):
     output_dir = 'DLP'
     script_dir = os.path.dirname(os.path.abspath(__file__))
     output_dir_path = os.path.join(script_dir, output_dir)
@@ -833,14 +828,14 @@ def create_dlp_files(ecu_config_list, setup_type):
         if hostname is not None:
             hostname.text = ecu['ip-address']
         else:
-            print(f"Warning: 'hostname' not found for ECU {ecu['ecu-type']}")
+            py_logger.warning(f"Warning: 'hostname' not found for ECU {ecu['ecu-type']}")
             continue
         # Set description text to the ECU type
         description = root.find('ecu/description')
         if description is not None:
             description.text = ecu['ecu-type']
         else:
-            print(f"Warning: 'description' not found for ECU {ecu['ecu-type']}")
+            py_logger.warning(f"Warning: 'description' not found for ECU {ecu['ecu-type']}")
         # Write updated XML to file
         output_path = os.path.join(output_dir_path, project_name)
         dlp_files[ecu['ecu-type']] = output_path
@@ -897,10 +892,10 @@ def validate_ip_address(ecu_config_list, py_logger):
     return True
 
 def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name, config, ecu_type, py_logger):
-    print("capture_logs_from_dlt_viewer :: START")
+    py_logger.info("Starting DLT log capture...")
     
     # Check stop flag before starting
-    if check_stop_flag_periodically():
+    if check_stop_flag_periodically(py_logger):
         py_logger.info("Stop flag detected. Aborting DLT log capture.")
         return False
         
@@ -928,7 +923,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
             
             # Wait for process to complete, checking stop flag periodically
             while process.poll() is None:
-                if check_stop_flag_periodically():
+                if check_stop_flag_periodically(py_logger):
                     py_logger.info("Stop flag detected during DLT capture. Terminating process.")
                     process.terminate()
                     try:
@@ -941,17 +936,17 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
             # Process completed normally
             if sys.platform.startswith("linux"):
                 # Check stop flag before conversion
-                if check_stop_flag_periodically():
+                if check_stop_flag_periodically(py_logger):
                     py_logger.info("Stop flag detected. Aborting DLT conversion.")
                     return False
                     
-                print("Converting *.dlt to *.txt...")
+                py_logger.info("Converting *.dlt to *.txt...")
                 convert_process = subprocess.Popen("dlt-viewer -c  "+str(dlt_file_name)+" "+str(log_file_name), shell=True)
                 register_process(convert_process)
                 
                 # Wait for conversion to complete
                 while convert_process.poll() is None:
-                    if check_stop_flag_periodically():
+                    if check_stop_flag_periodically(py_logger):
                         py_logger.info("Stop flag detected during DLT conversion. Terminating process.")
                         convert_process.terminate()
                         try:
@@ -960,7 +955,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
                             convert_process.kill()
                         return False
                     time.sleep(0.5)
-                print("Conversion done, successfully...")
+                py_logger.info("Conversion done, successfully...")
 
         # Check if log file was created successfully
         size = os.path.getsize(log_file_name)
@@ -977,7 +972,7 @@ def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name
 def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config, sheet, shutdown_summary, py_logger):
     try:
         # Check stop flag before processing
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected. Aborting log file processing.")
             return False
             
@@ -987,7 +982,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
             
         # Check stop flag after capture
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected after log capture. Aborting processing.")
             return False
             
@@ -1004,12 +999,12 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
            
         # Check stop flag before processing log data
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected before processing log data. Aborting.")
             return False
             
         # Extract the shutdown timing data from the log file
-        mfg_timestamp, terminated_apps = extract_shutdown_timing_data(lines)
+        mfg_timestamp, terminated_apps = extract_shutdown_timing_data(lines, py_logger)
         if mfg_timestamp is None:
             py_logger.error("Error: Unable to extract shutdown timing data.")
             return False
@@ -1019,7 +1014,7 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
    
         mfg_datetime, shutdown_app_timings = calculate_differences(mfg_timestamp, terminated_apps, py_logger)
-        print("differences::"+str(shutdown_app_timings))
+        py_logger.info(f"Total applications with calculated shutdown timings :: {len(shutdown_app_timings)}")
    
         # Check if the differences were calculated
         if shutdown_app_timings is None or len(shutdown_app_timings) == 0:
@@ -1027,14 +1022,14 @@ def process_log_file(i, ecu_type, setup_type, log_file_details, dlp_file, config
             return False
            
         # Check stop flag before updating summary
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected before updating summary. Aborting.")
             return False
             
         update_shutdown_summary(shutdown_summary, shutdown_app_timings)
 
         # Check stop flag before generating report
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected before generating report. Aborting.")
             return False
             
@@ -1059,12 +1054,13 @@ def start_shutdown_time_measurement(py_logger):
     table_headers  = list()
    
     # Start stop flag monitoring thread
-    stop_monitor_thread = threading.Thread(target=check_stop_flag, daemon=True)
+    stop_monitor_thread = threading.Thread(target=check_stop_flag, args=(py_logger,), daemon=True)
     stop_monitor_thread.start()
     register_thread(stop_monitor_thread)
     py_logger.info("Stop flag monitoring started.")
    
     script_start_time = time.perf_counter()
+    py_logger.info(f"Script execution start time: {datetime.fromtimestamp(script_start_time).strftime('%H:%M:%S.%f')[:-2]} {datetime.fromtimestamp(script_start_time).strftime('%d-%m-%Y')}")
     try:
         workbook_map = {}
         fgs_map = {}
@@ -1077,7 +1073,7 @@ def start_shutdown_time_measurement(py_logger):
         anySheet = []
         
         # Check stop flag before starting
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected at startup. Aborting measurement.")
             return False
 
@@ -1122,7 +1118,7 @@ def start_shutdown_time_measurement(py_logger):
                     enabled_ecu_list.add(board_type)
                     setup_type = 'ELITE'
        
-        print(setup_type, enabled_ecu_list)
+        py_logger.info(f"Enabled ECU List: {enabled_ecu_list}, Setup Type: {setup_type}")
         if setup_type is None or len(enabled_ecu_list) == 0:
             py_logger.error("No enabled ECU found in the configuration.")
             return False
@@ -1167,17 +1163,15 @@ def start_shutdown_time_measurement(py_logger):
         if not validate_ip_address(ecu_config_list, py_logger):
             return False
            
-        dlp_files = create_dlp_files(ecu_config_list, setup_type)
+        dlp_files = create_dlp_files(ecu_config_list, setup_type, py_logger)
         if not dlp_files and len(dlp_files)==0:
             return False
 
         for i in range(iterations):
             # Check stop flag before each iteration
-            if check_stop_flag_periodically():
+            if check_stop_flag_periodically(py_logger):
                 py_logger.info(f"Stop flag detected before iteration {i+1}. Aborting measurement.")
                 return False
-           
-            py_logger.info(f"Starting iteration {i+1} of {iterations}")
            
             if setup_type == ECUType.RCAR.value:
                 if not RCAR_ON_OFF_Relay(config.get('power-on-off-delay-in-seconds', 25), py_logger):
@@ -1187,23 +1181,22 @@ def start_shutdown_time_measurement(py_logger):
                     return False
 
             # Check stop flag after power cycling
-            if check_stop_flag_periodically():
+            if check_stop_flag_periodically(py_logger):
                 py_logger.info(f"Stop flag detected after power cycling in iteration {i+1}. Aborting.")
                 return False
 
             threads = []
            
             for ecu_type, (report_file, workbook, sheets, summary_sheet) in workbook_map.items():
+                py_logger.info(f"Starting iteration {i+1} of {iterations} for ECU - {setup_type} {ecu_type}.")
                 # Check stop flag before processing each ECU
-                if check_stop_flag_periodically():
+                if check_stop_flag_periodically(py_logger):
                     py_logger.info(f"Stop flag detected before processing ECU {ecu_type}. Aborting.")
                     return False
-                    
-                print("Thread: ", ecu_type, ": Started")
                
                 filename_list = {}
                 if setup_type == ECUType.ELITE.value:
-                    filename_list = get_log_file_paths_for_elite(i, ecu_config_list, setup_type)
+                    filename_list = get_log_file_paths_for_elite(i, ecu_config_list, setup_type, py_logger)
                 else:
                     filename_list[ecu_type] = tuple(get_log_file_path(ecu_type, setup_type, i))
                 if any(not filename for (filename, logfile, dltfile) in filename_list.values()):
@@ -1231,30 +1224,29 @@ def start_shutdown_time_measurement(py_logger):
             # Wait for all threads to complete, checking stop flag periodically
             for thread in threads:
                 while thread.is_alive():
-                    if check_stop_flag_periodically():
+                    if check_stop_flag_periodically(py_logger):
                         py_logger.info("Stop flag detected while waiting for threads. Terminating all processes.")
                         return False
                     thread.join(timeout=0.5)  # Check every 0.5 seconds
-                print("Thread result :: ", thread.result)
                 anySheet.append(thread.result)
                 
-        print('anySheet:', anySheet)
+        py_logger.info(f"All iterations completed :: {anySheet}")
         if not any(anySheet):
             isSuccess = False
 
         # Check stop flag before generating final reports
-        if check_stop_flag_periodically():
+        if check_stop_flag_periodically(py_logger):
             py_logger.info("Stop flag detected before generating final reports. Aborting.")
             return False
 
         # Save workbooks and generate reports for each ECU type
         for ecu_type, (report_file, workbook, sheets, summary_sheet) in workbook_map.items():
             # Check stop flag before each ECU report generation
-            if check_stop_flag_periodically():
+            if check_stop_flag_periodically(py_logger):
                 py_logger.info(f"Stop flag detected before generating report for {ecu_type}. Aborting.")
                 return False
            
-            print("shutdown_summary::"+str(shutdown_summary_map[ecu_type]))
+            py_logger.info(f"shutdown_summary::{shutdown_summary_map[ecu_type]}")
             # Export the average data to the Excel sheet
             if not export_and_plot_average_data_to_excel(summary_sheet, ecu_type, shutdown_summary_map[ecu_type], workbook, report_file, py_logger):
                 py_logger.error("Error exporting and plotting average data to Excel.")
@@ -1289,12 +1281,13 @@ def start_shutdown_time_measurement(py_logger):
                     fgs_transfer.remote_fgs_cleanup()
 
             # Final cleanup of any remaining processes
-            terminate_all_processes()
+            terminate_all_processes(py_logger)
             
             script_end_time = time.perf_counter()
+            py_logger.info(f"Script end time: {datetime.fromtimestamp(script_end_time).strftime('%H:%M:%S.%f')[:-2]} {datetime.fromtimestamp(script_end_time).strftime('%d-%m-%Y')}")
             py_logger.info(f"Total script execution time: {(script_end_time-script_start_time):.3f} seconds")
             stop_requested.clear()
         except Exception as e:
-            print(f"Exception occurred as {e}")
-    print("Final response :: ", isSuccess)
+            py_logger.error(f"Exception occurred as {e}")
+    py_logger.info("Final response :: " + ('Success' if isSuccess else 'Failure'))
     return isSuccess
