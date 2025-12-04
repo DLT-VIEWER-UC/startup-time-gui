@@ -26,6 +26,7 @@ from openpyxl.drawing.colors import ColorChoice
 from openpyxl.chart.axis import ChartLines
 from openpyxl.drawing.line import LineProperties
 from openpyxl.chart.layout import Layout, ManualLayout
+from openpyxl.chart.title import Title
 from openpyxl.utils import get_column_letter
 from pathlib import Path
 from datetime import datetime
@@ -38,6 +39,9 @@ import colorlog
 import pandas as pd
 from decimal import Decimal, ROUND_HALF_UP
 import signal
+from openpyxl.chart.text import RichText, Text
+from openpyxl.drawing.text import Paragraph, ParagraphProperties, CharacterProperties, RegularTextRun
+from openpyxl.drawing.text import Font as DrawingFont
 
 class OverallCounts:
     def __init__(self):
@@ -71,6 +75,35 @@ def create_data_references(ws, cats_mcol, cats_mrow, cats_mxrow, sd_mcol, sd_mxc
    
     return cats, stacked_data, clustered_data
 
+def create_formatted_title(text, font_size=11, bold=False, font_name="Calibri"):
+    """Create a formatted chart title with custom font properties."""
+    rich_text = RichText()
+    paragraph = Paragraph()
+    
+    # Set character properties (font formatting)
+    char_props = CharacterProperties()
+    char_props.sz = font_size * 100  # Font size in hundredths of a point
+    char_props.b = bold  # Bold
+    char_props.latin = DrawingFont(typeface=font_name)
+    
+    # Create RegularTextRun object (not dictionary!)
+    text_run = RegularTextRun()
+    text_run.rPr = char_props
+    text_run.t = text
+    
+    paragraph.pPr = ParagraphProperties()
+    paragraph.r = [text_run]  # List of RegularTextRun objects
+    rich_text.p = [paragraph]
+    
+    # Wrap RichText in Text object, then in Title object
+    text_obj = Text()
+    text_obj.rich = rich_text
+    
+    title = Title()
+    title.tx = text_obj
+    
+    return title
+
 def create_stacked_chart(stacked_data, cats, title, y_title, x_title):
     """Create and configure the stacked bar chart."""
     stacked = BarChart()
@@ -79,9 +112,9 @@ def create_stacked_chart(stacked_data, cats, title, y_title, x_title):
     stacked.overlap = 100
     stacked.add_data(stacked_data, titles_from_data=True)
     stacked.set_categories(cats)
-    stacked.title = title
-    stacked.y_axis.title = y_title
-    stacked.x_axis.title = x_title
+    stacked.title = create_formatted_title(title, font_size=14, bold=True)
+    stacked.y_axis.title = create_formatted_title(y_title, font_size=10.5, bold=False)
+    stacked.x_axis.title = create_formatted_title(x_title, font_size=12, bold=False)
     stacked.legend = None
    
     # Reverse the order of series so Col2 (1.5) appears first, then Col1 (3.567)
@@ -626,7 +659,7 @@ def adjust_column_width(sheet, ecu_type, logger):
         for cell in col[0:]:
             try:
                 # Check if the cell is empty
-                if not cell.value:
+                if not cell.value or is_merged_cell(sheet, cell):
                     continue
                
                 # Skip cells with specific content
@@ -671,7 +704,7 @@ def format_excel_cells(sheet, start_row):
         start_row (int): The row number from which to start formatting (1-based indexing)
        
     Formatting Rules:
-        - Column headers: Light green background (B5E6A2), bold font, bordered
+        - Column headers: Light green background (C6E0B4), bold font, bordered
         - "PASS" values: Bright green background (92D050) for success indication
         - "FAIL" values: Red background (FF0000) for failure indication
         - All cells: Center alignment (horizontal and vertical), bordered
@@ -705,8 +738,8 @@ def format_excel_cells(sheet, start_row):
                               applications_overall_status_columns + other_header_columns):
                
                 # Apply a green fill color and bold font to column headers
-                cell.fill = PatternFill(start_color="B5E6A2", end_color="B5E6A2", fill_type="solid")
-                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="C6E0B4", end_color="C6E0B4", fill_type="solid")
+                cell.font = Font(bold=True, size=10)
                 cell.border = border_style
                 if '\n' in cell.value:
                     cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
@@ -717,14 +750,23 @@ def format_excel_cells(sheet, start_row):
             elif cell.value == "PASS":
                 # If the cell value is "PASS", fill it with a light green color.
                 cell.fill = PatternFill(start_color = "92D050", end_color = "92D050", fill_type = "solid")
-                cell.font = Font(color="000000", bold=True)
+                cell.font = Font(color="000000", size=10, bold=True)
 
             elif cell.value == "FAIL":
                 # If the cell value is "FAIL", fill it with a light red color.
                 cell.fill = PatternFill(start_color = "FF0000", end_color = "FF0000", fill_type = "solid")
-                cell.font = Font(color="FFFFFF", bold=True)
+                cell.font = Font(color="FFFFFF", size=10, bold=True)
             elif cell.value == '⬤':
-                cell.font = Font(bold=True)
+                cell.font = Font(bold=True, size=10)
+            else:
+                if cell.font:
+                    cell.font = Font(
+                            name=cell.font.name,
+                            size=10,
+                            bold=cell.font.bold,
+                            color=cell.font.color,
+                            underline=cell.font.underline
+                        )
                
             # Center align the cell contents horizontally and vertically
             cell.alignment = Alignment(horizontal='center', vertical='center')
@@ -1600,7 +1642,7 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
             cell.value = f'Count: {count}'
             cell.fill = yellow_fill
             cell.border = border_style
-            cell.font = Font(bold=True)
+            cell.font = Font(bold=True, size=10)
    
     # Merge cells from column 1 to 9 in the current row with the above row
     for col in range(1, 10 if validate_startup_order else 8):
@@ -1629,7 +1671,7 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
     terminated_count_cell = sheet.cell(row=startup_order_count_idx, column=13 if validate_startup_order else 8)
     terminated_count_cell.value = f'Count: {application_startup_order_status_iteration["terminated_applications_count"]}'
     terminated_count_cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-    terminated_count_cell.font = Font(bold=True)
+    terminated_count_cell.font = Font(bold=True, size=10)
    
 
     other_header_columns.extend(['Signal', 'Cause'])
@@ -1637,7 +1679,7 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
     missing_sts_count_cell = sheet.cell(row=startup_order_count_idx, column=16 if validate_startup_order else 9)
     missing_sts_count_cell.value = f'Count: {application_startup_order_status_iteration["missing_sts_count"]}'
     missing_sts_count_cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-    missing_sts_count_cell.font = Font(bold=True)
+    missing_sts_count_cell.font = Font(bold=True, size=10)
 
     # Apply the border style to the entire merged range
     # if not is_empty_log:
@@ -1771,7 +1813,7 @@ def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_colum
         that clearly separate different types of analysis data within the same worksheet.
     """
     # Check if the sheet has existing rows and append empty rows if necessary
-    if sheet.max_row > 1:
+    if sheet.max_row > 2:
         # Append 5 empty rows to separate the header from existing data
         sheet.append([])
 
@@ -1820,7 +1862,7 @@ def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_colum
         ecu_ss_hyperlink_cell.value = '=HYPERLINK("'f'#\'{setup_type}_{ecu_type}_Summary\'!A1", "Summary Sheet Link")'
         ecu_ss_hyperlink_cell.fill = PatternFill(start_color="006fc0", end_color="006fc0", fill_type="solid")
         ecu_ss_hyperlink_cell.alignment = Alignment(horizontal='center', vertical='center')
-        ecu_ss_hyperlink_cell.font = Font(bold=True, color="FFFFFF", underline='single')
+        ecu_ss_hyperlink_cell.font = Font(bold=True, size=10, color="FFFFFF", underline='single')
        
 
     # Merge the cells in the header row
@@ -1833,7 +1875,7 @@ def create_header(sheet, ecu_type, setup_type, validate_startup_order, app_colum
     # Apply formatting to the merged cell (gray fill, bold text, centered alignment)
     merged_cell.fill = PatternFill(start_color="006fc0", end_color="006fc0", fill_type="solid")
     merged_cell.alignment = Alignment(horizontal='center', vertical='center')
-    merged_cell.font = Font(bold=True, color="FFFFFF")
+    merged_cell.font = Font(bold=True, size=10, color="FFFFFF")
 
     # Append the column names for the header
     sheet.append(columns)    
@@ -1935,7 +1977,7 @@ def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet,
            
             # Apply hyperlink formatting to the first cell in the last row
             cell = summary_sheet.cell(row=summary_sheet.max_row, column=1)
-            cell.font = Font(bold=True, underline='single', color='0000FF')
+            cell.font = Font(bold=True, size=10, underline='single', color='0000FF')
             # Apply red fill to terminated count if greater than 0
             terminated_count_cell = summary_sheet.cell(row=summary_sheet.max_row, column=9)  # Column 9 is the terminated count column
             if application_startup_order_status[i]['terminated_applications_count'] > 0:
@@ -2098,27 +2140,27 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
         if ecu_app_info_counts_map[ecu_type][data_row['process']].startup_time_judgement_fail_count > 0:
             startup_time_judgement_fail_cell = sheet.cell(row=sheet.max_row, column=7)  # Column 9 is the terminated count column
             startup_time_judgement_fail_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
-            startup_time_judgement_fail_cell.font = Font(color="FFFFFF")  # White font for contrast
+            startup_time_judgement_fail_cell.font = Font(color="FFFFFF", size=10)  # White font for contrast
         if ecu_app_info_counts_map[ecu_type][data_row['process']].order_mismatch_count > 0:
             order_mismatch_count_cell = sheet.cell(row=sheet.max_row, column=8)  # Column 9 is the terminated count column
             order_mismatch_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
-            order_mismatch_count_cell.font = Font(color="FFFFFF")  # White font for contrast
+            order_mismatch_count_cell.font = Font(color="FFFFFF", size=10)  # White font for contrast
         if ecu_app_info_counts_map[ecu_type][data_row['process']].not_found_count > 0:
             not_found_count_cell = sheet.cell(row=sheet.max_row, column=9)  # Column 9 is the terminated count column
             not_found_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
-            not_found_count_cell.font = Font(color="FFFFFF")  # White font for contrast
+            not_found_count_cell.font = Font(color="FFFFFF", size=10)  # White font for contrast
         if ecu_app_info_counts_map[ecu_type][data_row['process']].not_configured_count > 0:
             not_configured_count_cell = sheet.cell(row=sheet.max_row, column=10)  # Column 10 is the not configured count column
             not_configured_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
-            not_configured_count_cell.font = Font(color="FFFFFF")  # White font for contrast
+            not_configured_count_cell.font = Font(color="FFFFFF", size=10)  # White font for contrast
         if ecu_app_info_counts_map[ecu_type][data_row['process']].terminated_count > 0:
             terminated_count_cell = sheet.cell(row=sheet.max_row, column=11)
             terminated_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
-            terminated_count_cell.font = Font(color="FFFFFF")  # White font for contrast
+            terminated_count_cell.font = Font(color="FFFFFF", size=10)  # White font for contrast
         if len(overall_IG_ON_iteration) - len(process_times.get(data_row['process'], [])) > 0 and len(process_times.get(data_row['process'], [])) > 0:
             missing_count_cell = sheet.cell(row=sheet.max_row, column=12)  # Column 12 is the missing count column
             missing_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
-            missing_count_cell.font = Font(color="FFFFFF")  # White font for contrast
+            missing_count_cell.font = Font(color="FFFFFF", size=10)  # White font for contrast
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             differences[data_row['process']] = float(data_row['avg_time'])
@@ -2191,7 +2233,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
    
     if len(process_start_times) > 0:
         create_combo_chart(
-            ws=sheet, position=f"F{start_row}", step=500,
+            ws=sheet, position=f"F{start_row}", step=50,
             width=width, height=height,
             cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_start_times) + start_row + 1,
             sd_mcol=5, sd_mxcol=5, sd_mrow=start_row + 1, sd_mxrow=len(process_start_times) + start_row + 1,
@@ -2259,7 +2301,7 @@ def add_logfile_hyperlink(report_path, log_path, sheet, ecu_type, setup_type):
     sheet.cell(row=1, column=7).value = hyperlink_formula
    
     # Set the font color of the hyperlink to blue
-    sheet.cell(row=1, column=7).font = Font(color="006fc0", underline='single', bold=True)
+    sheet.cell(row=1, column=7).font = Font(color="006fc0", size=10, underline='single', bold=True)
 
 
 def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_timing_info, overall_IG_ON_cur_iteration, is_empty_log, config):
@@ -2328,7 +2370,7 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
     width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=5, end_col=19)
     if len(process_timing_info) > 0:
         create_combo_chart(
-            ws=sheet, position=f"E{start_row}", step=500,
+            ws=sheet, position=f"E{start_row}", step=50,
             width=width, height=height,
             cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_timing_info) + start_row + 1,
             sd_mcol=4, sd_mxcol=4, sd_mrow=start_row + 1, sd_mxrow=len(process_timing_info) + start_row + 1,
@@ -2424,15 +2466,15 @@ def format_qnx_startup_time_column(sheet, start_row, dltstart_timestamps):
         cell = sheet.cell(row=row_no, column=4)  # Column D is the 4th column
         if row_no == start_row:
             cell.border = Border(top=Side(style='thin'), left=Side(style='thin'), right=Side(style='thin'), bottom=Side(style='none'))
-            cell.font = Font(color="FFFFFF")
+            cell.font = Font(color="FFFFFF", size=10)
         elif row_no == sheet.max_row:
             cell.border = Border(bottom=Side(style='thin'), left=Side(style='thin'), right=Side(style='thin'), top=Side(style='none'))
-            cell.font = Font(color="FFFFFF")
+            cell.font = Font(color="FFFFFF", size=10)
         else:
             cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='none'), bottom=Side(style='none'))
-            cell.font = Font(color="FFFFFF")
+            cell.font = Font(color="FFFFFF", size=10)
         if row_no == mid_cell_no:
-            cell.font = Font(color="000000")
+            cell.font = Font(color="000000", size=10)
         cell.alignment = Alignment(vertical='center', horizontal='center')
 
 
@@ -3479,7 +3521,7 @@ def format_sheet(sheet, start_row, columns):
        
     Formatting Features:
         Column Headers:
-        - Light green background (B5E6A2) for visual distinction
+        - Light green background (C6E0B4) for visual distinction
         - Bold font for emphasis
         - Consistent border styling
        
@@ -3533,8 +3575,8 @@ def format_sheet(sheet, start_row, columns):
                 if (col_letter not in max_col_widths or max_col_widths[col_letter] < length) and not is_merged_cell(sheet, cell):
                    max_col_widths[col_letter] = length
             if cell.value in columns:
-                cell.fill = PatternFill(start_color="B5E6A2", end_color="B5E6A2", fill_type="solid")
-                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="C6E0B4", end_color="C6E0B4", fill_type="solid")
+                cell.font = Font(bold=True, size=10)
                 cell.border = border_style
             else:
                 cell.alignment = Alignment(horizontal='center', vertical='center')
