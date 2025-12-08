@@ -95,6 +95,315 @@ class SpinnerDialog(QDialog):
             self.move(self.parent().frameGeometry().center() - self.rect().center())
         return super().eventFilter(obj, event)
 
+class PingSerialThread(QObject):
+    finished = pyqtSignal()
+    send_device_response_msg = pyqtSignal(str, bool)
+    send_ping_response_object = pyqtSignal(object)
+
+    def __init__(self, selected_ecu_details, relay_mode):
+        super().__init__()
+        self.selected_ecu_details = selected_ecu_details
+        self.relay_mode = relay_mode  # "IG-ON" or "IG-OFF"
+
+        # Read relay configuration from selected_ecu_details dictionary
+        self.serial_port_relay = self.selected_ecu_details.get('Relay Port')      # Example: COM4 or /dev/ttyUSB0
+        self.baud_rate = self.selected_ecu_details.get('Relay Baudrate')          # Example: 9600        
+
+    def run(self):
+        """
+        Executes ping and relay control logic based on relay mode.
+       
+        Behavior:
+        - If relay_mode is "IG-ON" or "IG-OFF", control the relay and wait for stabilization.
+        - If relay_mode is not "IG-OFF", ping ECU IPs.
+        - Emits ping results via signal and logs status.
+        """
+
+        try:
+            # Handle relay control if mode is IG-ON or IG-OFF
+            if self.relay_mode in ["IG-ON", "IG-OFF"]:
+                # Call control_relay() and check if it was successful
+                if self.control_relay():
+                    # Only wait if relay control succeeded
+                    time.sleep(20)  # Allow relay to stabilize
+            else:
+                # Optional device connection check for other modes
+                if not self.check_device_connection():
+                    py_logger.warning("Device connection check failed.")
+
+            # Perform ping only if relay_mode is not IG-OFF
+            if self.relay_mode != "IG-OFF":
+                # Extract ECU IPs safely
+                ip_list = list(self.selected_ecu_details.get("ECU IPs", {}).values())
+
+                if ip_list:
+                    # Perform ping and emit results
+                    results = self.ping_multiple_hosts(ip_list)
+                    self.send_ping_response_object.emit(results)
+
+                    # Log results in one loop
+                    for ip, status in results.items():
+                        py_logger.info(f"{ip}: {status}")
+                else:
+                    py_logger.warning("No IP addresses available for pinging.")
+
+        except Exception as e:
+            py_logger.error(f"Error in PingSerialThread: {e}")
+
+        finally:
+            py_logger.info("Closing the Ping communication worker...")
+            self.finished.emit()
+
+    def check_device_connection(self):
+        """
+        Checks communication with the device via the configured serial port.
+       
+        Steps:
+        1. Open the serial port.
+        2. Send an AT command to the device.
+        3. Read and validate the response.
+        4. Emit status message and return True if successful, False otherwise.
+        """
+
+        ser = None  # Initialize serial object
+
+        try:
+            # Attempt to open the serial port with given settings
+            ser = serial.Serial(port=self.serial_port_relay, baudrate=self.baud_rate, timeout=1)
+
+            # Verify if the port is successfully opened
+            if not ser.is_open:
+                py_logger.error(f"Failed to open serial port: {self.serial_port_relay}")
+                self.send_device_response_msg.emit(f"Failed to open serial port: {self.serial_port_relay}", False)
+                return False
+
+            py_logger.info(f"Serial port {self.serial_port_relay} opened successfully.")
+
+            # Send AT command to check device responsiveness
+            ser.write(b'AT\r\n')
+            time.sleep(0.2)  # Allow time for device to respond
+
+            # Read all available response data from the device
+            response = ser.read_all().decode('utf-8', errors='ignore').strip()
+            py_logger.info(f"Raw response: {response}")
+
+            # Validate response: 'OK' indicates successful communication
+            if 'OK' in response:
+                py_logger.info(f"Device communication successful: {response}")
+                self.send_device_response_msg.emit("Device communication successful.", True)
+                return True
+            else:
+                py_logger.warning(f"No valid response from device: {response}")
+                self.send_device_response_msg.emit("No response from device", False)
+                return False
+
+        except serial.SerialException as e:
+            # Handle serial-specific errors (e.g., port not found, permission issues)
+            self.send_device_response_msg.emit(f"Serial port error: {e}", False)
+            py_logger.error(f"Serial port error: {e}")
+            return False
+
+        except Exception as e:
+            # Handle any other unexpected errors
+            self.send_device_response_msg.emit(f"Serial port error: {e}", False)
+            py_logger.error(f"Serial port error: {e}")
+            return False
+
+        finally:
+            # Ensure the serial port is closed if it was opened
+            if ser and ser.is_open:
+                ser.close()
+                py_logger.info("Serial port closed.")  
+
+    def control_relay(self):
+        """
+        Controls the relay based on the relay mode using serial communication.
+       
+        Relay modes:
+            - "IG-ON": Turns the relay ON
+            - "IG-OFF": Turns the relay OFF
+       
+        Returns:
+            bool: True if relay control was successful, False otherwise.
+        """
+
+        ser = None  # Serial object placeholder
+
+        try:
+            # Open serial connection with specified port and settings
+            ser = serial.Serial(
+                port=self.serial_port_relay,
+                baudrate=self.baud_rate,
+                stopbits=serial.STOPBITS_ONE,
+                timeout=0.1
+            )
+            py_logger.info(f"Serial port opened: {self.serial_port_relay}")
+
+            # Prepare command based on relay mode
+            cmd = "AT+CH1=1" if self.relay_mode == "IG-ON" else "AT+CH1=0"
+
+            # Send command to relay device
+            ser.write(cmd.encode())
+            py_logger.info(f"Command sent: {cmd}")
+
+            # Allow time for device to respond
+            time.sleep(0.2)
+
+            # Read response from device (optional validation)
+            response = ser.readline().decode().strip()
+            py_logger.info(f"Device response: {response}")
+
+            # Notify success via signal
+            self.send_device_response_msg.emit(f"{self.relay_mode} is successful", True)
+            return True  # Relay control successful
+
+        except serial.SerialException as e:
+            # Handle serial-specific errors (e.g., port not found)
+            py_logger.error(f"Serial communication error: {e}")
+            self.send_device_response_msg.emit("Serial communication failed", False)
+            return False
+
+        except Exception as e:
+            # Handle unexpected errors
+            py_logger.error(f"Unexpected error controlling relay: {e}")
+            self.send_device_response_msg.emit("Relay control failed", False)
+            return False
+
+        finally:
+            # Ensure serial port is closed if opened
+            if ser and ser.is_open:
+                ser.close()
+                py_logger.info(f"Serial port closed for {self.relay_mode}.")
+
+    def ping_multiple_hosts(self, ip_list):
+        """
+        Pings multiple hosts concurrently using threads.
+       
+        Args:
+            ip_list (list): List of IP addresses to ping.
+       
+        Returns:
+            dict: A dictionary mapping each IP address to its ping result.
+        """
+
+        results = {}  # Dictionary to store ping results for each IP
+        lock = threading.Lock()  # Lock to ensure thread-safe updates to results
+
+        def worker(ip):
+            """
+            Worker function for each thread.
+            Pings a single IP and stores the result in the shared dictionary.
+            """
+            result = self.ping_host(ip)  # Perform ping for the given IP
+            with lock:  # Acquire lock before updating shared dictionary
+                results[ip] = result
+
+        # Create a thread for each IP address
+        threads = [threading.Thread(target=worker, args=(ip,)) for ip in ip_list]
+
+        # Start all threads
+        for t in threads:
+            t.start()
+
+        # Wait for all threads to finish
+        for t in threads:
+            t.join()
+
+        # Return the dictionary of results
+        return results
+
+    def ping_host(self, ip_address, count=4):
+        """
+        Pings a single host and analyzes the response to determine success or failure.
+       
+        Args:
+            ip_address (str): The IP address to ping.
+            count (int): Number of ping attempts (default: 4).
+       
+        Returns:
+            str: A message indicating whether the ping was successful or failed.
+        """
+
+        # Common error patterns in ping output (English + Japanese)
+        # These indicate network issues, unreachable hosts, or timeouts.
+        error_patterns = [
+            r"Request timed out", r"Destination host unreachable", r"General failure",
+            r"TTL expired in transit", r"Transmit failed", r"Unknown host",
+            r"Name or service not known", r"Temporary failure in name resolution",
+            r"Network is unreachable", r"Host is down", r"Operation not permitted",
+            r"100% packet loss", r"0 received, 100% packet loss", r"timeout",
+            r"no route to host", r"Destination net unreachable",
+            # Japanese patterns for localized OS responses
+            r"要求がタイムアウトしました", r"宛先ホストに到達できません", r"一般エラー",
+            r"TTLが転送中に期限切れになりました", r"送信に失敗しました", r"不明なホスト",
+            r"名前またはサービスが不明です", r"名前解決の一時的な失敗", r"ネットワークに到達できません",
+            r"ホストがダウンしています", r"操作は許可されていません", r"100% パケット損失",
+            r"0 受信、100% パケット損失", r"タイムアウト", r"ホストへのルートがありません",
+            r"宛先ネットワークに到達できません",
+        ]
+
+        # Determine OS type to set correct ping parameter
+        # Windows uses '-n', Linux/macOS uses '-c'
+        os_type = platform.system().lower()
+        param = '-n' if os_type == 'windows' else '-c'
+
+        # Build ping command
+        command = ['ping', param, str(count), ip_address]
+
+        try:
+            # Execute ping command and capture output
+            # creationflags prevents console window from appearing on Windows
+            result = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+
+            # Combine stdout and stderr for analysis
+            output = result.stdout or result.stderr
+            py_logger.info(output)
+
+            # Split output into lines for pattern matching
+            lines = output.splitlines()
+            success_count = 0  # Track successful replies
+
+            # Analyze each line for errors or success indicators
+            for line in lines:
+                # Check for any error pattern in the line
+                for pattern in error_patterns:
+                    if re.search(pattern, line, re.IGNORECASE):
+                        py_logger.error(f"Ping failed '{ip_address}: {pattern}'")
+                        return f"Ping failed '{ip_address}: {pattern}'"
+
+                # Check success patterns based on OS type
+                if os_type == 'windows':
+                    # Windows success indicators (English + Japanese)
+                    if ("Reply from" in line and "bytes" in line and "time" in line and "TTL" in line) or \
+                    ("からの応答" in line and "バイト数" in line and "時間" in line and "TTL" in line):
+                        success_count += 1
+                else:
+                    # Linux/macOS success indicators (English + Japanese)
+                    if ("bytes from" in line and "ttl" in line and "time" in line) or \
+                    ("バイト" in line and "ttl" in line and "時間" in line):
+                        success_count += 1
+
+            py_logger.info(f"success_count: {success_count} for {ip_address}")
+
+            # Determine final result based on success count
+            if success_count == count:
+                py_logger.info(f"{ip_address}: Ping successful")
+                return "Ping successful"
+            else:
+                py_logger.error(f"{ip_address}: ping failed or no valid replies")
+                return f"{ip_address}: ping failed or no valid replies"
+
+        except Exception as e:
+            # Handle unexpected errors during ping execution
+            py_logger.error(f"Error occurred ping failed: {e}")
+            return f"Error occurred ping failed: {e}"
+
 class Worker(QObject):
     finished = pyqtSignal()
     set_status_inProgess = pyqtSignal(str)
@@ -162,6 +471,8 @@ class Worker(QObject):
  
     def launch_diag_application(self):
         py_logger.info("Launching the Diag High Level ECU Tester, please wait!...")
+        diag_start_time = datetime.now()
+        py_logger.info(f"The Diag Tester start time: {diag_start_time}")
 
         current_os = platform.system()
         if current_os == "Windows":
@@ -191,6 +502,12 @@ class Worker(QObject):
                     return False
 
                 time.sleep(0.2)  # Non-blocking check
+            diag_end_time = datetime.now()
+            py_logger.info(f"The Diag Tester end time: {diag_end_time}")
+
+            total_time = diag_end_time - diag_start_time
+
+            py_logger.info(f"The total time taken by Diag Tester: {total_time}")
 
             return True  # Process finished naturally
 
@@ -280,12 +597,12 @@ class Worker(QObject):
 
         # ---------------- Label Actions Mapping ---------------- #
         label_actions = {
-            'CPU and Memory Utilization': lambda: CPU_Memory_measurement(),
-            'Heap Memory': lambda: __import__('Heap_Memory_Scripts.Heap_Memory_Utilization', fromlist=['RUN_HEAP_MEMORY_SCRIPT']).RUN_HEAP_MEMORY_SCRIPT(),
+            'CPU and Memory Utilization': lambda: CPU_Memory_measurement(py_logger),
+            'Heap Memory': lambda: __import__('Heap_Memory_Scripts.Heap_Memory_Utilization', fromlist=['RUN_HEAP_MEMORY_SCRIPT']).RUN_HEAP_MEMORY_SCRIPT(py_logger),
             'Startup Time': lambda: __import__('Startup_Time_Scripts.Applications_StartupTime_IG_ON', fromlist=['start_startup_time_measurement']).start_startup_time_measurement(py_logger),
-            'Cyclic and Turnaround Time': lambda: __import__('Cyclic_Turnaround_Time_Scripts.cyclic_turnaround_time_measurement', fromlist=['start_cyclic_turnaround_time_measurement']).start_cyclic_turnaround_time_measurement(),
-            'Throughput and Fault Injection': lambda: __import__('Throughput_Scripts.Integrated_Throughput', fromlist=['start_throughput']).start_throughput(),
-            'Execution Time': lambda: __import__('Execution_Time_Scripts.Execution_Time_Measurement_Script', fromlist=['start_execution_time_measurement']).start_execution_time_measurement(),
+            'Cyclic and Turnaround Time': lambda: __import__('Cyclic_Turnaround_Time_Scripts.cyclic_turnaround_time_measurement', fromlist=['start_cyclic_turnaround_time_measurement']).start_cyclic_turnaround_time_measurement(py_logger),
+            'Throughput and Fault Injection': lambda: __import__('Throughput_Scripts.Integrated_Throughput', fromlist=['start_throughput']).start_throughput(py_logger),
+            'Execution Time': lambda: __import__('Execution_Time_Scripts.Execution_Time_Measurement_Script', fromlist=['start_execution_time_measurement']).start_execution_time_measurement(py_logger),
             'Shutdown Time': lambda: __import__('Shutdown_Time_Scripts.Applications_ShutdownTime_IG_ON', fromlist=['start_shutdown_time_measurement']).start_shutdown_time_measurement(py_logger),
             'Continuous KEV': lambda: run_subprocess("./Continuous_KEV_Scripts/main.py"),
             'Event Trigger KEV': lambda: run_subprocess("./Event_Trigger_KEV_Scripts/main.py"),
@@ -357,7 +674,8 @@ class MainWindow(QMainWindow):
         self.is_any_ecu_selected_flag = False
         self.is_test_in_progress = False
         self.current_kpi_label = None
-        self.kpi_log_file = None  
+        self.kpi_log_file = None
+        self.ping_comm_worker = None
 
         self.tab_widget = QTabWidget()
         self.setCentralWidget(self.tab_widget)
@@ -464,16 +782,20 @@ class MainWindow(QMainWindow):
         try:
             self.current_kpi_label = kpi_label
 
-            if kpi_label in diag_labels:
-                return
-
             folder_name = folder_names.get(kpi_label)
+            py_logger.info(f"folder_name: {folder_name}")
             if not folder_name:
                 raise ValueError(f"Invalid KPI label: {kpi_label}")
 
             parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
             log_dir = os.path.join(parent_dir, 'Reports', folder_name, Current_Timestamp, 'Console_Log')
             os.makedirs(log_dir, exist_ok=True)
+           
+            # if kpi_label and kpi_label.strip() in diag_labels:
+            #     folder_name = "_".join(kpi_label.split())
+
+            if kpi_label in diag_labels:
+                folder_name = folder_name.split("/")[1]
 
             log_file_path = os.path.join(log_dir, f"{folder_name}.log")
             self.kpi_log_file = open(log_file_path, "a", encoding="utf-8")
@@ -930,22 +1252,32 @@ class MainWindow(QMainWindow):
         return relay_layout        
 
     def create_IG_button_layout(self):
-        IG_button_layout = QHBoxLayout()
+        IG_button_layout = QVBoxLayout()
 
-        self.IG_OFF_button = QPushButton('IG OFF')
-        # self.IG_OFF_button.setFixedSize(150,35)
-        self.IG_OFF_button.setStyleSheet(common_enabled_style + common_hover_style)
-        self.IG_OFF_button.clicked.connect(self.IG_ON_Off)
+        self.ping_comm_button = QPushButton('Ping Communication Check')
+        self.ping_comm_button.setFixedHeight(35)
+        self.ping_comm_button.setStyleSheet("QPushButton:enabled { font-size: 20px; }" + common_enabled_style + common_hover_style)
+        self.ping_comm_button.clicked.connect(self.on_ping_comm_btn_click)
+
+        self.IG_OFF_button = QPushButton('IG-OFF')
+        self.IG_OFF_button.setFixedHeight(35)
+        self.IG_OFF_button.setStyleSheet("QPushButton:enabled { font-size: 20px; }" + common_enabled_style + common_hover_style)
+        self.IG_OFF_button.clicked.connect(self.on_ping_comm_btn_click)
         self.IG_OFF_button.setEnabled(False)
 
-        self.IG_ON_button = QPushButton('IG ON')
-        # self.IG_ON_button.setFixedSize(150, 35)
-        self.IG_ON_button.setStyleSheet(common_enabled_style + common_hover_style)
-        self.IG_ON_button.clicked.connect(self.IG_ON_Off)
+        self.IG_ON_button = QPushButton('IG-ON')
+        self.IG_ON_button.setFixedHeight(35)
+        self.IG_ON_button.setStyleSheet("QPushButton:enabled { font-size: 20px; }" + common_enabled_style + common_hover_style)
+        self.IG_ON_button.clicked.connect(self.on_ping_comm_btn_click)
         self.IG_ON_button.setEnabled(False)
 
-        IG_button_layout.addWidget(self.IG_OFF_button)
-        IG_button_layout.addWidget(self.IG_ON_button)
+        IG_ON_OFF_button_layout = QHBoxLayout()
+        IG_ON_OFF_button_layout.addWidget(self.IG_OFF_button)
+        IG_ON_OFF_button_layout.addWidget(self.IG_ON_button)
+
+        IG_button_layout.addWidget(self.ping_comm_button)
+        IG_button_layout.addLayout(IG_ON_OFF_button_layout)
+       
         return IG_button_layout    
 
     def create_login_credential_group(self):
@@ -1969,6 +2301,7 @@ class MainWindow(QMainWindow):
         # Check if all required inputs are valid and borders are correctly updated
         if self.is_configuration_valid():
             # Enable IG buttons and show success status
+            self.ping_comm_button.setEnabled(True)
             self.IG_OFF_button.setEnabled(True)
             self.IG_ON_button.setEnabled(True)
             self.configuration_status_label.setStyleSheet(
@@ -1977,6 +2310,7 @@ class MainWindow(QMainWindow):
             self.configuration_flag = True
         else:
             # Disable IG buttons and show error status
+            self.ping_comm_button.setEnabled(False)
             self.IG_OFF_button.setEnabled(False)
             self.IG_ON_button.setEnabled(False)
             self.configuration_status_label.setStyleSheet(
@@ -2155,16 +2489,7 @@ class MainWindow(QMainWindow):
                 else:
                     clear_border()
 
-        return is_input_valid    
-
-    def IG_ON_Off(self):
-        sender = self.sender()
-        if sender == self.IG_ON_button:
-            # Code to be executed when IG ON button is clicked
-            QMessageBox.information(self, "IG ON", "'IG ON' functionality implementation is in progress.")
-        elif sender == self.IG_OFF_button:
-            # Code to be executed when IG OFF button is clicked
-            QMessageBox.information(self, "IG OFF", "'IG OFF' functionality implementation is in progress.")
+        return is_input_valid
 
     def check_kpi_compatibility(self):
         try:
@@ -2183,6 +2508,180 @@ class MainWindow(QMainWindow):
         except Exception as e:
             py_logger.error(f"Error in check KPI compatibility as {e}")
             return False
+
+    def show_message_once_old(self, title, msg, level="warning"):
+        """
+        Show a message box only once, with dynamic icon based on level.
+        level can be 'info' or 'warning'
+        """
+        # # Check if a message box is already open
+        # if hasattr(self, 'msg_box') and self.msg_box is not None and self.msg_box.isVisible():
+        #     return  # Don't show again if already visible
+
+        # Create and show the message box
+        self.msg_box = QMessageBox(self)
+
+        # Set icon based on level
+        if level.lower() == "warning":
+            self.msg_box.setIcon(QMessageBox.Warning)
+        else:
+            self.msg_box.setIcon(QMessageBox.Information)
+
+        self.msg_box.setWindowTitle(title)
+        self.msg_box.setText(msg)
+        self.msg_box.setStandardButtons(QMessageBox.Ok)
+        self.msg_box.show()
+
+        # Optional: Auto-close after 3 seconds
+        # from PyQt5.QtCore import QTimer
+        # QTimer.singleShot(3000, self.msg_box.close)
+
+    def show_message_once(self, title, msg, level="warning"):
+        """
+        Show a message box only once at a time, queueing subsequent messages.
+       
+        Features:
+        - Displays messages sequentially using a queue.
+        - Dynamic icon based on 'level' (info or warning).
+        - Prevents multiple overlapping message boxes.
+        """
+
+        # Initialize queue if not already present
+        if not hasattr(self, 'message_queue'):
+            self.message_queue = []
+
+        # Add the new message to the queue
+        self.message_queue.append((title, msg, level))
+
+        # If no message box is currently visible, show the next one
+        if not hasattr(self, 'msg_box') or self.msg_box is None or not self.msg_box.isVisible():
+            self._show_next_message()
+
+    def _show_next_message(self):
+        """
+        Internal helper to show the next message in the queue.
+        Automatically called when the previous message is closed.
+        """
+
+        # If queue is empty, nothing to show
+        if not self.message_queue:
+            return
+
+        # Get next message details
+        title, msg, level = self.message_queue.pop(0)
+
+        # Create message box
+        self.msg_box = QMessageBox(self)
+
+        # Set icon based on level
+        if level.lower() == "warning":
+            self.msg_box.setIcon(QMessageBox.Warning)
+        else:
+            self.msg_box.setIcon(QMessageBox.Information)
+
+        # Set title, text, and buttons
+        self.msg_box.setWindowTitle(title)
+        self.msg_box.setText(msg)
+        self.msg_box.setStandardButtons(QMessageBox.Ok)
+
+        # Connect signal to show next message after closing
+        self.msg_box.finished.connect(self._show_next_message)
+
+        # Show the message box
+        self.msg_box.show()
+
+        # Optional: Auto-close after 3 seconds
+        # QTimer.singleShot(3000, self.msg_box.close)
+
+   
+    def on_ping_comm_worker_finished(self):
+        """
+        Slot called when ping communication worker finishes.
+        Resets worker reference and re-enables the button.
+        """
+        py_logger.info("Ping communication worker finished. Cleaning up...")
+        self.ping_comm_worker = None
+        self.ping_comm_button.setEnabled(True)
+        self.IG_OFF_button.setEnabled(True)
+        self.IG_ON_button.setEnabled(True)
+
+    def show_device_response_popup(self, msg, status):
+        """
+        Show popup based on device communication status.
+        status = True -> INFO popup
+        status = False -> WARNING popup
+        """
+
+        # Choose icon based on status
+        level = "info" if status else "warning"
+        self.show_message_once("Device Communication Response", msg, level)
+
+    def show_ping_results_popup(self, results):
+        """
+        Show a popup with failed ping results only.
+        results: dict {ip: status}
+        """
+        # Filter failed IPs
+        failed_ips = {ip: status for ip, status in results.items() if "failed" in status.lower()}
+
+        msg = "\n".join([f"{status}" for ip, status in results.items()])
+
+        # Show popup if there are failures
+        level = "warning" if failed_ips else "info"
+           
+        self.show_message_once("Ping Response", msg, level)
+
+    def on_ping_comm_btn_click(self):
+        py_logger.info("ping COMM clicked")
+        self.ping_comm_button.setEnabled(False)
+        self.IG_OFF_button.setEnabled(False)
+        self.IG_ON_button.setEnabled(False)
+               
+        # Dictionary to store relay settings and selected ECU IPs
+        selected_ecu_details = {}
+
+        # Save relay configuration details
+        selected_ecu_details['Relay Port'] = self.relay_port_input.text()      # Example: COM3
+        selected_ecu_details['Relay Baudrate'] = self.relay_baudrate_input.text()  # Example: 9600
+
+        # Initialize a nested dictionary for ECU IPs
+        selected_ecu_details["ECU IPs"] = {}
+
+        # Define mapping of checkboxes to ECU names and their IP retrieval methods
+        ecu_mapping = [
+            (self.padas_checkbox, "PADAS RCAR", self.get_RCAR_ip_address),
+            (self.RCar_checkbox, "ELITE RCAR", self.get_RCAR_ip_address),
+            (self.SoC0_checkbox, "ELITE SoC0", self.get_SoC0_ip_address),
+            (self.SoC1_checkbox, "ELITE SoC1", self.get_SoC1_ip_address),
+        ]
+
+        # Loop through mapping and add selected ECUs with their IP addresses
+        for checkbox, ecu_name, ip_method in ecu_mapping:
+            if checkbox.isChecked():  # If checkbox is selected by the user
+                selected_ecu_details["ECU IPs"][ecu_name] = ip_method()  # Save ECU name and its IP address        
+       
+        relay_mode = None  # Default: None for other buttons
+        sender = self.sender()
+        if sender == self.IG_ON_button:
+            relay_mode = "IG-ON"
+        elif sender == self.IG_OFF_button:
+            relay_mode = "IG-OFF"              
+
+        self.ping_thread = QThread()
+        self.ping_comm_worker = PingSerialThread(selected_ecu_details, relay_mode)
+        self.ping_comm_worker.moveToThread(self.ping_thread)
+
+        self.ping_thread.started.connect(self.ping_comm_worker.run)
+        self.ping_comm_worker.finished.connect(self.ping_thread.quit)
+        self.ping_comm_worker.finished.connect(self.ping_comm_worker.deleteLater)
+        self.ping_comm_worker.finished.connect(self.on_ping_comm_worker_finished)
+        self.ping_thread.finished.connect(self.ping_thread.deleteLater)
+
+        # Connect signals        
+        self.ping_comm_worker.send_device_response_msg.connect(self.show_device_response_popup)
+        self.ping_comm_worker.send_ping_response_object.connect(self.show_ping_results_popup)
+
+        self.ping_thread.start()
 
     def on_run_button_click(self):
         if not self.check_kpi_compatibility():
@@ -2583,6 +3082,7 @@ class MainWindow(QMainWindow):
 
     def disable_all_widgets(self):
         self.run_button.setEnabled(False)
+        self.ping_comm_button.setEnabled(False)
         self.IG_OFF_button.setEnabled(False)
         self.IG_ON_button.setEnabled(False)
 

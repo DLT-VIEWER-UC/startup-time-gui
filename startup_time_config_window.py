@@ -1153,7 +1153,7 @@ class StartupTimeConfig(QDialog):
         cancel_btn = QPushButton('Cancel'); cancel_btn.clicked.connect(self.reject)
         cancel_btn.setFixedHeight(35)
         cancel_btn.setFocusPolicy(Qt.NoFocus)
-        
+       
         help_button = QPushButton()
         help_button.setIcon(QIcon('./GUI_Icons/Help_icon.ico'))
         help_button.setFixedSize(35,35)
@@ -1752,7 +1752,7 @@ class StartupTimeConfig(QDialog):
         for i in range(4):
             self.update_ecu_block_styles(self.ecu_block_list[i], self.ecu_error_list[i])
 
-        self.ok_btn.setEnabled(False if self.main_window.is_test_in_progress else True)
+        self.ok_btn.setEnabled(False if self.main_window.is_test_in_progress and self.is_checked else True)
         print(f"Validation result - ECU block list map: {self.ecu_block_list_selection_map}, ECU error list: {self.ecu_error_list}), is_partially_filled: {is_partially_filled}")
         return not is_partially_filled and any((
             not self.ecu_error_list[0] and self.ecu_block_list_selection_map[0],

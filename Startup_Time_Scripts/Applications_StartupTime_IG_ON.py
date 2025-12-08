@@ -79,29 +79,29 @@ def create_formatted_title(text, font_size=11, bold=False, font_name="Calibri"):
     """Create a formatted chart title with custom font properties."""
     rich_text = RichText()
     paragraph = Paragraph()
-    
+   
     # Set character properties (font formatting)
     char_props = CharacterProperties()
     char_props.sz = font_size * 100  # Font size in hundredths of a point
     char_props.b = bold  # Bold
     char_props.latin = DrawingFont(typeface=font_name)
-    
+   
     # Create RegularTextRun object (not dictionary!)
     text_run = RegularTextRun()
     text_run.rPr = char_props
     text_run.t = text
-    
+   
     paragraph.pPr = ParagraphProperties()
     paragraph.r = [text_run]  # List of RegularTextRun objects
     rich_text.p = [paragraph]
-    
+   
     # Wrap RichText in Text object, then in Title object
     text_obj = Text()
     text_obj.rich = rich_text
-    
+   
     title = Title()
     title.tx = text_obj
-    
+   
     return title
 
 def create_stacked_chart(stacked_data, cats, title, y_title, x_title):
@@ -173,10 +173,10 @@ def configure_chart_layout(chart, width=18, height=10, gap_width=100, major_unit
    
     # Set manual layout with padding
     ml = ManualLayout()
-    ml.x = 0.05
-    ml.y = 0.08
-    ml.w = 0.95
-    ml.h = 0.90
+    ml.x = 0.02
+    ml.y = 0.12
+    ml.w = 0.98
+    ml.h = 0.88
     ml.xMode = "edge"
     ml.yMode = "edge"
     ml.wMode = "edge"
@@ -310,7 +310,7 @@ def get_signal_name_with_fallback(signum):
         '64': 'SIGRTMAX',
     }
    
-    return signal_map.get(signum, '')
+    return signal_map.get(signum, 'Undefined')
 
 def check_stop_flag(py_logger):
     """
@@ -659,7 +659,7 @@ def adjust_column_width(sheet, ecu_type, logger):
         for cell in col[0:]:
             try:
                 # Check if the cell is empty
-                if not cell.value or is_merged_cell(sheet, cell):
+                if not cell.value or 'Startup Time Report' in str(cell.value):
                     continue
                
                 # Skip cells with specific content
@@ -669,6 +669,8 @@ def adjust_column_width(sheet, ecu_type, logger):
                 # Attempt to retrieve the content of the cell and check its length
                 cell_content = str(cell.value)
                 if cell_content.startswith('=HYPERLINK'):
+                    if is_merged_cell(sheet, cell):
+                        continue
                     # If the cell is a hyperlink, extract the display text
                     cell_content = cell_content.split(', "')[1]
                 # Check if the cell's alignment has wrap text enabled
@@ -1688,15 +1690,15 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
     #             cell.border = border_style
    
     # Calculate the total height of rows starting from row 4 to sheet.max_row for chart sizing
-    width, height = calculate_graph_size(sheet, start_row=4, end_row=sheet.max_row, start_col=17, end_col=30)
+    width, height = calculate_graph_size(sheet, start_row=3, end_row=sheet.max_row, start_col=17, end_col=31)
    
     if len(dltstart_timestamps)>0:            
         create_combo_chart(
-            ws=sheet, position="Q4", step=1,
+            ws=sheet, position="Q3", step=1,
             width=width, height=height,
-            cats_mcol=2, cats_mrow=7, cats_mxrow=len(dltstart_timestamps) + 7,
-            sd_mcol=3, sd_mxcol=4, sd_mrow=6, sd_mxrow=len(dltstart_timestamps) + 6,
-            cd_mcol=5, cd_mxcol=5, cd_mrow=6, cd_mxrow=len(dltstart_timestamps) + 6,
+            cats_mcol=2, cats_mrow=6, cats_mxrow=len(dltstart_timestamps) + 6,
+            sd_mcol=3, sd_mxcol=4, sd_mrow=5, sd_mxrow=len(dltstart_timestamps) + 5,
+            cd_mcol=5, cd_mxcol=5, cd_mrow=5, cd_mxrow=len(dltstart_timestamps) + 5,
             chart_title=f"Applications Startup Time from IG-ON on {setup_type} {ecu_type}",
             x_title="Applications",
             y_title="Startup Time (s)  *The first 1.5 seconds is the QNX startup time",
@@ -1755,7 +1757,7 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     log_label_cell.border = border_style
    
     # Cell G1 - Log folder path with hyperlink
-    sheet.merge_cells('G1:K1')
+    sheet.merge_cells('G1:K1' if sheet_type != 'Summary' else ('G1:I1' if is_pre_gen_logs else 'G1:H1'))
     log_path_cell = sheet['G1']
     log_folder_path = f'{"Pre-Generated_Logs" if is_pre_gen_logs else "Logs"}\\{setup_type}_{ecu_type}'
     # Create hyperlink formula
@@ -1767,7 +1769,7 @@ def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
     log_path_cell.alignment = Alignment(horizontal='left', vertical='center')
    
     # Apply border to all cells in the merged range
-    for col in range(7, 12):  # G=7 to K=11 (columns G through K)
+    for col in range(7, 12 if sheet_type != 'Summary' else (10 if is_pre_gen_logs else 9)):  # G=7 to K=11 (columns G through K)
         sheet.cell(row=1, column=col).border = border_style
 
 
@@ -2367,14 +2369,15 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
         if process not in process_timing_info and (not is_empty_log or process not in ecu_encountered_apps_map[ecu_type]):
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
-    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=5, end_col=19)
-    if len(process_timing_info) > 0:
+    width, height = calculate_graph_size(sheet, start_row=start_row + 1, end_row=sheet.max_row , start_col=5, end_col=19)
+    len_started_apps = len([process for process, process_data in process_timing_info.items() if process_data['start_time_ms']])
+    if len_started_apps > 0:
         create_combo_chart(
             ws=sheet, position=f"E{start_row}", step=50,
             width=width, height=height,
-            cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_timing_info) + start_row + 1,
-            sd_mcol=4, sd_mxcol=4, sd_mrow=start_row + 1, sd_mxrow=len(process_timing_info) + start_row + 1,
-            cd_mcol=4, cd_mxcol=4, cd_mrow=start_row + 1, cd_mxrow=len(process_timing_info) + start_row + 1,
+            cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len_started_apps + start_row + 1,
+            sd_mcol=4, sd_mxcol=4, sd_mrow=start_row + 1, sd_mxrow=len_started_apps + start_row + 1,
+            cd_mcol=4, cd_mxcol=4, cd_mrow=start_row + 1, cd_mxrow=len_started_apps + start_row + 1,
             chart_title=f"Applications Init Up Time on {setup_type} {ecu_type}",
             y_title="Init Up Time (ms)",
             x_title="Applications",
@@ -4258,7 +4261,7 @@ def start_startup_time_measurement(logger):
     logger.info("="*80)
     logger.info(f"Execution Start Time: {datetime.fromtimestamp(script_start_time).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
     logger.info(f"Timestamp: {current_timestamp}")
-    
+   
     try:
         # Check for stop flag at the beginning
         if check_stop_flag_periodically(logger):
@@ -4267,7 +4270,7 @@ def start_startup_time_measurement(logger):
 
         isSuccess = True
         anySheet = []
-        
+       
         logger.info("\n[Configuration Loading]")
         config = load_config('startup_time_config.json', logger)      
        
@@ -4275,7 +4278,7 @@ def start_startup_time_measurement(logger):
         if config is None:
             logger.error("[Error] Configuration file not found: startup_time_config.json")
             return False
-        
+       
         logger.info("Configuration loaded successfully")
        
         is_pre_gen_logs = config.get('Pre-Generated Logs', False)
@@ -4286,7 +4289,7 @@ def start_startup_time_measurement(logger):
             if not pre_gen_logs_folder_path or not os.path.exists(str(pre_gen_logs_folder_path)):
                 logger.error("[Error] Pre-generated logs folder not found or not configured")
                 return False
-        
+       
         local_save_path = Path(__file__).parents[2].joinpath("Reports", "03_Startup_Time", config.get('Current_Timestamp', cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S")))
         local_save_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"Report directory: {local_save_path}")
@@ -4340,7 +4343,7 @@ def start_startup_time_measurement(logger):
         logger.info(f"\n[GUI Settings]")
         logger.info(f"Setup Type: {setup_type}")
         logger.info(f"Enabled ECUs: {', '.join(enabled_ecu_list)}")
-        
+       
         if setup_type is None or len(enabled_ecu_list) == 0:
             logger.error("[Error] No enabled ECU found in the configuration")
             return False
@@ -4409,7 +4412,7 @@ def start_startup_time_measurement(logger):
             logger.info(f"\n{'='*80}")
             logger.info(f"ITERATION {i+1} of {iterations}")
             logger.info(f"{'='*80}")
-            
+           
             if check_stop_flag_periodically(logger):
                 logger.info(f"Stop flag detected. Aborting iteration {i+1}/{iterations}.")
                 return False
@@ -4448,7 +4451,7 @@ def start_startup_time_measurement(logger):
                 else:
                     filename_list[ecu_type] = extract_log_file_paths(i, ecu_type, setup_type, logger)
                 filename_list_map[i]=filename_list
-                
+               
                 if any(not filename for (filename, logfile, dltfile) in filename_list.values()):
                     if is_pre_gen_logs:
                         logger.error(f"[Error] Log file not found for {ecu_type} in iteration {i}")
@@ -4550,7 +4553,7 @@ def start_startup_time_measurement(logger):
                 if check_stop_flag_periodically(logger):
                     logger.info(f"Stop flag detected before generating report for {ecu_type}.")
                     return False
-                
+               
                 logger.info(f"Generating report for {ecu_type}...")
                    
                 if not save_workbook_and_generate_reports(
@@ -4594,23 +4597,23 @@ def start_startup_time_measurement(logger):
     finally:
         try:
             logger.info("\n[Cleanup Operations]")
-            
+           
             # Check if stop was requested for logging purposes
             if stop_requested.is_set():
                 logger.warning("Measurement stopped due to stop flag detection")
-            
+           
             # Set stop flag to ensure all monitoring stops
             stop_requested.clear()
-            
+           
             # Terminate any remaining processes
             terminate_all_processes(logger)
-            
+           
             # Remove temporary files
             remove_png_files(logger)
-            
+           
             script_end_time = time.perf_counter()
             execution_time = script_end_time - script_start_time
-            
+           
             logger.info("\n" + "="*80)
             logger.info("STARTUP TIME MEASUREMENT - EXECUTION COMPLETED")
             logger.info("="*80)
@@ -4620,5 +4623,5 @@ def start_startup_time_measurement(logger):
             logger.info("="*80)
         except Exception as e:
             logger.error(f"[Error] Exception during cleanup: {e}")
-    
+   
     return isSuccess

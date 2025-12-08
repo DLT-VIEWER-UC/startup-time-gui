@@ -42,8 +42,8 @@ from PyQt5.QtWidgets import (
     # Table and header
     QTableWidget, QHeaderView
 )
-from Event_Trigger_KEV_Scripts.flagManager import FlagManager
-from Continuous_KEV_Scripts.flagManager import FlagManager
+# from Event_Trigger_KEV_Scripts.flagManager import FlagManager
+# from Continuous_KEV_Scripts.flagManager import FlagManager
 
 common_groupbox_style = """
     QGroupBox {
@@ -267,7 +267,7 @@ def open_user_manual(label, pdf_process=None):
     # Path to the PDF file
     pdf_path = r"M13_HOKPIT-3661_GEN2_Platform_Testing_GUI_Tool_UM.pdf"
     # Path to Adobe Reader executable
-    adobe_reader_path = r"C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe"
+    adobe_reader_path = r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
     # JSON file containing label-to-page mapping
     json_path = r"user_manual_page_mapping.json"
 
