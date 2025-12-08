@@ -270,11 +270,11 @@ class ApplicationSelectorWidget(QWidget):
             same_type_widgets = []
             if is_startup_widget:
                 for entry in ecu_config['startup']:
-                    if len(entry) >= 3 and hasattr(entry[2], 'application_checkboxes'):
+                    if len(entry) >= 3 and hasattr(entry[2], 'application_checkboxes') and entry[4].isChecked():
                         same_type_widgets.append(entry[2])
             else:
                 for entry in ecu_config['threshold']:
-                    if len(entry) >= 2 and hasattr(entry[1], 'application_checkboxes'):
+                    if len(entry) >= 2 and hasattr(entry[1], 'application_checkboxes') and entry[3].isChecked():
                         same_type_widgets.append(entry[1])
            
             # Collect all currently selected applications from same group type
@@ -1633,6 +1633,16 @@ class StartupTimeConfig(QDialog):
             seen_apps = dict()
             for idx, entry in enumerate(self.widgets['ecu-config'][i]['startup']):
                 text = self._get_widget_text(entry[2])
+                if entry[4].isChecked() and self.widgets['Startup Order Application Registration'].isChecked() and text and len(text) > 0:
+                    for app in text.split(','):
+                        if app.strip():
+                            if app.strip() in seen_apps:
+                                seen_apps[app.strip()] += 1
+                            else:
+                                seen_apps[app.strip()] = 1
+                
+            for idx, entry in enumerate(self.widgets['ecu-config'][i]['startup']):
+                text = self._get_widget_text(entry[2])
                 if entry[4].isChecked() and self.widgets['Startup Order Application Registration'].isChecked() and (not text or len(text) == 0 or text.startswith(' ') or text.endswith(' ')):
                     self._set_widget_style(entry[2], 'border: 1px solid red;')
                     enabled = False
@@ -1641,19 +1651,12 @@ class StartupTimeConfig(QDialog):
                     self._set_widget_style(entry[2], 'border: 1px solid red;')
                     enabled = False
                     self.ecu_error_list[i] = True
-                elif entry[4].isChecked() and self.widgets['Startup Order Application Registration'].isChecked() and len(set(seen_apps.keys()).intersection(set([app.strip() for app in text.split(',')]))) > 0:
+                elif entry[4].isChecked() and self.widgets['Startup Order Application Registration'].isChecked() and max([seen_apps[common_app] for common_app in set(seen_apps.keys()).intersection(set([app.strip() for app in text.split(',')]))]) > 1:
                     self._set_widget_style(entry[2], 'border: 1px solid red;')
-                    for app in set(seen_apps.keys()).intersection(set([app.strip() for app in text.split(',')])):
-                        conflict_idx = seen_apps[app]
-                        conflict_entry = self.widgets['ecu-config'][i]['startup'][conflict_idx]
-                        self._set_widget_style(conflict_entry[2], 'border: 1px solid red;')
                     enabled = False
                     self.ecu_error_list[i] = True
                 else:
                     self._set_widget_style(entry[2], 'border: 0px;')
-                for app in text.split(','):
-                    if app.strip() and app.strip() not in seen_apps:
-                        seen_apps[app.strip()] = idx
             for entry in self.widgets['ecu-config'][i]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
                 if entry[3].isChecked() and (not apps_text or len(apps_text) == 0 or apps_text.startswith(' ') or apps_text.endswith(' ')):
