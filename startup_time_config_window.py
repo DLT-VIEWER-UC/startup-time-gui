@@ -46,6 +46,55 @@ class CustomIntValidator(QIntValidator):
             return (QIntValidator.Invalid, input_str, pos)
 
 
+class CustomDecimalValidator(QDoubleValidator):
+    def __init__(self, min_value=0.0, max_value=float('inf'), decimals=2, parent=None):
+        super().__init__(min_value, max_value, decimals, parent)
+        self.min_value = min_value
+        self.max_value = max_value
+        self.decimals = decimals
+        self.setNotation(QDoubleValidator.StandardNotation)
+
+    def validate(self, input_str, pos):
+        if input_str == "":
+            return (QDoubleValidator.Intermediate, input_str, pos)
+
+        # Allow incomplete input like "0.", "1.", etc.
+        if input_str.endswith('.'):
+            # Check if the integer part is valid
+            try:
+                int_part = input_str[:-1]
+                if int_part == "" or int_part == "0":
+                    return (QDoubleValidator.Intermediate, input_str, pos)
+                value = float(int_part)
+                if value >= self.min_value:
+                    return (QDoubleValidator.Intermediate, input_str, pos)
+            except ValueError:
+                return (QDoubleValidator.Invalid, input_str, pos)
+
+        # Check if it's a valid decimal number
+        try:
+            value = float(input_str)
+            
+            # Check if value is within range
+            if value < self.min_value:
+                return (QDoubleValidator.Invalid, input_str, pos)
+            
+            # Check decimal places
+            if '.' in input_str:
+                decimal_part = input_str.split('.')[1]
+                if len(decimal_part) > self.decimals:
+                    return (QDoubleValidator.Invalid, input_str, pos)
+            
+            # Reject leading zeros for numbers >= 1 (e.g., "01.5" is invalid, but "0.5" is valid)
+            if input_str.startswith('0') and len(input_str) > 1 and not input_str.startswith('0.'):
+                return (QDoubleValidator.Invalid, input_str, pos)
+            
+            return (QDoubleValidator.Acceptable, input_str, pos)
+            
+        except ValueError:
+            return (QDoubleValidator.Invalid, input_str, pos)
+
+
 class ApplicationSelectorWidget(QWidget):
     """Custom widget for selecting applications with dropdown checkboxes and editable text field"""
    
@@ -893,8 +942,19 @@ class StartupTimeConfig(QDialog):
         # General Settings
         general_group = QGroupBox('General Settings')
         general_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 500; font-size: 9pt; }")
-        general_group.setFixedHeight(280)
-        general_layout = QFormLayout()
+        general_group.setFixedHeight(300)
+        
+        # Base vertical layout for general settings group box
+        general_base_layout = QVBoxLayout()
+        
+        # First horizontal layout containing two vertical layouts
+        general_horizontal_layout = QHBoxLayout()
+        
+        # Left vertical layout for existing fields
+        left_vlayout = QVBoxLayout()
+        left_vlayout.setSpacing(18)  # Set spacing between widgets in the layout
+        left_form_layout = QFormLayout()
+        
         for key, validator in [
             ('DLT-Viewer Log Capture Time', CustomIntValidator(1)),
             ('Iterations', CustomIntValidator(1)),
@@ -920,7 +980,7 @@ class StartupTimeConfig(QDialog):
             widgets_lst.append(units_lbl)
             key_lbl = QLabel(key)
             widgets_lst.append(key_lbl)
-            general_layout.addRow(key_lbl, row_layout)
+            left_form_layout.addRow(key_lbl, row_layout)
             self.widgets[key] = widgets_lst
        
         # Application Input List row
@@ -933,7 +993,56 @@ class StartupTimeConfig(QDialog):
         self.app_input_btn.clicked.connect(self.open_application_input_list)
         app_input_layout.addWidget(self.app_input_btn)
         app_input_layout.addStretch()  # Push everything to the left
-        general_layout.addRow(QLabel('Application Input List'), app_input_layout)
+        left_form_layout.addRow(QLabel('Application Input List'), app_input_layout)
+        
+        left_vlayout.addLayout(left_form_layout)
+        left_vlayout.addStretch()
+        
+        # Right vertical layout for IG-ON to QNX startup times
+        right_vlayout = QVBoxLayout()
+        
+        # Create "IG-ON to QNX startup times" group box
+        igon_qnx_group = QGroupBox('IG-ON to QNX startup times')
+        igon_qnx_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 500; font-size: 8pt; }")
+        igon_qnx_group.setMinimumHeight(160)  # Set minimum height for the group box
+        igon_qnx_layout = QVBoxLayout()
+        igon_qnx_form_layout = QFormLayout()
+        
+        # Add 4 rows for each ECU type
+        for ecu_name in ['PADAS_RCAR', 'ELITE_RCAR', 'ELITE_SoC0', 'ELITE_SoC1']:
+            widgets_lst = list()
+            le = QLineEdit(str(self.config_data.get(f'IG-ON to QNX startup time {ecu_name}', '')))
+            le.textChanged.connect(lambda text, name=ecu_name: [self.validate_all_fields(), self.update_border(f'IG-ON to QNX startup time {name}')])
+            le.setValidator(CustomDecimalValidator())
+            le.setFixedWidth(150)
+            widgets_lst.append(le)
+            
+            row_layout = QHBoxLayout()
+            row_layout.addWidget(le)
+            units_lbl = QLabel('[Int: 0~ (sec)]')
+            row_layout.addWidget(units_lbl)
+            widgets_lst.append(units_lbl)
+            
+            ecu_lbl = QLabel(ecu_name)
+            widgets_lst.append(ecu_lbl)
+            igon_qnx_form_layout.addRow(ecu_lbl, row_layout)
+            self.widgets[f'IG-ON to QNX startup time {ecu_name}'] = widgets_lst
+        
+        igon_qnx_layout.addLayout(igon_qnx_form_layout)
+        igon_qnx_group.setLayout(igon_qnx_layout)
+        right_vlayout.addWidget(igon_qnx_group)
+        right_vlayout.addStretch()
+        
+        # Add both vertical layouts to the horizontal layout with spacing
+        general_horizontal_layout.addLayout(left_vlayout)
+        general_horizontal_layout.addSpacing(20)  # Add 20px spacing between left and right sections
+        general_horizontal_layout.addLayout(right_vlayout)
+        
+        # Add the horizontal layout to the base vertical layout
+        general_base_layout.addLayout(general_horizontal_layout)
+        
+        # Set the base vertical layout to the general group
+        general_group.setLayout(general_base_layout)
        
         # Create group box with checkbox as title
         startup_order_group = QGroupBox()
@@ -996,13 +1105,14 @@ class StartupTimeConfig(QDialog):
             }
         """)
        
-        # Add the group box to the general layout
-        general_layout.addRow(startup_order_group)
+        # Add the startup order group box to the general base layout
+        general_base_layout.addWidget(startup_order_group)
        
         self.pre_gen_logs_cb = QCheckBox(); self.pre_gen_logs_cb.setChecked(self.config_data.get('Pre-Generated Logs', False))
        
         # Create horizontal layout for Pre-Generated Logs with button
         pre_gen_layout = QHBoxLayout()
+        pre_gen_layout.setSpacing(10)
         pre_gen_layout.addWidget(self.pre_gen_logs_cb)
        
         # Add button to open File Explorer
@@ -1031,10 +1141,16 @@ class StartupTimeConfig(QDialog):
         pre_gen_layout.addWidget(self.open_logs_btn)
         pre_gen_layout.addStretch()  # Push everything to the left
        
-        general_layout.addRow(QLabel('Pre-Generated Logs'), pre_gen_layout)
+        # Create a form layout for Pre-Generated Logs row
+        pre_gen_form_layout = QFormLayout()
+        pre_gen_form_layout.setHorizontalSpacing(50)
+        pre_gen_form_layout.addRow(QLabel('Pre-Generated Logs'), pre_gen_layout)
         self.widgets['Pre-Generated Logs'] = self.pre_gen_logs_cb
        
-        general_group.setLayout(general_layout)
+        # Add the pre-generated logs form layout to the general base layout
+        general_base_layout.addLayout(pre_gen_form_layout)
+        
+        # Add the general group to the main layout
         layout.addWidget(general_group)
 
         # Windows Settings
@@ -1597,6 +1713,16 @@ class StartupTimeConfig(QDialog):
             2: self.isElite and self.isSOC0,
             3: self.isElite and self.isSOC1
         }
+        for ecu_idx, ecu_name in enumerate(['PADAS_RCAR', 'ELITE_RCAR', 'ELITE_SoC0', 'ELITE_SoC1']):
+            if self.ecu_block_list_selection_map[ecu_idx] and self.is_any_ecu_selected_flag:
+                le = self.widgets[f'IG-ON to QNX startup time {ecu_name}'][0]
+                text = le.text()
+                if not text or len(text) == 0:
+                    enabled = False
+                    self._set_widget_style(le, 'border: 1px solid red;')
+                else:
+                    self._set_widget_style(le, 'border: 0px;')
+                    
         for key in ['DLT-Viewer Log Capture Time', 'Iterations', 'Power ON-OFF Delay']:
             if key in ['DLT-Viewer Log Capture Time', 'Power ON-OFF Delay', 'Iterations'] and self.widgets['Pre-Generated Logs'].isChecked():
                 continue
@@ -2094,6 +2220,15 @@ class StartupTimeConfig(QDialog):
             # print(w.text())
             if w.text() and len(w.text())>0:
                 data[key] = int(w.text())
+        
+        # Save IG-ON to QNX startup time values
+        for ecu_name in ['PADAS_RCAR', 'ELITE_RCAR', 'ELITE_SoC0', 'ELITE_SoC1']:
+            key = f'IG-ON to QNX startup time {ecu_name}'
+            if key in self.widgets:
+                w = self.widgets[key][0]
+                if w.text() and len(w.text()) > 0:
+                    data[key] = float(w.text())
+        
         data['Startup Order Application Registration'] = self.widgets['Startup Order Application Registration'].isChecked()
         # data['Application Registration'] = self.widgets['Application Registration'].isChecked()
         data['Startup Order Judgement'] = self.widgets['Startup Order Judgement'].isChecked()

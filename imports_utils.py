@@ -5,7 +5,7 @@ from PyQt5.QtGui import (
     QIcon, QMovie,
 
     # Validators
-    QIntValidator, QValidator, QRegExpValidator, QRegularExpressionValidator
+    QIntValidator, QDoubleValidator, QValidator, QRegExpValidator, QRegularExpressionValidator
 )
 from PyQt5.QtCore import (
     # Core types and enums

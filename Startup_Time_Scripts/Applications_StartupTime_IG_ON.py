@@ -511,7 +511,12 @@ other_header_columns = []
 border_style = Border(left=Side(border_style='thin'), right=Side(border_style='thin'),
                         top=Side(border_style='thin'), bottom=Side(border_style='thin'))
 
-OFFSET_TIME: Final = 1.5
+OFFSET_TIME = {
+    'PADAS': 0,
+    'RCAR': 0,
+    'SoC0': 0,
+    'SoC1': 0
+}
 
 class ECUType(Enum):
     RCAR = "RCAR"
@@ -1026,17 +1031,17 @@ def plot_process_startup_time_graph(differences, sheet, start_row, ecu_type, avg
         # Create a new figure with a specified size
         plt.figure(figsize=(12, max(3, len(differences)*0.2)))  
 
-        plt.plot([0, OFFSET_TIME], [0, 0],  marker='o')
-        plt.text((OFFSET_TIME) / 2, 0.1, f"{OFFSET_TIME} sec", verticalalignment='bottom', horizontalalignment='center')
+        plt.plot([0, OFFSET_TIME[ecu_type]], [0, 0],  marker='o')
+        plt.text((OFFSET_TIME[ecu_type]) / 2, 0.1, f"{OFFSET_TIME[ecu_type]} sec", verticalalignment='bottom', horizontalalignment='center')
 
         # Iterate over each process and its difference
         for index, (process, difference) in enumerate(differences.items()):
             index = index + 1
             # Plot a line from (OFFSET_TIME, index) to (difference + OFFSET_TIME, index) with a marker at the end
-            plt.plot([OFFSET_TIME, difference + OFFSET_TIME], [index, index], marker='o')
+            plt.plot([OFFSET_TIME[ecu_type], difference + OFFSET_TIME[ecu_type]], [index, index], marker='o')
 
             # Add a text label at the midpoint of the line with the difference value
-            plt.text((OFFSET_TIME + difference + OFFSET_TIME) / 2, index + 0.1,
+            plt.text((OFFSET_TIME[ecu_type] + difference + OFFSET_TIME[ecu_type]) / 2, index + 0.1,
                     str(round_decimal_half_up(difference, 4))+" sec", #"{:.3f} sec".format(difference),
                     verticalalignment='bottom', horizontalalignment='center')
 
@@ -1063,7 +1068,7 @@ def plot_process_startup_time_graph(differences, sheet, start_row, ecu_type, avg
 
         # Determine the x-axis limits with some padding
         min_x = 0
-        max_x = max(differences.values()) + OFFSET_TIME  # add OFFSET_TIME to max_x
+        max_x = max(differences.values()) + OFFSET_TIME[ecu_type]  # add OFFSET_TIME to max_x
         padding = (max_x - min_x) * 0.015
 
         # Create a sequence of seconds for the x-axis
@@ -1075,10 +1080,10 @@ def plot_process_startup_time_graph(differences, sheet, start_row, ecu_type, avg
         # plt.xlim(0, max_x + padding)
 
         # Add QNX Startup Time label exactly below OFFSET_TIME sec on x-axis
-        plt.text(OFFSET_TIME, -3.0, "QNX Startup", verticalalignment='top', horizontalalignment='center')
+        plt.text(OFFSET_TIME[ecu_type], -3.0, "QNX Startup", verticalalignment='top', horizontalalignment='center')
 
         # Add a vertical black line at x=OFFSET_TIME seconds
-        plt.axvline(x=OFFSET_TIME, color='black', linestyle='--', linewidth=1)  
+        plt.axvline(x=OFFSET_TIME[ecu_type], color='black', linestyle='--', linewidth=1)  
 
         # Get the current time
         timestamp = datetime.now().strftime("%M%S%f")
@@ -1419,7 +1424,7 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
         # Check if the process names match
         result = '-'
         if process in threshold_map[ecu_type] or 'Non-Configured Applications' in threshold_map[ecu_type]:
-            if float(dltstart_line + OFFSET_TIME) < threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)):
+            if float(dltstart_line + OFFSET_TIME[ecu_type]) < threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)):
                 result = 'PASS'
                 overall_IG_ON_cur_iteration['passed_count'] += 1
             else:
@@ -1427,7 +1432,7 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
                 ecu_app_info_counts_map[ecu_type][process].startup_time_judgement_fail_count += 1
                 overall_IG_ON_cur_iteration['status'] = False
 
-        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME, round_decimal_half_up(dltstart_line + OFFSET_TIME, 4), threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', result]
+        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME[ecu_type], round_decimal_half_up(dltstart_line + OFFSET_TIME[ecu_type], 4), threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', result]
 
         if validate_startup_order:
             # Create a data row for the process
@@ -1949,7 +1954,7 @@ def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet,
         if i in overall_IG_ON_iteration:
             overall_value = '-'
             if overall_IG_ON_iteration[i]['timestamp'] is not None:
-                overall_value = overall_IG_ON_iteration[i]['timestamp'] + OFFSET_TIME
+                overall_value = overall_IG_ON_iteration[i]['timestamp'] + OFFSET_TIME[ecu_type]
             test_status = '-'
             if overall_IG_ON_iteration[i]['status']:
                 if overall_IG_ON_iteration[i]['passed_count'] >= 1:
@@ -4289,6 +4294,11 @@ def start_startup_time_measurement(logger):
             if not pre_gen_logs_folder_path or not os.path.exists(str(pre_gen_logs_folder_path)):
                 logger.error("[Error] Pre-generated logs folder not found or not configured")
                 return False
+        
+        OFFSET_TIME['PADAS'] = config.get('IG-ON to QNX startup time PADAS_RCAR', 0)
+        OFFSET_TIME['RCAR'] = config.get('IG-ON to QNX startup time ELITE_RCAR', 0)
+        OFFSET_TIME['SoC0'] = config.get('IG-ON to QNX startup time ELITE_SoC0', 0)
+        OFFSET_TIME['SoC1'] = config.get('IG-ON to QNX startup time ELITE_SoC1', 0)
        
         local_save_path = Path(__file__).parents[2].joinpath("Reports", "03_Startup_Time", config.get('Current_Timestamp', cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S")))
         local_save_path.mkdir(parents=True, exist_ok=True)
