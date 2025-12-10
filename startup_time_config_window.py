@@ -5,6 +5,7 @@ import platform
 from pathlib import Path
 from PyQt5.QtCore import QFileSystemWatcher
 from imports_utils import *
+from collections import OrderedDict
 
 common_groupbox_style = """
     QGroupBox {
@@ -104,7 +105,7 @@ class ApplicationSelectorWidget(QWidget):
         self.ecu_family = ecu_family.upper() if ecu_family else None
         self.ecu_type = ecu_type.upper() if ecu_type else None
         self.ecu_idx = ecu_idx
-        self.application_checkboxes = {}
+        self.application_checkboxes = OrderedDict()
         self.select_all_checkbox = None
         self.updating_from_text = False
         self.updating_from_checkboxes = False
@@ -409,9 +410,11 @@ class ApplicationSelectorWidget(QWidget):
         current_text = self.text_field.text()
         all_current_apps = [app.strip() for app in current_text.split(',') if app.strip()]
        
-        # Get applications from checkboxes that are checked
-        checked_apps = {app for app, checkbox in self.application_checkboxes.items()
-                       if checkbox.isChecked()}
+        # Get applications from checkboxes that are checked (maintain order from dropdown)
+        checked_apps_set = {app for app, checkbox in self.application_checkboxes.items()
+                           if checkbox.isChecked()}
+        checked_apps_ordered = [app for app in self.application_checkboxes.keys()
+                               if app in checked_apps_set]
        
         # Build final list preserving the order from text field
         final_apps = []
@@ -421,12 +424,12 @@ class ApplicationSelectorWidget(QWidget):
         for app in all_current_apps:
             if app not in seen:
                 # Keep if it's either checked or a manual entry (not in dropdown)
-                if app in checked_apps or app not in self.application_checkboxes:
+                if app in checked_apps_set or app not in self.application_checkboxes:
                     final_apps.append(app)
                     seen.add(app)
        
-        # Then add any newly checked apps that weren't in the text field yet
-        for app in checked_apps:
+        # Then add any newly checked apps that weren't in the text field yet (in dropdown order)
+        for app in checked_apps_ordered:
             if app not in seen:
                 final_apps.append(app)
                 seen.add(app)
