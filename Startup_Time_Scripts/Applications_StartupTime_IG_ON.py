@@ -2115,6 +2115,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
     data.sort(key=lambda x: x['avg_time'])
     for process in app_configured_and_terminated_list:
         if process not in process_times:
+            ind_app_terminated_count = get_ind_app_terminated_count(process, overall_IG_ON_iteration)
             data_row = {
                 'index': '-',
                 'process': process,
@@ -2122,7 +2123,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
                 'max_time': '-',
                 'avg_time': '-',
                 'count': '-',
-                'terminated_count': get_ind_app_terminated_count(process, overall_IG_ON_iteration)
+                'terminated_count': ind_app_terminated_count if ind_app_terminated_count > 0 else '-'
             }
             data.append(data_row)
 
@@ -2168,6 +2169,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
             missing_count_cell = sheet.cell(row=sheet.max_row, column=12)  # Column 12 is the missing count column
             missing_count_cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
             missing_count_cell.font = Font(color="FFFFFF", size=10)  # White font for contrast
+        fill_disabled_cell_with_grey(8, 9, 10, sheet, config)
         # Store the average difference in the differences dictionary
         if data_row['avg_time'] != '-':
             differences[data_row['process']] = float(data_row['avg_time'])
@@ -4540,8 +4542,8 @@ def start_startup_time_measurement(logger):
         logger.info(f"All {iterations} iteration(s) completed")
         successful_iterations = sum(1 for result in anySheet if result)
         logger.info(f"Successful iterations: {successful_iterations}/{len(anySheet)}")
-        if not any(anySheet):
-            logger.warning("No successful data collected from any iteration")
+        if not all(anySheet):
+            logger.warning("Some iterations encountered errors during processing.")
             isSuccess = False
 
         # Check stop flag before report generation

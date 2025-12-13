@@ -1272,16 +1272,27 @@ class StartupTimeConfig(QDialog):
         cancel_btn = QPushButton('Cancel'); cancel_btn.clicked.connect(self.reject)
         cancel_btn.setFixedHeight(35)
         cancel_btn.setFocusPolicy(Qt.NoFocus)
-       
-        help_button = QPushButton()
-        help_button.setIcon(QIcon('./GUI_Icons/Help_icon.ico'))
-        help_button.setFixedSize(35,35)
-        help_button.setToolTip("Help")
-        help_button.clicked.connect(self.handle_help_click)
-        # help_button.setIconSize(QSize(30, 30))
-        help_button.setWindowIconText(None)  # Icon beside text
-        help_button.setFocusPolicy(Qt.NoFocus)
-        btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn); btn_h.addWidget(help_button)
+        
+        help_button_EN = QPushButton("EN")
+        # help_button_EN.setStyleSheet("QPushButton:enabled { font-size: 18px; }")
+        help_button_EN.setIcon(QIcon('./GUI_Icons/Help_icon.ico'))
+        help_button_EN.setFixedSize(58,35)
+        help_button_EN.setToolTip("Help")
+        help_button_EN.clicked.connect(lambda: open_user_manual("Startup Time", "English"))
+        # help_button_EN.setIconSize(QSize(30, 30))
+        help_button_EN.setWindowIconText(None)  # Icon beside text
+        help_button_EN.setFocusPolicy(Qt.NoFocus)
+
+        help_button_JP = QPushButton("JP")
+        help_button_JP.setIcon(QIcon('./GUI_Icons/Help_icon.ico'))
+        help_button_JP.setFixedSize(58,35)
+        help_button_JP.setToolTip("Help")
+        help_button_JP.clicked.connect(lambda: open_user_manual("Startup Time", "Japanese"))
+        # help_button_JP.setIconSize(QSize(30, 30))
+        help_button_JP.setWindowIconText(None)  # Icon beside text
+        help_button_JP.setFocusPolicy(Qt.NoFocus)
+        
+        btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn); btn_h.addWidget(help_button_EN); btn_h.addWidget(help_button_JP)
         layout.addLayout(btn_h)
 
         self.widgets['DLT-Viewer Log Capture Time'][0].textChanged.connect(lambda text: [self.update_border('DLT-Viewer Log Capture Time')])
@@ -1769,6 +1780,17 @@ class StartupTimeConfig(QDialog):
                                 seen_apps[app.strip()] += 1
                             else:
                                 seen_apps[app.strip()] = 1
+            
+            seen_apps_in_threshold = dict()
+            for entry in self.widgets['ecu-config'][i]['threshold']:
+                text = self._get_widget_text(entry[1])
+                if entry[3].isChecked() and text and len(text) > 0:
+                    for app in text.split(','):
+                        if app.strip():
+                            if app.strip() in seen_apps_in_threshold:
+                                seen_apps_in_threshold[app.strip()] += 1
+                            else:
+                                seen_apps_in_threshold[app.strip()] = 1
                 
             for idx, entry in enumerate(self.widgets['ecu-config'][i]['startup']):
                 text = self._get_widget_text(entry[2])
@@ -1788,7 +1810,8 @@ class StartupTimeConfig(QDialog):
                     self._set_widget_style(entry[2], 'border: 0px;')
             for entry in self.widgets['ecu-config'][i]['threshold']:
                 apps_text = self._get_widget_text(entry[1])
-                if entry[3].isChecked() and (not apps_text or len(apps_text) == 0 or apps_text.startswith(' ') or apps_text.endswith(' ')):
+                has_duplicates =  max([seen_apps_in_threshold.get(app.strip(), 1) for app in apps_text.split(',') if app.strip()]) > 1 if apps_text else False
+                if entry[3].isChecked() and (not apps_text or len(apps_text) == 0 or apps_text.startswith(' ') or apps_text.endswith(' ') or has_duplicates):
                     self._set_widget_style(entry[1], 'border: 1px solid red;')
                     enabled = False
                     self.ecu_error_list[i] = True
