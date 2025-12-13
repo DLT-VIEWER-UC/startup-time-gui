@@ -1224,13 +1224,15 @@ def fill_disabled_cell_with_grey(order_mismatch_col, not_found_col, not_configur
         if not order_mismatch_judgement:
             order_mismatch_cell = sheet.cell(row=sheet.max_row, column=order_mismatch_col)
             order_mismatch_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+            order_mismatch_cell.font = Font(color="000000", size=10)
         if not not_found_judgement:
             not_found_cell = sheet.cell(row=sheet.max_row, column=not_found_col)
             not_found_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+            not_found_cell.font = Font(color="000000", size=10)
         if not not_configured_judgement:
             not_configured_cell = sheet.cell(row=sheet.max_row, column=not_configured_col)
             not_configured_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
-
+            not_configured_cell.font = Font(color="000000", size=10)
 
 def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timing_info, sheet, application_startup_order, config, application_startup_order_status_iteration, overall_IG_ON_cur_iteration, is_empty_log, logger):
     """
