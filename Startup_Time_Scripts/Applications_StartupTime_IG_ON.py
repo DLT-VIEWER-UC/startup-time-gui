@@ -512,10 +512,10 @@ border_style = Border(left=Side(border_style='thin'), right=Side(border_style='t
                         top=Side(border_style='thin'), bottom=Side(border_style='thin'))
 
 OFFSET_TIME = {
-    'PADAS': 0,
-    'RCAR': 0,
-    'SoC0': 0,
-    'SoC1': 0
+    'PADAS_RCAR': 0,
+    'ELITE_RCAR': 0,
+    'ELITE_SoC0': 0,
+    'ELITE_SoC1': 0
 }
 
 class ECUType(Enum):
@@ -975,132 +975,6 @@ def plot_process_start_end_time_graph(ecu_type, data, sheet, start_row):
         img = Image(plot_image)
         sheet.add_image(img, f'J{start_row}')
 
-
-def plot_process_startup_time_graph(differences, sheet, start_row, ecu_type, avg_flag):
-    """
-    Creates and embeds a comprehensive timeline graph showing application startup times from IG ON.
-   
-    This function generates the main timeline visualization that shows the complete startup
-    sequence from ignition ON through QNX startup to individual application completion.
-    It includes reference lines for QNX startup time and performance thresholds.
-   
-    Args:
-        differences (dict): Dictionary mapping application names to their startup times (seconds)
-        sheet (openpyxl.worksheet.worksheet.Worksheet): Excel worksheet to embed the graph
-        start_row (int): Row number where the graph should be positioned
-        ecu_type (str): ECU type identifier for graph title and file naming
-        threshold (float): Performance threshold in seconds (shown as red dashed line)
-        avg_flag (bool): If True, shows average times; if False, shows individual completion times
-       
-    Timeline Structure:
-        - Time 0: Ignition ON
-        - OFFSET_TIME (1.5s): QNX Startup completion
-        - OFFSET_TIME + app_time: Individual application completion
-       
-    Graph Features:
-        - Thread-safe plotting using plot_lock
-        - Dynamic figure sizing based on number of applications
-        - Horizontal timeline visualization with clear time references
-        - QNX startup baseline shown as first timeline element
-        - Performance threshold line (red dashed) for quick assessment
-        - QNX startup reference line (black dashed) for context
-        - Time values displayed at timeline midpoints
-       
-    Visual Elements:
-        - X-axis: Time interval in seconds from ignition ON
-        - Y-axis: 'Time from IG ON to QNX startup' + Service/Application names
-        - Title: Dynamic based on avg_flag (Average vs Completion Time)
-        - Grid: Professional dashed grid lines
-        - Reference lines: Threshold (red) and QNX startup (black)
-        - Labels: QNX Startup marker below timeline
-       
-    Note:
-        This is the primary visualization for startup performance analysis,
-        allowing stakeholders to quickly identify applications that exceed
-        performance thresholds and understand the overall startup sequence.
-    """
-    with plot_lock:
-        # Determine the height of the graph based on the size of the sheet
-        height = (sheet.max_row - start_row + 1) * 0.35 # adjust the multiplier as needed
-        width = 10
-
-        if height > 6.5:
-            height = 6.5
-            width = 12
-
-        # Create a new figure with a specified size
-        plt.figure(figsize=(12, max(3, len(differences)*0.2)))  
-
-        plt.plot([0, OFFSET_TIME[ecu_type]], [0, 0],  marker='o')
-        plt.text((OFFSET_TIME[ecu_type]) / 2, 0.1, f"{OFFSET_TIME[ecu_type]} sec", verticalalignment='bottom', horizontalalignment='center')
-
-        # Iterate over each process and its difference
-        for index, (process, difference) in enumerate(differences.items()):
-            index = index + 1
-            # Plot a line from (OFFSET_TIME, index) to (difference + OFFSET_TIME, index) with a marker at the end
-            plt.plot([OFFSET_TIME[ecu_type], difference + OFFSET_TIME[ecu_type]], [index, index], marker='o')
-
-            # Add a text label at the midpoint of the line with the difference value
-            plt.text((OFFSET_TIME[ecu_type] + difference + OFFSET_TIME[ecu_type]) / 2, index + 0.1,
-                    str(round_decimal_half_up(difference, 4))+" sec", #"{:.3f} sec".format(difference),
-                    verticalalignment='bottom', horizontalalignment='center')
-
-        # Set the y-axis tick labels to the process names and 'Time from IG ON to QNX startup'
-        plt.yticks(range(len(differences) + 1), ['Time from IG ON to QNX startup'] + list(differences.keys()))
-
-        # Set the x-axis label
-        plt.xlabel('Time Interval (seconds)')
-
-        # Set the y-axis label
-        plt.ylabel('Services or Applications')
-
-        # Set the title of the graph
-        if avg_flag:
-            plt.title(f'{ecu_type} Timeline Graph: Services/Applications Startup Time Average', pad=20)
-        else:
-            plt.title(f'{ecu_type} Timeline Graph: Services/Applications Startup Completion Time', pad=20)
-
-        # Enable the grid on both x and y axes with light lines
-        plt.grid(True, axis='both', linestyle='--', linewidth=0.5, color='gray')
-
-        # Ensure the plot fits within the figure
-        plt.tight_layout()
-
-        # Determine the x-axis limits with some padding
-        min_x = 0
-        max_x = max(differences.values()) + OFFSET_TIME[ecu_type]  # add OFFSET_TIME to max_x
-        padding = (max_x - min_x) * 0.015
-
-        # Create a sequence of seconds for the x-axis
-        x_ticks = np.arange(0, max_x + 1, 1)  
-
-        plt.xticks(x_ticks)
-
-        plt.xlim(min_x - padding, max_x + padding)
-        # plt.xlim(0, max_x + padding)
-
-        # Add QNX Startup Time label exactly below OFFSET_TIME sec on x-axis
-        plt.text(OFFSET_TIME[ecu_type], -3.0, "QNX Startup", verticalalignment='top', horizontalalignment='center')
-
-        # Add a vertical black line at x=OFFSET_TIME seconds
-        plt.axvline(x=OFFSET_TIME[ecu_type], color='black', linestyle='--', linewidth=1)  
-
-        # Get the current time
-        timestamp = datetime.now().strftime("%M%S%f")
-        # plot_image = f'graph_process_startup_{ecu_type}_{timestamp}.png'
-        plot_image = Path(__file__).parent.joinpath(f'graph_process_startup_{ecu_type}_{timestamp}.png')
-
-        # # Save the plot to a file
-        # plot_image = f'bar_chart_process_start_time_{start_row}.png'
-        plt.savefig(plot_image)
-
-        # Close the plot
-        plt.close()
-
-        # Add the plot to the Excel sheet
-        img = Image(plot_image)
-        sheet.add_image(img, f'Q{start_row}')
-
 def get_log_file_path(ecu_type, setup_type, index):
     """
     Generates standardized log file paths and names for ECU startup time testing.
@@ -1424,7 +1298,7 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
         # Check if the process names match
         result = '-'
         if process in threshold_map[ecu_type] or 'Non-Configured Applications' in threshold_map[ecu_type]:
-            if float(dltstart_line + OFFSET_TIME[ecu_type]) < threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)):
+            if float(dltstart_line + OFFSET_TIME[f'{setup_type}_{ecu_type}']) < threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)):
                 result = 'PASS'
                 overall_IG_ON_cur_iteration['passed_count'] += 1
             else:
@@ -1432,7 +1306,7 @@ def write_data_to_excel(ecu_type, setup_type, dltstart_timestamps, process_timin
                 ecu_app_info_counts_map[ecu_type][process].startup_time_judgement_fail_count += 1
                 overall_IG_ON_cur_iteration['status'] = False
 
-        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME[ecu_type], round_decimal_half_up(dltstart_line + OFFSET_TIME[ecu_type], 4), threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', result]
+        data_row = [position+1, process, round_decimal_half_up(dltstart_line, 4), OFFSET_TIME[f'{setup_type}_{ecu_type}'], round_decimal_half_up(dltstart_line + OFFSET_TIME[f'{setup_type}_{ecu_type}'], 4), threshold_map[ecu_type].get(process, threshold_map[ecu_type].get('Non-Configured Applications', 0)) if ((process in threshold_map[ecu_type]) or ('Non-Configured Applications' in threshold_map[ecu_type])) else '-', result]
 
         if validate_startup_order:
             # Create a data row for the process
@@ -1954,7 +1828,7 @@ def each_iteration_test_status(ecu_type, setup_type, report_file, summary_sheet,
         if i in overall_IG_ON_iteration:
             overall_value = '-'
             if overall_IG_ON_iteration[i]['timestamp'] is not None:
-                overall_value = overall_IG_ON_iteration[i]['timestamp'] + OFFSET_TIME[ecu_type]
+                overall_value = overall_IG_ON_iteration[i]['timestamp'] + OFFSET_TIME[f'{setup_type}_{ecu_type}']
             test_status = '-'
             if overall_IG_ON_iteration[i]['status']:
                 if overall_IG_ON_iteration[i]['passed_count'] >= 1:
@@ -4297,10 +4171,10 @@ def start_startup_time_measurement(logger):
                 logger.error("[Error] Pre-generated logs folder not found or not configured")
                 return False
         
-        OFFSET_TIME['PADAS'] = config.get('IG-ON to QNX startup time PADAS_RCAR', 0)
-        OFFSET_TIME['RCAR'] = config.get('IG-ON to QNX startup time ELITE_RCAR', 0)
-        OFFSET_TIME['SoC0'] = config.get('IG-ON to QNX startup time ELITE_SoC0', 0)
-        OFFSET_TIME['SoC1'] = config.get('IG-ON to QNX startup time ELITE_SoC1', 0)
+        OFFSET_TIME['PADAS_RCAR'] = config.get('IG-ON to QNX startup time PADAS_RCAR', 0)
+        OFFSET_TIME['ELITE_RCAR'] = config.get('IG-ON to QNX startup time ELITE_RCAR', 0)
+        OFFSET_TIME['ELITE_SoC0'] = config.get('IG-ON to QNX startup time ELITE_SoC0', 0)
+        OFFSET_TIME['ELITE_SoC1'] = config.get('IG-ON to QNX startup time ELITE_SoC1', 0)
        
         local_save_path = Path(__file__).parents[2].joinpath("Reports", "03_Startup_Time", config.get('Current_Timestamp', cur_dt_time_obj.strftime("%Y%m%d_%H-%M-%S")))
         local_save_path.mkdir(parents=True, exist_ok=True)
