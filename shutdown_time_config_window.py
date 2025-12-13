@@ -97,7 +97,7 @@ class ShutdownTimeConfig(QDialog):
 
         # General Settings
         general_group = QGroupBox('General Settings')
-        general_group.setStyleSheet(common_groupbox_style)
+        general_group.setStyleSheet(common_groupbox_style + "QGroupBox { font-weight: 500; font-size: 9pt; }")
         # general_group.setFixedHeight(110)
         general_layout = QFormLayout()
         general_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -167,14 +167,26 @@ class ShutdownTimeConfig(QDialog):
         cancel_btn.setFixedHeight(35)
         cancel_btn.setFocusPolicy(Qt.NoFocus)
         
-        help_button = QPushButton()
-        help_button.setIcon(QIcon('./GUI_Icons/Help_icon.ico'))
-        help_button.setFixedSize(35,35)
-        help_button.setToolTip("Help")
-        help_button.clicked.connect(self.handle_help_click)
-        help_button.setWindowIconText(None)  # Icon beside text
-        help_button.setFocusPolicy(Qt.NoFocus)
-        btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn); btn_h.addWidget(help_button)
+        help_button_EN = QPushButton("EN")
+        # help_button_EN.setStyleSheet("QPushButton:enabled { font-size: 18px; }")
+        help_button_EN.setIcon(QIcon('./GUI_Icons/Help_icon.ico'))
+        help_button_EN.setFixedSize(58,35)
+        help_button_EN.setToolTip("Help")
+        help_button_EN.clicked.connect(lambda: open_user_manual("Shutdown Time", "English"))
+        # help_button_EN.setIconSize(QSize(30, 30))
+        help_button_EN.setWindowIconText(None)  # Icon beside text
+        help_button_EN.setFocusPolicy(Qt.NoFocus)
+
+        help_button_JP = QPushButton("JP")
+        help_button_JP.setIcon(QIcon('./GUI_Icons/Help_icon.ico'))
+        help_button_JP.setFixedSize(58,35)
+        help_button_JP.setToolTip("Help")
+        help_button_JP.clicked.connect(lambda: open_user_manual("Shutdown Time", "Japanese"))
+        # help_button_JP.setIconSize(QSize(30, 30))
+        help_button_JP.setWindowIconText(None)  # Icon beside text
+        help_button_JP.setFocusPolicy(Qt.NoFocus)
+
+        btn_h.addWidget(self.ok_btn); btn_h.addWidget(cancel_btn); btn_h.addWidget(help_button_EN); btn_h.addWidget(help_button_JP)
         layout.addLayout(btn_h)
 
         self.validate_all_fields()
