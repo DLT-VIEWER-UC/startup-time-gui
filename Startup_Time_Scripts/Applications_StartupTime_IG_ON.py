@@ -174,9 +174,9 @@ def configure_chart_layout(chart, width=18, height=10, gap_width=100, major_unit
     # Set manual layout with padding
     ml = ManualLayout()
     ml.x = 0.02
-    ml.y = 0.12
+    ml.y = 0.10
     ml.w = 0.98
-    ml.h = 0.88
+    ml.h = 0.90
     ml.xMode = "edge"
     ml.yMode = "edge"
     ml.wMode = "edge"
@@ -1594,7 +1594,7 @@ def calculate_graph_size(sheet, start_row, end_row, start_col, end_col):
         else:
             row_height = 15  # default Excel row height in points
         # Convert points to cm (1 point = 0.0353 cm)
-        total_height_cm += row_height * 0.0353
+        total_height_cm += row_height * 0.0330
    
     # Calculate width for 7 columns (A to G)
     total_width_cm = 0
@@ -1605,7 +1605,7 @@ def calculate_graph_size(sheet, start_row, end_row, start_col, end_col):
         else:
             col_width = 8.43  # default width
         # Convert character width to cm (1 character ≈ 0.269 cm)
-        total_width_cm += col_width * 0.269
+        total_width_cm += col_width * 0.280
     return total_width_cm, total_height_cm
 
 def add_sheet_title_header(sheet, ecu_type, setup_type, sheet_type):
@@ -1999,12 +1999,13 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
                 'max_time': '-',
                 'avg_time': '-',
                 'count': '-',
-                'terminated_count': ind_app_terminated_count if ind_app_terminated_count > 0 else '-'
+                'terminated_count': ind_app_terminated_count #if ind_app_terminated_count > 0 else '-'
             }
             data.append(data_row)
 
     # Append the sorted data to the Excel sheet
     for index, data_row in enumerate(data):
+        app_terminated_count_final = ecu_app_info_counts_map[ecu_type][data_row['process']].terminated_count
         sheet.append([
             data_row['index'] if data_row['index'] == '-' else index + 1,
             data_row['process'],
@@ -2016,7 +2017,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
             ecu_app_info_counts_map[ecu_type][data_row['process']].order_mismatch_count,
             ecu_app_info_counts_map[ecu_type][data_row['process']].not_found_count,
             ecu_app_info_counts_map[ecu_type][data_row['process']].not_configured_count,
-            ecu_app_info_counts_map[ecu_type][data_row['process']].terminated_count,
+            ecu_app_info_counts_map[ecu_type][data_row['process']].terminated_count if data_row['index'] != '-' else (app_terminated_count_final if app_terminated_count_final > 0 else '-'),
             len(overall_IG_ON_iteration) - len(process_times.get(data_row['process'], [])) if len(process_times.get(data_row['process'], [])) > 0 else '-'
         ])
 
@@ -2073,6 +2074,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
 
     # Create a header in the Excel sheet for the average data
     start_row = create_header(sheet, ecu_type, setup_type, True, 'min_max_avg_individual')
+    overall_max_time = 500
 
     for index, (process, start_times) in enumerate(process_start_times.items()):
         # Calculate the minimum, maximum, and average start times for the process
@@ -2092,6 +2094,7 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
        
         # Append the data row to the list
         individual_list.append(data_row)
+        overall_max_time = max(overall_max_time, max_time)
 
     # Sort the data based on the average time
     individual_list.sort(key=lambda x: x['avg_time'])    
@@ -2114,11 +2117,11 @@ def export_and_plot_average_data_to_excel(sheet, ecu_type, setup_type, process_t
         if data_row['avg_time'] != '-':
             individual_differences[data_row['process']] = float(data_row['avg_time'])
            
-    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=5, end_col=14)
+    width, height = calculate_graph_size(sheet, start_row=start_row, end_row=sheet.max_row - 1, start_col=5, end_col=12)
    
     if len(process_start_times) > 0:
         create_combo_chart(
-            ws=sheet, position=f"F{start_row}", step=50,
+            ws=sheet, position=f"F{start_row}", step=round(overall_max_time/10),
             width=width, height=height,
             cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len(process_start_times) + start_row + 1,
             sd_mcol=5, sd_mxcol=5, sd_mrow=start_row + 1, sd_mxrow=len(process_start_times) + start_row + 1,
@@ -2233,12 +2236,14 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
     # Create the header for the Excel sheet
     start_row = create_header(sheet, ecu_type, setup_type, True, 'info_columns')
     filtered_data = []
+    overall_max_time = 500
 
     for index, (process, process_data) in enumerate(process_timing_info.items()):
         if process_data['start_time_ms']:
             data_row = [index + 1, process, float(process_data['start_time_ms'])*1000, float(process_data['start_time_ms'])]
             sheet.append(data_row)
             filtered_data.append(process_data)
+            overall_max_time = max(overall_max_time, float(process_data['start_time_ms']))
         else:
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
@@ -2252,11 +2257,11 @@ def generate_apps_start_end_time_report(ecu_type, setup_type, sheet, process_tim
         if process not in process_timing_info and (not is_empty_log or process not in ecu_encountered_apps_map[ecu_type]):
             data_row = ['-', process, '-', '-']
             sheet.append(data_row)
-    width, height = calculate_graph_size(sheet, start_row=start_row + 1, end_row=sheet.max_row , start_col=5, end_col=19)
+    width, height = calculate_graph_size(sheet, start_row=start_row + 1, end_row=sheet.max_row , start_col=5, end_col=18)
     len_started_apps = len([process for process, process_data in process_timing_info.items() if process_data['start_time_ms']])
     if len_started_apps > 0:
         create_combo_chart(
-            ws=sheet, position=f"E{start_row}", step=50,
+            ws=sheet, position=f"E{start_row}", step=round(overall_max_time/10),
             width=width, height=height,
             cats_mcol=2, cats_mrow=start_row + 2, cats_mxrow=len_started_apps + start_row + 1,
             sd_mcol=4, sd_mxcol=4, sd_mrow=start_row + 1, sd_mxrow=len_started_apps + start_row + 1,
@@ -3573,7 +3578,7 @@ def create_dlp_files(ecu_config_list, setup_type, config, logger):
         tree.write(output_path, encoding='utf-8', xml_declaration=True)
    
     return dlp_files
-
+ 
 
 def capture_logs_from_dlt_viewer(log_file_name, dlt_file_name, project_file_name, config, ecu_type, logger):
     """
@@ -4172,7 +4177,7 @@ def start_startup_time_measurement(logger):
             if not pre_gen_logs_folder_path or not os.path.exists(str(pre_gen_logs_folder_path)):
                 logger.error("[Error] Pre-generated logs folder not found or not configured")
                 return False
-        
+       
         OFFSET_TIME['PADAS_RCAR'] = config.get('IG-ON to QNX startup time PADAS_RCAR', 0)
         OFFSET_TIME['ELITE_RCAR'] = config.get('IG-ON to QNX startup time ELITE_RCAR', 0)
         OFFSET_TIME['ELITE_SoC0'] = config.get('IG-ON to QNX startup time ELITE_SoC0', 0)
@@ -4323,6 +4328,7 @@ def start_startup_time_measurement(logger):
                 return False
            
             threads = []
+            filename_list = {}
             for ecu_type, (report_file, workbook, sheets, summary_sheet) in workbook_map.items():
                 if(len(sheets)<=i):
                     continue
@@ -4330,7 +4336,6 @@ def start_startup_time_measurement(logger):
                     continue
                 logger.info(f"\n[Processing {ecu_type}]")
                
-                filename_list = {}
                 if not is_pre_gen_logs:
                     if setup_type == ECUType.ELITE.value:
                         filename_list = get_log_file_paths_for_elite(i, ecu_config_list, setup_type)
@@ -4338,8 +4343,7 @@ def start_startup_time_measurement(logger):
                         filename_list[ecu_type] = tuple(get_log_file_path(ecu_type, setup_type, i))
                 else:
                     filename_list[ecu_type] = extract_log_file_paths(i, ecu_type, setup_type, logger)
-                filename_list_map[i]=filename_list
-               
+                   
                 if any(not filename for (filename, logfile, dltfile) in filename_list.values()):
                     if is_pre_gen_logs:
                         logger.error(f"[Error] Log file not found for {ecu_type} in iteration {i}")
@@ -4374,6 +4378,8 @@ def start_startup_time_measurement(logger):
                 threads.append(thread)
                 register_thread(thread)  # Register thread for monitoring
                 thread.start()
+            filename_list_map[i]=filename_list
+               
                
             # Wait for all threads to complete with stop flag checking
             logger.info(f"Waiting for all {len(threads)} ECU processing thread(s) to complete...")
